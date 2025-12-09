@@ -16,5 +16,8 @@
     "express": "^5.2.1",
     "express-oauth2-jwt-bearer": "^1.7.1",
     "mongoose": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
   }
 }
