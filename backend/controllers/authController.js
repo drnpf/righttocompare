@@ -20,10 +20,10 @@ const syncUser = async (req, res) => {
 
     // Deciding status code based on the result of authService
     if (result.isNew) {
-      console.log("New User Registered: ${result.user.email}");
+      console.log(`New User Registered: ${result.user.email}`);
       return res.status(201).json(result.user); // 201 Created
     } else {
-      console.log("User Logged In: ${result.user.email}");
+      console.log(`User Logged In: ${result.user.email}`);
       return res.status(200).json(result.user); // 200 OK
     }
   } catch (error) {

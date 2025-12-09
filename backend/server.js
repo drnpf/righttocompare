@@ -12,7 +12,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connecting Database
+// Connecting Database (NEED TO ESTABLISH YOUR OWN .env to use this)
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected Successfully"))
@@ -27,5 +27,5 @@ app.use("/api/auth", authRoutes);
 // Starting server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log("Server running on port ${PORT}");
+  console.log(`Server running on port ${PORT}`);
 });
