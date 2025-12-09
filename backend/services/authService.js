@@ -22,12 +22,6 @@ const syncUserToDatabase = async ({ sub, email, name, picture }) => {
     displayName: name,
     picture: picture,
     role: "user",
-    wishlist: [],
-    preferences: {
-      notifications: {
-        priceAlerts: true,
-      },
-    },
   });
   await user.save();
   return { user, isNew: true };
