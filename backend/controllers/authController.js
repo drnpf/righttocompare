@@ -1,42 +1,31 @@
-const User = require("../models/User");
+const authService = require("../services/authService");
 /**
- * Syncs the user profile from Auth0 to MongoDB. Handles both
- * REGISTRATION (new user) and LOGIN (existing user).
+ * Syncs the user profile from Auth0 to MongoDB.
  * @route POST /api/auth/sync
  * @param {*} req - ExpressJS request containing auth payload
  * @param {*} res - ExpressJS response onbject
  */
 const syncUser = async (req, res) => {
-  // Getting user info from validated Auth0 token
+  // Getting user info from HTTP request
   const { sub, email, name, picture } = req.auth.payload;
 
   try {
-    // Attempting to find user in DB
-    let user = await User.findOne({ auth0Id: sub });
-
-    // --- LOGIN SECTION ---
-    // User EXISTS: Updating current user metadata
-    if (user) {
-    }
-
-    // --- REGISTRATION SECTION ---
-    // User DOES NOT EXIST: Creating new user
-    user = new User({
-      auth0Id: sub,
-      email: email,
-      displayName: name,
-      picture: picture,
-      role: "user",
-      wishlist: [],
-      preferences: {
-        notifications: {
-          priceAlerts: true,
-        },
-      },
+    // Delegating request processing to AuthService to perform user retrieval
+    const result = await authService.syncUserToDatabase({
+      sub,
+      email,
+      name,
+      picture,
     });
-    await user.save();
-    console.log("New User Registered: ${user.email}");
-    return res.status(201).json(user);
+
+    // Deciding status code based on the result of authService
+    if (result.isNew) {
+      console.log("New User Registered: ${result.user.email}");
+      return res.status(201).json(result.user); // 201 Created
+    } else {
+      console.log("User Logged In: ${result.user.email}");
+      return res.status(200).json(result.user); // 200 OK
+    }
   } catch (error) {
     console.error("Authorization Sync Error", error);
     res.status(500).json({ message: "Server Error during Auth Sync" });
