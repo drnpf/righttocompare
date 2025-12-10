@@ -23,7 +23,7 @@ export const syncUser = async (
       return;
     }
 
-    const { uid, email } = firebaseUser;
+    const { uid, email, name } = firebaseUser;
 
     // Check if user exists
     let user = await User.findOne({ firebaseUid: uid });
@@ -38,7 +38,7 @@ export const syncUser = async (
     user = await User.create({
       firebaseUid: uid,
       email: email,
-      role: "user",
+      displayName: name || "User",
     });
     res.status(201).json(user);
   } catch (error) {
