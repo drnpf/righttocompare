@@ -1,16 +1,14 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/authMiddleware";
 import * as UserService from "../services/userService";
-import { userInfo } from "os";
-import User from "src/models/User";
 
 /**
  * Sync Firebase User to MongoDB (for Retrieval or Creation).
  * Checks if user exists in MongoDB based on Firebase UID from token.
  * If exists, returns the user profile; otherwise, creates a new user document.
  * @route POST /api/auth/sync
- * @param req Express Request object with Firebase User data
- * @param res Express Response object
+ * @param req Express Request with Firebase User data
+ * @param res Express Response
  */
 export const syncUser = async (
   req: AuthRequest,
@@ -21,7 +19,7 @@ export const syncUser = async (
 
     // Ensures middleware verified token
     if (!firebaseUser) {
-      res.status(401).json({ message: "No user data found in request" });
+      res.status(401).json({ message: "No user data found" });
       return;
     }
 
@@ -39,7 +37,7 @@ export const syncUser = async (
 
     // Asking UserService to create a new user
     console.log(`Creating new user: ${email}`);
-    user = await UserService.createUser(uid, email, name);
+    user = await UserService.createUser(uid, email!, name);
     res.status(201).json(user);
   } catch (error) {
     console.error("Error in syncUser:", error);
