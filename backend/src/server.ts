@@ -26,14 +26,15 @@ const PORT = process.env.PORT || 5000;
 
 /**
  * Middleware Configurations (Express)
- * CORS: Allows requests to come in from Frontend
+ * CORS: Allows requests to come in from Frontend (or different servers)
  * JSON: Allows Express to read JSON from HTTP requests
  */
 app.use(
   cors({
+    // Allows request from the following server URLs
     origin: [
-      "http://localhost:3000",
-      "https://right-to-compare.firebaseapp.com",
+      "http://localhost:3000", // Frontend URL
+      "https://right-to-compare.firebaseapp.com", // Firebase Auth URL
     ],
     credentials: true,
   })
