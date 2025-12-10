@@ -13,13 +13,10 @@ import AIChatWidget from "./components/AIChatWidget";
 import { phonesData } from "./data/phoneData";
 import { Toaster } from "sonner@2.0.3";
 import { DarkModeProvider } from "./components/DarkModeContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import FirebaseConnectionTest from "./components/FirebaseConnectionTest";
 
 type PageType = "spec" | "comparison" | "discussions" | "discussionDetail" | "signIn" | "signUp" | "profile" | "admin";
-
-interface User {
-  name: string;
-  email: string;
-}
 
 // Helper functions for localStorage
 const getRecentlyViewedFromStorage = (): string[] => {
@@ -39,42 +36,18 @@ const saveRecentlyViewedToStorage = (phoneIds: string[]) => {
   }
 };
 
-const getUserFromStorage = (): User | null => {
-  try {
-    const stored = localStorage.getItem('currentUser');
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
-};
-
-const saveUserToStorage = (user: User | null) => {
-  try {
-    if (user) {
-      localStorage.setItem('currentUser', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('currentUser');
-    }
-  } catch {
-    // Ignore storage errors
-  }
-};
-
-export default function App() {
+function AppContent() {
+  const { currentUser, signOut } = useAuth();
   const [currentPage, setCurrentPage] = useState<string>("galaxy-s24-ultra");
   const [pageType, setPageType] = useState<PageType>("spec");
   const [comparisonPhoneIds, setComparisonPhoneIds] = useState<string[]>([]);
   const [recentlyViewedPhones, setRecentlyViewedPhones] = useState<string[]>([]);
   const [currentDiscussionId, setCurrentDiscussionId] = useState<string>("");
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // Load recently viewed phones and user from localStorage on mount
+  // Load recently viewed phones from localStorage on mount
   useEffect(() => {
     const stored = getRecentlyViewedFromStorage();
     setRecentlyViewedPhones(stored);
-    
-    const user = getUserFromStorage();
-    setCurrentUser(user);
   }, []);
 
   // Add current page to recently viewed when it changes
@@ -165,35 +138,20 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSignIn = (email: string, password: string) => {
-    // In a real app, this would validate credentials with a backend
-    // For now, we'll create a user from the email
-    const name = email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1);
-    const user: User = { name, email };
-    
-    setCurrentUser(user);
-    saveUserToStorage(user);
-    
-    // Navigate to profile page after sign in
+  const handleSignInSuccess = () => {
+    // Navigate to profile page after successful sign in
     setPageType("profile");
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSignUp = (name: string, email: string, password: string) => {
-    // In a real app, this would create an account with a backend
-    const user: User = { name, email };
-    
-    setCurrentUser(user);
-    saveUserToStorage(user);
-    
-    // Navigate to profile page after sign up
+  const handleSignUpSuccess = () => {
+    // Navigate to profile page after successful sign up
     setPageType("profile");
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSignOut = () => {
-    setCurrentUser(null);
-    saveUserToStorage(null);
+  const handleSignOut = async () => {
+    await signOut();
     setPageType("spec");
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -242,13 +200,13 @@ export default function App() {
         ) : pageType === "profile" ? (
           <UserProfilePage />
         ) : pageType === "signIn" ? (
-          <SignInPage 
-            onSignIn={handleSignIn}
+          <SignInPage
+            onSignInSuccess={handleSignInSuccess}
             onNavigateToSignUp={handleSignUpClick}
           />
         ) : pageType === "signUp" ? (
-          <SignUpPage 
-            onSignUp={handleSignUp}
+          <SignUpPage
+            onSignUpSuccess={handleSignUpSuccess}
             onNavigateToSignIn={handleSignInClick}
           />
         ) : pageType === "discussionDetail" ? (
@@ -296,7 +254,18 @@ export default function App() {
 
         {/* AI Chat Widget */}
         <AIChatWidget onNavigate={navigateToPhone} />
+
+        {/* Firebase Connection Test - Remove this after testing */}
+        <FirebaseConnectionTest />
       </div>
     </DarkModeProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

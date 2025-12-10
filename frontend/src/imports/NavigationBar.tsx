@@ -22,8 +22,8 @@ function LogoButton({ className, onClick }: { className?: string; onClick?: () =
 }
 
 interface User {
-  name: string;
-  email: string;
+  displayName?: string | null;
+  email: string | null;
 }
 
 function NavigationBarLinks({ 
@@ -113,7 +113,7 @@ function NavigationBarLinks({
               </div>
               <div className="hidden md:flex flex-col font-['Inter:Regular',sans-serif] font-normal justify-center items-center not-italic relative shrink-0 text-white text-nowrap">
                 <p className="font-['Inter:Bold',sans-serif] font-bold leading-none text-[14px] md:text-[16px] whitespace-pre">
-                  {user.name.split(' ')[0]}
+                  {user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'User'}
                 </p>
               </div>
             </button>
@@ -122,7 +122,7 @@ function NavigationBarLinks({
             {showDropdown && (
               <div className="absolute right-0 top-full mt-2 bg-white dark:bg-[#1a1f2e] rounded-xl shadow-xl border border-[#e5e5e5] dark:border-[#2d3548] py-2 min-w-[200px] z-50">
                 <div className="px-4 py-3 border-b border-[#e5e5e5] dark:border-[#2d3548]">
-                  <p className="font-['Inter:Bold',sans-serif] text-[#1e1e1e] dark:text-white">{user.name}</p>
+                  <p className="font-['Inter:Bold',sans-serif] text-[#1e1e1e] dark:text-white">{user.displayName || user.email?.split('@')[0] || 'User'}</p>
                   <p className="text-[#666] dark:text-[#a0a0a0] text-[14px]">{user.email}</p>
                 </div>
                 <button

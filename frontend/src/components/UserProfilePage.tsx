@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { User, Bell, Heart, Settings, ChevronDown, ChevronUp, Save, X } from "lucide-react";
 import { toast } from "sonner@2.0.3";
 import { phonesData } from "../data/phoneData";
+import { useAuth } from "../context/AuthContext";
 
 interface UserProfile {
   name: string;
@@ -47,23 +48,22 @@ const featureLabels = {
 };
 
 export default function UserProfilePage() {
+  const { currentUser } = useAuth();
   const [activeSection, setActiveSection] = useState<string | null>("personal");
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile>(() => {
     const savedProfile = localStorage.getItem("userProfile");
-    const currentUser = localStorage.getItem("currentUser");
-    
+
     if (savedProfile) {
       return JSON.parse(savedProfile);
     }
-    
-    // Initialize with current user data if available
-    const userData = currentUser ? JSON.parse(currentUser) : null;
+
+    // Initialize with Firebase user data
     return {
-      name: userData?.name || "",
-      email: userData?.email || "",
+      name: currentUser?.displayName || currentUser?.email?.split('@')[0] || "",
+      email: currentUser?.email || "",
       preferences: {
         preferredBrands: [],
         budgetRange: { min: 0, max: 10000 },
@@ -84,6 +84,17 @@ export default function UserProfilePage() {
       wishlist: JSON.parse(localStorage.getItem("wishlist") || "[]"),
     };
   });
+
+  // Update profile when Firebase user changes
+  useEffect(() => {
+    if (currentUser) {
+      setProfile(prev => ({
+        ...prev,
+        name: currentUser.displayName || currentUser.email?.split('@')[0] || prev.name,
+        email: currentUser.email || prev.email,
+      }));
+    }
+  }, [currentUser]);
 
   const toggleSection = (section: string) => {
     setActiveSection(activeSection === section ? null : section);
