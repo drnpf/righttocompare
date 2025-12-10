@@ -1,5 +1,5 @@
 import express, { Router } from "express";
-import { syncUser } from "../controllers/authController";
+import { syncUser } from "../controllers/userController";
 import { protect } from "../middleware/authMiddleware";
 
 const router: Router = express.Router();
