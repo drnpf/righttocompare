@@ -3,6 +3,7 @@ import mongoose, { Document, Schema } from "mongoose";
 export interface IUser extends Document {
   firebaseUid: string;
   email: string;
+  displayName: string;
   role: "user" | "admin";
   lastLogin: Date;
   preferences: {
@@ -52,7 +53,7 @@ const UserSchema: Schema = new Schema(
         priceAlerts: { type: Boolean, default: true },
         newReleases: { type: Boolean, default: true },
       },
-      notificationsChannels: {
+      notificationChannels: {
         email: { type: Boolean, default: true },
         push: { type: Boolean, default: true },
       },
@@ -63,3 +64,5 @@ const UserSchema: Schema = new Schema(
     timestamps: true,
   }
 );
+
+export default mongoose.model<IUser>("User", UserSchema);
