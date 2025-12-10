@@ -1,6 +1,8 @@
 import { Response } from "express";
-import User from "../models/User";
 import { AuthRequest } from "../middleware/authMiddleware";
+import * as UserService from "../services/userService";
+import { userInfo } from "os";
+import User from "src/models/User";
 
 /**
  * Sync Firebase User to MongoDB (for Retrieval or Creation).
@@ -23,23 +25,21 @@ export const syncUser = async (
       return;
     }
 
+    // Extracting uid, email, and name from token
     const { uid, email, name } = firebaseUser;
 
-    // Check if user exists
-    let user = await User.findOne({ firebaseUid: uid });
+    // Asking UserService checking if user exists
+    let user = await UserService.findUserByUid(uid);
     if (user) {
-      console.log(`User found: ${User}`);
+      console.log(`User found: ${email}`);
+      user = await UserService.updateLastLogin(user);
       res.status(200).json(user);
       return;
     }
 
-    // Creates a new user
+    // Asking UserService to create a new user
     console.log(`Creating new user: ${email}`);
-    user = await User.create({
-      firebaseUid: uid,
-      email: email,
-      displayName: name || "User",
-    });
+    user = await UserService.createUser(uid, email, name);
     res.status(201).json(user);
   } catch (error) {
     console.error("Error in syncUser:", error);
