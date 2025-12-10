@@ -26,7 +26,7 @@ export const syncUser = async (
     // Extracting uid, email, and name from token
     const { uid, email, name } = firebaseUser;
 
-    // Asking UserService checking if user exists
+    // Asking UserService to check if user exists
     let user = await UserService.findUserByUid(uid);
     if (user) {
       console.log(`User found: ${email}`);
