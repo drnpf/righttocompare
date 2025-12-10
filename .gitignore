@@ -5,6 +5,7 @@ node_modules/
 
 # Testing
 /coverage
+*.http
 
 # Production builds
 /build
@@ -67,3 +68,6 @@ lerna-debug.log*
 
 # OS generated files
 Thumbs.db
+
+# Security
+serviceAccountKey.json
