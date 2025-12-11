@@ -25,6 +25,13 @@ export const syncUser = async (
 
     // Extracting uid, email, and name from token
     const { uid, email, name } = firebaseUser;
+    if (!email) {
+      console.error(
+        `User sync failed for UID: ${uid}. Email is missing from Firebase token.`
+      );
+      res.status(400).json({ message: "Email required for profile creation" });
+      return;
+    }
 
     // Asking UserService to check if user exists
     let user = await UserService.findUserByUid(uid);
@@ -37,7 +44,7 @@ export const syncUser = async (
 
     // Asking UserService to create a new user
     console.log(`Creating new user: ${email}`);
-    user = await UserService.createUser(uid, email!, name);
+    user = await UserService.createUser(uid, email, name);
     res.status(201).json(user);
   } catch (error) {
     console.error("Error in syncUser:", error);
