@@ -5,7 +5,6 @@
 - **Framework:** Express.js with TypeScript
 - **Database:** MongoDB (Mongoose)
 - **Auth:** Firebase Admin SDK (JWT Verification)
-- **Architecture:** MVC (Model-View-Controller)
 
 ---
 
