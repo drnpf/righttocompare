@@ -22,7 +22,7 @@ app.get("/api/health", (req, res) => {
 // Profile routes (your main vertical slice)
 app.use("/api/profile", profileRoutes);
 
-// TODO (teammate): add phone routes, review routes, recommendation endpoints, etc.
+// TODO: add phone routes, review routes, recommendation endpoints, etc.
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

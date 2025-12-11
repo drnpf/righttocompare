@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin"],
       default: "user"
     }
-    // TODO (teammate): add preferences, notification settings, etc.
+    // TODO: add preferences, notification settings, etc.
   },
   {
     timestamps: true

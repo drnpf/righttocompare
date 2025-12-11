@@ -51,7 +51,7 @@ async function updateMyProfile(req, res) {
     }
 
     if (password && password.length >= 6) {
-      // TODO (teammate): hash password with bcrypt before saving
+      // TODO: hash password with bcrypt before saving
       user.passwordHash = password;
     }
 

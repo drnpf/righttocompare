@@ -5,7 +5,7 @@
  *
  * - In a real system, this would verify a JWT or Firebase token and
  *   set req.userId to the authenticated user's ID.
- * - For now, we:
+ * - For now:
  *   1) Look for X-Demo-User-Id header, or
  *   2) Use a fixed demo user id from env DEMO_USER_ID (optional).
  */
