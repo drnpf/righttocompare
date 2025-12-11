@@ -14,7 +14,7 @@ export const syncUserWithBackend = async (firebaseUser: User | null) => {
 
   try {
     // Gets token from Firebase user and sending HTTP req to backend for syncing
-    const token = await firebaseUser.getIdToken();
+    const token = await firebaseUser.getIdToken(true);
     const response = await fetch(`${API_URL}/sync`, {
       method: "POST",
       headers: {

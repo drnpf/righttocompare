@@ -10,10 +10,7 @@ interface SignUpPageProps {
   onNavigateToSignIn: () => void;
 }
 
-export default function SignUpPage({
-  onSignUpSuccess,
-  onNavigateToSignIn,
-}: SignUpPageProps) {
+export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: SignUpPageProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,14 +47,7 @@ export default function SignUpPage({
     setIsLoading(true);
 
     try {
-      await signUp(email, password);
-
-      // Update user profile with display name
-      const user = (await import("../firebase/config")).auth.currentUser;
-      if (user) {
-        await updateProfile(user, { displayName: name });
-      }
-
+      await signUp(email, password, name);
       toast.success("Account created successfully!");
       onSignUpSuccess();
     } catch (error) {
@@ -177,10 +167,7 @@ export default function SignUpPage({
 
             {/* Confirm Password Field */}
             <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block mb-2 text-[#1e1e1e]"
-              >
+              <label htmlFor="confirmPassword" className="block mb-2 text-[#1e1e1e]">
                 Confirm Password
               </label>
               <div className="relative">
@@ -199,11 +186,7 @@ export default function SignUpPage({
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] hover:text-[#2c3968] transition-colors"
                   tabIndex={-1}
                 >
-                  {showConfirmPassword ? (
-                    <EyeOff size={20} />
-                  ) : (
-                    <Eye size={20} />
-                  )}
+                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
             </div>
@@ -260,10 +243,7 @@ export default function SignUpPage({
           <div className="text-center mt-6">
             <p className="text-[#666]">
               Already have an account?{" "}
-              <button
-                onClick={onNavigateToSignIn}
-                className="text-[#2c3968] hover:underline"
-              >
+              <button onClick={onNavigateToSignIn} className="text-[#2c3968] hover:underline">
                 Sign In
               </button>
             </p>
@@ -272,8 +252,7 @@ export default function SignUpPage({
 
         {/* Additional Info */}
         <p className="text-center text-[#999] mt-6">
-          By creating an account, you agree to our Terms of Service and Privacy
-          Policy
+          By creating an account, you agree to our Terms of Service and Privacy Policy
         </p>
       </div>
     </div>
