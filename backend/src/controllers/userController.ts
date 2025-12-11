@@ -10,10 +10,7 @@ import * as UserService from "../services/userService";
  * @param req Express Request with Firebase User data
  * @param res Express Response
  */
-export const syncUser = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const syncUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const firebaseUser = req.user;
 
@@ -26,9 +23,7 @@ export const syncUser = async (
     // Extracting uid, email, and name from token
     const { uid, email, name } = firebaseUser;
     if (!email) {
-      console.error(
-        `User sync failed for UID: ${uid}. Email is missing from Firebase token.`
-      );
+      console.error(`User sync failed for UID: ${uid}. Email is missing from Firebase token.`);
       res.status(400).json({ message: "Email required for profile creation" });
       return;
     }
@@ -37,7 +32,7 @@ export const syncUser = async (
     let user = await UserService.findUserByUid(uid);
     if (user) {
       console.log(`User found: ${email}`);
-      user = await UserService.updateLastLogin(user);
+      user = await UserService.updateUser(user, name);
       res.status(200).json(user);
       return;
     }

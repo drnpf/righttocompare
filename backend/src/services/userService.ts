@@ -16,8 +16,12 @@ export const findUserByUid = async (uid: string): Promise<IUser | null> => {
  * @param user The existing User document retrieved from database
  * @returns The saved/updated User document
  */
-export const updateLastLogin = async (user: IUser): Promise<IUser> => {
+export const updateUser = async (user: IUser, name?: string): Promise<IUser> => {
+  // Updating last login and name from token
   user.lastLogin = new Date();
+  if (name) {
+    user.displayName = name;
+  }
   return await user.save();
 };
 
@@ -28,11 +32,7 @@ export const updateLastLogin = async (user: IUser): Promise<IUser> => {
  * @param name  The User's display name for their Google/Firebase profile.
  * @returns The newly created User document
  */
-export const createUser = async (
-  uid: string,
-  email: string,
-  name?: string
-): Promise<IUser> => {
+export const createUser = async (uid: string, email: string, name?: string): Promise<IUser> => {
   return await User.create({
     firebaseUid: uid,
     email: email,
