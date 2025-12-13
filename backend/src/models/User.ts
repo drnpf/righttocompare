@@ -1,5 +1,7 @@
 import mongoose, { Document, Schema } from "mongoose";
 
+// IMPORTANT: If you change the model anywhere here,
+// make sure to also make changes to frontend/src/types/userTypes.ts
 export interface IUser extends Document {
   firebaseUid: string;
   email: string;
