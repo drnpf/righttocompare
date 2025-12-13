@@ -19,12 +19,16 @@ export interface AppUser {
       display: number;
       design: number;
     };
-    budgetMin: number;
-    budgetMax: number;
-    brands: string[];
+    preferredBrands: string[];
+    budget: {
+      min: number;
+      max: number;
+    };
     notifications: {
       priceAlerts: boolean;
       newReleases: boolean;
+      deals: boolean;
+      featureUpdates: boolean;
     };
     notificationChannels: {
       email: boolean;

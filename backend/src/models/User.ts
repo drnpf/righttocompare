@@ -14,12 +14,16 @@ export interface IUser extends Document {
       display: number;
       design: number;
     };
-    budgetMin: number;
-    budgetMax: number;
-    brands: string[];
+    preferredBrands: string[];
+    budget: {
+      min: number;
+      max: number;
+    };
     notifications: {
       priceAlerts: boolean;
       newReleases: boolean;
+      deals: boolean;
+      featureUpdates: boolean;
     };
     notificationChannels: {
       email: boolean;
@@ -46,12 +50,16 @@ const UserSchema: Schema = new Schema(
         display: { type: Number, min: 1, max: 5, default: 3 },
         design: { type: Number, min: 1, max: 5, default: 3 },
       },
-      budgetMin: { type: Number, default: 0 },
-      budgetMax: { type: Number, default: 2000 },
-      brands: { type: [String], default: [] },
+      preferredBrands: { type: [String], default: [] },
+      budget: {
+        min: { type: Number, default: 0 },
+        max: { type: Number, default: 2000 },
+      },
       notifications: {
         priceAlerts: { type: Boolean, default: true },
         newReleases: { type: Boolean, default: true },
+        deals: { type: Boolean, default: true },
+        featureUpdates: { type: Boolean, default: true },
       },
       notificationChannels: {
         email: { type: Boolean, default: true },
