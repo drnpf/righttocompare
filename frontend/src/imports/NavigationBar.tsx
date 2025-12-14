@@ -22,8 +22,8 @@ function LogoButton({ className, onClick }: { className?: string; onClick?: () =
 }
 
 interface User {
-  displayName?: string | null;
-  email: string | null;
+  name: string;
+  email: string;
 }
 
 function NavigationBarLinks({ 
@@ -34,7 +34,8 @@ function NavigationBarLinks({
   onSignInClick,
   onSignOut,
   onProfileClick,
-  onAdminClick
+  onAdminClick,
+  onCatalogClick
 }: { 
   onComparisonToolClick?: () => void;
   onDiscussionsClick?: () => void;
@@ -44,6 +45,7 @@ function NavigationBarLinks({
   onSignOut?: () => void;
   onProfileClick?: () => void;
   onAdminClick?: () => void;
+  onCatalogClick?: () => void;
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -83,6 +85,15 @@ function NavigationBarLinks({
       </button>
       <div className="content-start flex flex-wrap gap-[8px] items-center relative shrink-0" data-name="Navigation Bar Pill List">
         <button 
+          onClick={onCatalogClick}
+          className="box-border content-stretch flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer" 
+          data-name="Catalog"
+        >
+          <div className="flex flex-col font-['Inter:Regular',sans-serif] font-normal justify-center leading-[0] not-italic relative shrink-0 text-[#1e1e1e] dark:text-white text-[0px] text-nowrap">
+            <p className="font-['Inter:Bold',sans-serif] font-bold leading-none text-[16px] whitespace-pre">Catalog</p>
+          </div>
+        </button>
+        <button 
           onClick={onComparisonToolClick}
           className="box-border content-stretch flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer" 
           data-name="Comparison Tool"
@@ -113,16 +124,16 @@ function NavigationBarLinks({
               </div>
               <div className="hidden md:flex flex-col font-['Inter:Regular',sans-serif] font-normal justify-center items-center not-italic relative shrink-0 text-white text-nowrap">
                 <p className="font-['Inter:Bold',sans-serif] font-bold leading-none text-[14px] md:text-[16px] whitespace-pre">
-                  {user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'User'}
+                  {user.name.split(' ')[0]}
                 </p>
               </div>
             </button>
 
             {/* Dropdown Menu */}
             {showDropdown && (
-              <div className="absolute right-0 top-full mt-2 bg-white dark:bg-[#1a1f2e] rounded-xl shadow-xl border border-[#e5e5e5] dark:border-[#2d3548] py-2 min-w-[200px] z-50">
+              <div className="absolute right-0 top-full mt-2 bg-white dark:bg-[#1a1f2e] rounded-xl shadow-xl border border-[#e5e5e5] dark:border-[#2d3548] py-2 min-w-[200px] z-[1000]">
                 <div className="px-4 py-3 border-b border-[#e5e5e5] dark:border-[#2d3548]">
-                  <p className="font-['Inter:Bold',sans-serif] text-[#1e1e1e] dark:text-white">{user.displayName || user.email?.split('@')[0] || 'User'}</p>
+                  <p className="font-['Inter:Bold',sans-serif] text-[#1e1e1e] dark:text-white">{user.name}</p>
                   <p className="text-[#666] dark:text-[#a0a0a0] text-[14px]">{user.email}</p>
                 </div>
                 <button
@@ -181,6 +192,7 @@ function NavigationBarLayout({
   onSignOut,
   onProfileClick,
   onAdminClick,
+  onCatalogClick,
   onLogoClick
 }: { 
   onComparisonToolClick?: () => void;
@@ -191,29 +203,14 @@ function NavigationBarLayout({
   onSignOut?: () => void;
   onProfileClick?: () => void;
   onAdminClick?: () => void;
+  onCatalogClick?: () => void;
   onLogoClick?: () => void;
 }) {
   return (
-    <div className="absolute content-stretch flex h-[80px] items-center justify-between left-1/2 top-1/2 translate-x-[-50%] translate-y-[-50%] w-full max-w-[1398px] px-4 md:px-6 gap-2 md:gap-4" data-name="Navigation Bar Layout">
+    <div className="absolute content-stretch flex h-[80px] items-center justify-between left-0 right-0 top-1/2 translate-y-[-50%] w-full max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 gap-2 md:gap-4" data-name="Navigation Bar Layout">
       <LogoButton className="h-[50px] md:h-[70px] relative shrink-0 w-[250px] md:w-[388px]" onClick={onLogoClick} />
-      <div className="bg-white dark:bg-[#1a1f2e] relative rounded-[9999px] shrink-0 w-full max-w-[300px] md:max-w-[400px] hidden sm:block" data-name="Search">
-        <div className="box-border content-stretch flex gap-[8px] items-center overflow-clip px-[16px] py-[12px] relative rounded-[inherit] w-full">
-          <p className="basis-0 font-['Inter:Regular',sans-serif] font-normal grow leading-none min-h-px min-w-px not-italic relative shrink-0 text-[#b3b3b3] dark:text-[#707070] text-[16px]">Search</p>
-          <div className="overflow-clip relative shrink-0 size-[16px]" data-name="Search">
-            <div className="absolute inset-[12.5%]" data-name="Icon">
-              <div className="absolute inset-[-6.667%]" style={{ "--stroke-0": "rgba(30, 30, 30, 1)" } as React.CSSProperties}>
-                <svg className="block size-full dark:hidden" fill="none" preserveAspectRatio="none" viewBox="0 0 14 14">
-                  <path d={svgPaths.p8625680} id="Icon" stroke="var(--stroke-0, #1E1E1E)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
-                </svg>
-                <svg className="hidden dark:block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 14 14">
-                  <path d={svgPaths.p8625680} id="Icon" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div aria-hidden="true" className="absolute border border-[#d9d9d9] dark:border-[#2d3548] border-solid inset-[-0.5px] pointer-events-none rounded-[9999.5px]" />
-      </div>
+      {/* Spacer to maintain layout spacing where search bar was */}
+      <div className="relative shrink-0 w-full max-w-[300px] md:max-w-[400px] hidden sm:block" />
       <NavigationBarLinks 
         onComparisonToolClick={onComparisonToolClick} 
         onDiscussionsClick={onDiscussionsClick}
@@ -223,6 +220,7 @@ function NavigationBarLayout({
         onSignOut={onSignOut}
         onProfileClick={onProfileClick}
         onAdminClick={onAdminClick}
+        onCatalogClick={onCatalogClick}
       />
     </div>
   );
@@ -230,29 +228,31 @@ function NavigationBarLayout({
 
 export default function NavigationBar({ 
   onComparisonToolClick, 
-  onDiscussionsClick,
-  isAuthenticated = false,
-  user = null,
+  onDiscussionsClick, 
+  isAuthenticated, 
+  user, 
   onSignInClick,
   onSignOut,
   onProfileClick,
   onAdminClick,
+  onCatalogClick,
   onLogoClick
 }: { 
   onComparisonToolClick?: () => void;
   onDiscussionsClick?: () => void;
-  isAuthenticated?: boolean;
-  user?: User | null;
+  isAuthenticated: boolean;
+  user: User | null;
   onSignInClick?: () => void;
   onSignOut?: () => void;
   onProfileClick?: () => void;
   onAdminClick?: () => void;
+  onCatalogClick?: () => void;
   onLogoClick?: () => void;
 }) {
   return (
-    <div className="relative size-full z-[100] bg-white dark:bg-[#161b26] transition-colors duration-300" data-name="Navigation Bar">
+    <div className="bg-white dark:bg-[#161b26] border-b border-[#e5e5e5] dark:border-[#2d3548] overflow-visible fixed left-0 right-0 top-0 h-[80px] z-[999] transition-colors duration-300" data-name="Navigation Bar">
       <NavigationBarLayout 
-        onComparisonToolClick={onComparisonToolClick} 
+        onComparisonToolClick={onComparisonToolClick}
         onDiscussionsClick={onDiscussionsClick}
         isAuthenticated={isAuthenticated}
         user={user}
@@ -260,6 +260,7 @@ export default function NavigationBar({
         onSignOut={onSignOut}
         onProfileClick={onProfileClick}
         onAdminClick={onAdminClick}
+        onCatalogClick={onCatalogClick}
         onLogoClick={onLogoClick}
       />
     </div>
