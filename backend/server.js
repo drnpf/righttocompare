@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const connectDb = require("./config/db");
 const profileRoutes = require("./routes/profileRoutes");
+const phoneRoutes = require("./routes/phoneRoutes");
 
 const app = express();
 
@@ -22,7 +23,10 @@ app.get("/api/health", (req, res) => {
 // Profile routes (your main vertical slice)
 app.use("/api/profile", profileRoutes);
 
-// TODO: add phone routes, review routes, recommendation endpoints, etc.
+// Phone routes
+app.use("/api/phones", phoneRoutes);
+
+// TODO: review routes, recommendation endpoints, etc.
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
