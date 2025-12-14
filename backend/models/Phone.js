@@ -29,8 +29,34 @@ const phoneSchema = new mongoose.Schema(
     },
     batteryMah: {
       type: Number
+    },
+    ram: {
+      type: Number  
+    },
+    storage: {
+      type: Number  
+    },
+    displaySize: {
+      type: Number  
+    },
+    displayType: {
+      type: String  
+    },
+    refreshRate: {
+      type: Number  
+    },
+    mainCameraMp: {
+      type: Number  
+    },
+    frontCameraMp: {
+      type: Number  
+    },
+    processor: {
+      type: String  
+    },
+    weight: {
+      type: Number  
     }
-    // TODO: add full spec structure here (RAM, storage, display, cameras, bands, etc.)
   },
   {
     timestamps: true
