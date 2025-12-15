@@ -10,7 +10,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { auth } from "../firebase/config";
-import { getUserProfile, syncUserWithBackend } from "../api/userApi";
+import { getUserProfile, syncUserWithBackend, updateUserProfile } from "../api/userApi";
 import { AppUser } from "../types/userTypes";
 
 interface AuthContextType {
@@ -51,7 +51,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Fallback to syncing the user profile if GET fails
       if (!userData) {
         console.warn("User missing in DB, attempting to sync...");
-        const userData = await syncUserWithBackend(user);
+        userData = await syncUserWithBackend(user);
       }
 
       // Combines Firebase identity + MongoDB user profile data if user found
@@ -86,9 +86,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Updating user display name upon sign up and forces sync with backend
     await updateProfile(user, { displayName: name });
     await user.reload();
-    if (auth.currentUser) {
-      await fetchAndSetUser(auth.currentUser);
-    }
+    const token = await user.getIdToken(true);
+    await updateUserProfile(user.uid, token, { displayName: name });
+    setCurrentUser((prev) => {
+      // Sets current user to the previous user with their new display name
+      return prev ? { ...prev, displayName: name } : null;
+    });
   }
 
   // Sign in with email and password

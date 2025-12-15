@@ -58,6 +58,10 @@ export const getUserProfile = async (uid: string, token: string) => {
     });
 
     // Handles failed sync with backend
+    if (response.status === 404) {
+      // If profile fails to retrieve will fallback to syncing
+      return null;
+    }
     if (!response.ok) {
       throw new Error("Failed to sync user with backend");
     }
