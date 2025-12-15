@@ -215,9 +215,9 @@ function AppContent() {
           ) : pageType === "profile" ? (
             <UserProfilePage />
           ) : pageType === "signIn" ? (
-            <SignInPage onSignIn={handleSignIn} onNavigateToSignUp={handleSignUpClick} />
+            <SignInPage onSignInSuccess={handleSignInSuccess} onNavigateToSignUp={handleSignUpClick} />
           ) : pageType === "signUp" ? (
-            <SignUpPage onSignUp={handleSignUp} onNavigateToSignIn={handleSignInClick} />
+            <SignUpPage onSignUpSuccess={handleSignUpSuccess} onNavigateToSignIn={handleSignInClick} />
           ) : pageType === "discussionDetail" ? (
             <DiscussionDetailPage discussionId={currentDiscussionId} onBack={handleBackToDiscussions} />
           ) : pageType === "discussions" ? (
