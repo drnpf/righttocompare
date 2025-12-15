@@ -84,7 +84,7 @@ const PhoneSchema: Schema = new Schema(
       performance: {
         processor: { type: String, required: true },
         ram: {
-          options: { type: String },
+          options: [{ type: Number }],
           technology: { type: String },
         },
         storageOptions: [{ type: Number }],
