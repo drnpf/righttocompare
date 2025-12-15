@@ -6,7 +6,7 @@ import Phone, { IPhone } from "../models/Phone";
  * @returns An array of phone documents
  */
 export const findAllPhones = async (): Promise<IPhone[]> => {
-  return await Phone.find().select("-_id -__v"); // Optional: Exclude internal DB fields
+  return await Phone.find().select("-_id -__v");
 };
 
 /**
