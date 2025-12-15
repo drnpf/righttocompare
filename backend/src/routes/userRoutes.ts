@@ -5,20 +5,20 @@ import { protect } from "../middleware/authMiddleware";
 const router: Router = express.Router();
 
 /**
+ * Sync user data from Firebase to MongoDB
  * @route   POST /api/users/sync
- * @desc    Sync user data from Firebase to MongoDB
  */
 router.post("/sync", protect, syncUser);
 
 /**
+ * Gets user profile data from MongoDB
  * @route  PUT /api/users/:uid
- * @desc   Gets user profile data from MongoDB
  */
 router.get("/:uid", protect, getUser);
 
 /**
+ * Update user profile data in MongoDB
  * @route  PUT /api/users/:uid
- * @desc   Update user profile data in MongoDB
  */
 router.put("/:uid", protect, updateUser);
 
