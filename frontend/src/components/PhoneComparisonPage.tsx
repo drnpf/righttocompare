@@ -548,14 +548,17 @@ export default function PhoneComparisonPage({
                           className="text-center hover:underline transition-all cursor-pointer group"
                           title={`View ${phone.manufacturer} ${phone.name} specs`}
                         >
-                          <h3 className="text-[#2c3968] mb-1 group-hover:text-[#1f2747]">
+                          <h3 className="text-[#2c3968] dark:text-[#4a7cf6] mb-1 group-hover:text-[#1f2747] dark:group-hover:text-[#5b8df7]">
                             {phone.manufacturer}
                           </h3>
-                          <p className="text-sm text-[#666] mb-3 group-hover:text-[#444]">
+                          <p className="text-sm text-[#666] dark:text-[#a0a8b8] mb-2 group-hover:text-[#444] dark:group-hover:text-[#b8c0d0]">
                             {phone.name}
                           </p>
                         </button>
-                        <p className="text-[#2c3968] mb-3">{phone.price}</p>
+                        <Badge variant="secondary" className="bg-[#2c3968] dark:bg-[#4a7cf6] text-white hover:bg-[#2c3968]/90 dark:hover:bg-[#4a7cf6]/90 mb-2">
+                          {phone.releaseDate}
+                        </Badge>
+                        <p className="text-[#2c3968] dark:text-[#4a7cf6] mb-3">{phone.price}</p>
                         
                         {/* Rating */}
                         <div className="flex items-center gap-2 mb-1">
