@@ -1,5 +1,5 @@
 import express, { Router } from "express";
-import { syncUser, updateUser } from "../controllers/userController";
+import { syncUser, getUser, updateUser } from "../controllers/userController";
 import { protect } from "../middleware/authMiddleware";
 
 const router: Router = express.Router();
@@ -9,6 +9,12 @@ const router: Router = express.Router();
  * @desc    Sync user data from Firebase to MongoDB
  */
 router.post("/sync", protect, syncUser);
+
+/**
+ * @route  PUT /api/users/:uid
+ * @desc   Gets user profile data from MongoDB
+ */
+router.get("/:uid", protect, getUser);
 
 /**
  * @route  PUT /api/users/:uid
