@@ -10,7 +10,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { auth } from "../firebase/config";
-import { syncUserWithBackend } from "../api/userApi";
+import { getUserProfile, syncUserWithBackend } from "../api/userApi";
 import { AppUser } from "../types/userTypes";
 
 interface AuthContextType {
@@ -42,8 +42,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const fetchAndSetUser = useCallback(async (user: User) => {
     try {
-      // Sending token to backend and waiting for user profile data
-      const userData = await syncUserWithBackend(user);
+      const token = await user.getIdToken();
+
+      // Trying to GET the user profile
+      console.log("Attempting to fetch user profile...");
+      let userData = await getUserProfile(user.uid, token);
+
+      // Fallback to syncing the user profile if GET fails
+      if (!userData) {
+        console.warn("User missing in DB, attempting to sync...");
+        const userData = await syncUserWithBackend(user);
+      }
 
       // Combines Firebase identity + MongoDB user profile data if user found
       if (userData) {
