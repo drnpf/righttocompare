@@ -32,7 +32,6 @@ export default function FirebaseConnectionTest() {
           authDomain: appConfig.authDomain,
           currentUserUID: user ? user.uid : "None",
           currentUserEmail: user ? user.email : "None",
-          currentUserName: user ? user.displayName : "None",
           appName: auth.app.name,
           timestamp: new Date().toISOString(),
         });
