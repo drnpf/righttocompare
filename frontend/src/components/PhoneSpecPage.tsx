@@ -4,7 +4,7 @@ import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
 import { Checkbox } from "./ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
-import { Star, Smartphone, Camera, Cpu, Battery, Ruler, Weight, Droplet, ChevronDown, ThumbsUp, ThumbsDown, X, Monitor, Wifi, Mic, HardDrive, Zap, Radio, BarChart3, Palette, Heart, Bell, Plus, HelpCircle, DollarSign, PenSquare, TrendingDown, TrendingUp } from "lucide-react";
+import { Star, Smartphone, Camera, Cpu, Battery, Ruler, Weight, Droplet, ChevronDown, ThumbsUp, ThumbsDown, X, Monitor, Wifi, Mic, HardDrive, Zap, Radio, BarChart3, Palette, Heart, Bell, Plus, Check, HelpCircle, DollarSign, PenSquare, TrendingDown, TrendingUp } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Button } from "./ui/button";
@@ -137,9 +137,10 @@ interface PhoneSpecPageProps {
   onComparisonChange?: (phoneIds: string[]) => void;
   recentlyViewedPhones?: string[];
   onAddToRecentlyViewed?: (phoneId: string) => void;
+  onNavigateToCatalog?: () => void;
 }
 
-export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToComparison, comparisonPhoneIds: externalComparisonIds, onComparisonChange, recentlyViewedPhones, onAddToRecentlyViewed }: PhoneSpecPageProps) {
+export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToComparison, comparisonPhoneIds: externalComparisonIds, onComparisonChange, recentlyViewedPhones, onAddToRecentlyViewed, onNavigateToCatalog }: PhoneSpecPageProps) {
   const categories = Object.keys(phoneData.categories);
   
   // Calculate overall rating from user reviews
@@ -575,7 +576,7 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
               </div>
               
               {/* Browse Phone Catalog Section - Dashed Rectangle - Positioned to the right */}
-              <div className="hidden xl:flex absolute top-1/2 -translate-y-1/2 left-[calc(100%-40px)] flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent w-52 group/catalog hover:border-[#2c3968]/50 transition-all duration-300 min-h-[400px] z-10 cursor-pointer" onClick={() => alert('Navigate to Phone Catalog')}>
+              <div className="hidden xl:flex absolute top-1/2 -translate-y-1/2 left-[calc(100%-40px)] flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 dark:border-[#4a7cf6]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent dark:from-[#4a7cf6]/5 w-52 group/catalog hover:border-[#2c3968]/50 dark:hover:border-[#4a7cf6]/50 transition-all duration-300 min-h-[400px] z-10 cursor-pointer" onClick={onNavigateToCatalog}>
                 {/* Decorative Corner Accents */}
                 <div className="absolute top-0 left-0 w-3 h-3 border-t-4 border-l-4 border-[#2c3968] rounded-tl-sm"></div>
                 <div className="absolute top-0 right-0 w-3 h-3 border-t-4 border-r-4 border-[#2c3968] rounded-tr-sm"></div>
@@ -728,17 +729,31 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
             {/* Add to Compare Button - Second Row */}
             <div className="flex justify-center mt-3 w-full px-4 sm:px-0">
               <Button
-                className="bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] text-white hover:from-[#243059] hover:to-[#354368] shadow-lg hover:shadow-xl w-full sm:w-auto transition-all duration-300 hover:scale-105 group"
+                className={
+                  comparisonPhones.some(phone => phone.id === phoneData.id)
+                    ? "bg-green-500 dark:bg-green-600 text-white hover:bg-green-600 dark:hover:bg-green-700 shadow-lg w-full sm:w-auto transition-all duration-300 cursor-default"
+                    : "bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white hover:from-[#243059] hover:to-[#354368] dark:hover:from-[#3d6be5] dark:hover:to-[#4a7cf6] shadow-lg hover:shadow-xl w-full sm:w-auto transition-all duration-300 hover:scale-105 group"
+                }
                 onClick={handleAddToComparison}
+                disabled={comparisonPhones.some(phone => phone.id === phoneData.id)}
               >
-                <Plus className="w-4 h-4 mr-2 transition-transform group-hover:rotate-90" />
-                Add to Compare
+                {comparisonPhones.some(phone => phone.id === phoneData.id) ? (
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    Already in Compare
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2 transition-transform group-hover:rotate-90" />
+                    Add to Compare
+                  </>
+                )}
               </Button>
             </div>
             
             {/* Mobile Browse Phones Section - Shows below XL screens */}
             <div className="xl:hidden flex justify-center mt-6 px-4">
-              <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent w-full max-w-md py-6 px-4 group/catalog hover:border-[#2c3968]/50 transition-all duration-300 rounded-lg cursor-pointer" onClick={() => alert('Navigate to Phone Catalog')}>
+              <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 dark:border-[#4a7cf6]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent dark:from-[#4a7cf6]/5 w-full max-w-md py-6 px-4 group/catalog hover:border-[#2c3968]/50 dark:hover:border-[#4a7cf6]/50 transition-all duration-300 rounded-lg cursor-pointer" onClick={onNavigateToCatalog}>
                 {/* Decorative Corner Accents */}
                 <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-3 border-l-3 border-[#2c3968] rounded-tl-sm"></div>
                 <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t-3 border-r-3 border-[#2c3968] rounded-tr-sm"></div>
@@ -1964,15 +1979,15 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
           </CollapsibleContent>
         </div>
       </Collapsible>
+    </div>
 
-      {/* Recently Viewed Phones */}
-      <div id="recently-viewed">
-        <RecentlyViewedPhones 
-          currentPhone={phoneData.id} 
-          onNavigate={onNavigate}
-          recentlyViewedPhones={recentlyViewedPhones}
-        />
-      </div>
+    {/* Recently Viewed Phones */}
+    <div id="recently-viewed" className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto">
+      <RecentlyViewedPhones 
+        currentPhone={phoneData.id} 
+        onNavigate={onNavigate}
+        recentlyViewedPhones={recentlyViewedPhones}
+      />
     </div>
 
     {/* Comparison Cart */}
