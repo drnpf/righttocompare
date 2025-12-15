@@ -1,24 +1,16 @@
 import express, { Application, Request, Response } from "express";
 import cors from "cors";
-import mongoose from "mongoose";
 import dotenv from "dotenv";
-import admin from "firebase-admin";
 
 // Importing routes
 import userRoutes from "./routes/userRoutes";
 
 // Loading environment variables
-dotenv.config(); // THIS IS FOR DEVELOPMENT
-// maybe we can use system environment variables on production
+dotenv.config(); // THIS IS FOR DEVELOPMENT maybe we can use system environment variables on production
 
-// Initializing Firebase Admin SDK
-try {
-  const serviceAccount = require("../serviceAccountKey.json");
-  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-  console.log("Firebase Admin Initialized");
-} catch (error) {
-  console.error("Firebase Admin Error: Missing serviceAccountKey.json");
-}
+// Configuration imports
+import { connectDB } from "./config/db";
+import "./config/firebase";
 
 // Initializing Express App (BACKEND SERVER)
 const app: Application = express();
@@ -41,21 +33,13 @@ app.use(express.json());
 /**
  * Database Connection (MongoDB)
  */
-const connectDB = async (): Promise<void> => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGO_URI as string);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`MongoDB Connection Error: ${(error as Error).message}`);
-    process.exit(1);
-  }
-};
 connectDB();
 
 /**
  * API Routes
  */
 app.use("/api/users", userRoutes); // User routes (sync, profile, etc.)
+// ADD MORE ROUTES HERE
 
 // Health Check Route
 app.get("/", (req: Request, res: Response) => {
