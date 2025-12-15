@@ -3,6 +3,8 @@ import { User, Bell, Heart, Settings, ChevronDown, ChevronUp, Save, X } from "lu
 import { toast } from "sonner@2.0.3";
 import { phonesData } from "../data/phoneData";
 import { useAuth } from "../context/AuthContext";
+import { AppUser } from "../types/userTypes";
+import { updateUserProfile } from "../api/userApi";
 
 interface UserProfile {
   name: string;
@@ -48,51 +50,16 @@ const featureLabels = {
 };
 
 export default function UserProfilePage() {
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
+  const [profile, setProfile] = useState<AppUser | null>(null);
   const [activeSection, setActiveSection] = useState<string | null>("personal");
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [profile, setProfile] = useState<UserProfile>(() => {
-    const savedProfile = localStorage.getItem("userProfile");
-
-    if (savedProfile) {
-      return JSON.parse(savedProfile);
-    }
-
-    // Initialize with Firebase user data
-    return {
-      name: currentUser?.displayName || currentUser?.email?.split('@')[0] || "",
-      email: currentUser?.email || "",
-      preferences: {
-        preferredBrands: [],
-        budgetRange: { min: 0, max: 10000 },
-        priorityFeatures: {
-          camera: 3,
-          battery: 3,
-          performance: 3,
-          display: 3,
-          design: 3,
-        },
-      },
-      notifications: {
-        priceAlerts: true,
-        newReleases: true,
-        deals: true,
-        featureUpdates: false,
-      },
-      wishlist: JSON.parse(localStorage.getItem("wishlist") || "[]"),
-    };
-  });
-
   // Update profile when Firebase user changes
   useEffect(() => {
     if (currentUser) {
-      setProfile(prev => ({
-        ...prev,
-        name: currentUser.displayName || currentUser.email?.split('@')[0] || prev.name,
-        email: currentUser.email || prev.email,
-      }));
+      setProfile({ ...currentUser }); // Using shallow copy
     }
   }, [currentUser]);
 
@@ -102,84 +69,105 @@ export default function UserProfilePage() {
 
   const handleBrandToggle = (brand: string) => {
     setProfile((prev) => {
-      const brands = prev.preferences.preferredBrands.includes(brand)
-        ? prev.preferences.preferredBrands.filter((b) => b !== brand)
-        : [...prev.preferences.preferredBrands, brand];
+      if (!prev) return null;
+      const currentBrands = prev.preferences.preferredBrands;
+      const newBrands = currentBrands.includes(brand)
+        ? currentBrands.filter((b) => b !== brand)
+        : [...currentBrands, brand];
+
       return {
         ...prev,
-        preferences: { ...prev.preferences, preferredBrands: brands },
+        preferences: { ...prev.preferences, preferredBrands: newBrands },
       };
     });
     setHasChanges(true);
   };
 
   const handleBudgetChange = (min: number, max: number) => {
-    setProfile((prev) => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        budgetRange: { min, max },
-      },
-    }));
+    setProfile((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        preferences: { ...prev.preferences, budget: { min, max } },
+      };
+    });
     setHasChanges(true);
   };
 
-  const handleFeaturePriorityChange = (feature: keyof UserProfile["preferences"]["priorityFeatures"], value: number) => {
-    setProfile((prev) => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        priorityFeatures: {
-          ...prev.preferences.priorityFeatures,
-          [feature]: value,
+  const handleFeaturePriorityChange = (feature: keyof AppUser["preferences"]["priorityFeatures"], value: number) => {
+    setProfile((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        preferences: {
+          ...prev.preferences,
+          priorityFeatures: { ...prev.preferences.priorityFeatures, [feature]: value },
         },
-      },
-    }));
+      };
+    });
     setHasChanges(true);
   };
 
-  const handleNotificationToggle = (key: keyof UserProfile["notifications"]) => {
-    setProfile((prev) => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        [key]: !prev.notifications[key],
-      },
-    }));
+  const handleNotificationToggle = (key: keyof AppUser["preferences"]["notifications"]) => {
+    setProfile((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        preferences: {
+          ...prev.preferences,
+          notifications: {
+            ...prev.preferences.notifications,
+            [key]: !prev.preferences.notifications[key],
+          },
+        },
+      };
+    });
     setHasChanges(true);
   };
 
   const handleRemoveFromWishlist = (phoneId: string) => {
-    setProfile((prev) => ({
-      ...prev,
-      wishlist: prev.wishlist.filter((id) => id !== phoneId),
-    }));
+    setProfile((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        wishlist: prev.wishlist.filter((id) => id !== phoneId),
+      };
+    });
     setHasChanges(true);
-    toast.success("Removed from wishlist");
-  };
-
-  const handleSaveProfile = () => {
-    setIsSaving(true);
-    
-    setTimeout(() => {
-      localStorage.setItem("userProfile", JSON.stringify(profile));
-      localStorage.setItem("wishlist", JSON.stringify(profile.wishlist));
-      setHasChanges(false);
-      setIsSaving(false);
-      toast.success("Profile saved successfully!");
-    }, 600);
   };
 
   const handleNameChange = (name: string) => {
-    setProfile((prev) => ({ ...prev, name }));
+    setProfile((prev) => {
+      if (!prev) return null;
+      return { ...prev, displayName: name };
+    });
     setHasChanges(true);
   };
 
-  // Sync wishlist from localStorage on mount
-  useEffect(() => {
-    const wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
-    setProfile((prev) => ({ ...prev, wishlist }));
-  }, []);
+  const handleSaveProfile = async () => {
+    if (!profile || !currentUser) return;
+    setIsSaving(true);
+
+    try {
+      const token = await currentUser.firebaseUser.getIdToken();
+      const uid = currentUser.uid;
+
+      // Updating the user profile
+      const updateUser = await updateUserProfile(uid, token, profile);
+
+      toast.success("Profile saved!");
+      setHasChanges(false);
+    } catch (error) {
+      console.error(error);
+      toast.error("Error saving profile");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (authLoading || !profile) {
+    return <div className="p-12 text-center">Loading profile...</div>;
+  }
 
   return (
     <div className="min-h-[calc(100vh-140px)] bg-gradient-to-b from-gray-50 to-white">
@@ -213,7 +201,7 @@ export default function UserProfilePage() {
             <label className="block mb-2 text-[#2c3968]">Display Name</label>
             <input
               type="text"
-              value={profile.name}
+              value={profile.displayName || ""}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="Enter your display name"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2c3968] focus:border-transparent transition-all"
@@ -274,8 +262,7 @@ export default function UserProfilePage() {
                       key={range.label}
                       onClick={() => handleBudgetChange(range.min, range.max)}
                       className={`px-4 py-3 rounded-lg border-2 transition-all duration-300 ${
-                        profile.preferences.budgetRange.min === range.min &&
-                        profile.preferences.budgetRange.max === range.max
+                        profile.preferences.budget.min === range.min && profile.preferences.budget.max === range.max
                           ? "border-[#2c3968] bg-[#2c3968] text-white shadow-md"
                           : "border-gray-300 bg-white text-gray-700 hover:border-[#2c3968] hover:bg-gray-50"
                       }`}
@@ -365,33 +352,32 @@ export default function UserProfilePage() {
                     label: "Feature Updates",
                     description: "Updates about new website features",
                   },
-                ].map(({ key, label, description }) => (
-                  <div
-                    key={key}
-                    className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-[#2c3968] transition-colors"
-                  >
-                    <div>
-                      <h4 className="text-gray-800 mb-1">{label}</h4>
-                      <p className="text-gray-600 text-sm">{description}</p>
-                    </div>
-                    <button
-                      onClick={() => handleNotificationToggle(key as keyof UserProfile["notifications"])}
-                      className={`relative w-14 h-8 rounded-full transition-all duration-300 ${
-                        profile.notifications[key as keyof UserProfile["notifications"]]
-                          ? "bg-[#2c3968]"
-                          : "bg-gray-300"
-                      }`}
+                ].map(({ key, label, description }) => {
+                  const notifKey = key as keyof AppUser["preferences"]["notifications"];
+                  return (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-[#2c3968] transition-colors"
                     >
-                      <div
-                        className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
-                          profile.notifications[key as keyof UserProfile["notifications"]]
-                            ? "translate-x-7"
-                            : "translate-x-1"
+                      <div>
+                        <h4 className="text-gray-800 mb-1">{label}</h4>
+                        <p className="text-gray-600 text-sm">{description}</p>
+                      </div>
+                      <button
+                        onClick={() => handleNotificationToggle(notifKey)}
+                        className={`relative w-14 h-8 rounded-full transition-all duration-300 ${
+                          profile.preferences.notifications[notifKey] ? "bg-[#2c3968]" : "bg-gray-300"
                         }`}
-                      />
-                    </button>
-                  </div>
-                ))}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
+                            profile.preferences.notifications[notifKey] ? "translate-x-7" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -434,7 +420,7 @@ export default function UserProfilePage() {
                   {profile.wishlist.map((phoneId) => {
                     const phone = phonesData[phoneId];
                     if (!phone) return null;
-                    
+
                     return (
                       <div
                         key={phoneId}
@@ -448,11 +434,7 @@ export default function UserProfilePage() {
                         </button>
                         <div className="flex gap-4">
                           <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
-                            <img
-                              src={phone.images.main}
-                              alt={phone.name}
-                              className="w-full h-full object-contain"
-                            />
+                            <img src={phone.images.main} alt={phone.name} className="w-full h-full object-contain" />
                           </div>
                           <div className="flex-1">
                             <h4 className="text-gray-800 mb-1">{phone.name}</h4>
