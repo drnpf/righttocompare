@@ -40,3 +40,17 @@ export const createUser = async (uid: string, email: string, name?: string): Pro
     lastLogin: new Date(),
   });
 };
+
+/**
+ * Updates a user's profile data (Display Name, Preferences, etc.)
+ * @param uid The Firebase UID of the user to update
+ * @param data The partial data to update (displayName, preferences, etc.)
+ * @returns The updated User document or null if not found
+ */
+export const updateUserProfile = async (uid: string, data: Partial<IUser>): Promise<IUser | null> => {
+  return await User.findOneAndUpdate(
+    { firebaseUid: uid },
+    { $set: data }, // Applies the updates
+    { new: true, runValidators: true } // Returns the new user doc and does a schema check
+  );
+};
