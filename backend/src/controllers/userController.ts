@@ -6,9 +6,10 @@ import * as UserService from "../services/userService";
  * Sync Firebase User to MongoDB (for Retrieval or Creation).
  * Checks if user exists in MongoDB based on Firebase UID from token.
  * If exists, returns the user profile; otherwise, creates a new user document.
- * @route POST /api/auth/sync
+ * @route POST /api/users/sync
  * @param req Express Request with Firebase User data
  * @param res Express Response
+ * @return The user profile data
  */
 export const syncUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -48,16 +49,49 @@ export const syncUser = async (req: AuthRequest, res: Response): Promise<void> =
 };
 
 /**
+ * Retrieves a user's profile data from MongoDB database.
+ * @route GET /api/users/:uid
+ * @param req Express Request with Firebase User data
+ * @param res Express Response
+ * @returns The user profile data
+ */
+export const getUser = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const tokenUid = req.user?.uid; // Who is logged in (from Token)
+    const uid = req.params.uid; // Who the edit is attempted on (from URL)
+
+    // Authorization check of URL uid from request against the token uid
+    if (tokenUid !== uid) {
+      res.status(403).json({ message: "Forbidden: You can only view your own profile" });
+      return;
+    }
+
+    // Asking UserService to fetch the user
+    const user = await UserService.findUserByUid(uid);
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+    res.status(200).json(user); // User found; 200 = OK (in http requests)
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ message: "Server error fetching user" });
+  }
+};
+
+/**
  * Updates an existing user's profile.
- * Security: Ensures the logged-in user can only update their OWN profile.
  * @route PUT /api/users/:uid
+ * @param req Express Request with Firebase User data
+ * @param res Express Response
+ * @returns The updated user profile data
  */
 export const updateUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const tokenUid = req.user?.uid; // Who is logged in (from Token)
     const paramUid = req.params.uid; // Who the edit is attempted on (from URL)
 
-    // Authorization check of uid from request against the token uid
+    // Authorization check of URL uid from request against the token uid
     if (tokenUid !== paramUid) {
       res.status(403).json({ message: "Forbidden: You can only edit your own profile" });
       return;
