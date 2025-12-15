@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 
 // Importing routes
 import userRoutes from "./routes/userRoutes";
+import phoneRoutes from "./routes/phoneRoutes";
 
 // Loading environment variables
 dotenv.config(); // THIS IS FOR DEVELOPMENT maybe we can use system environment variables on production
@@ -38,7 +39,9 @@ connectDB();
 /**
  * API Routes
  */
-app.use("/api/users", userRoutes); // User routes (sync, profile, etc.)
+app.use("/api/users", userRoutes);
+app.use("/api/phones", phoneRoutes);
+
 // ADD MORE ROUTES HERE
 
 // Health Check Route
