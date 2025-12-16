@@ -27,6 +27,8 @@ app.use(
     // Allows request from the following server URLs
     origin: "http://localhost:3000", // Frontend URL (CHANGE URL HERE ON PRODUCTION)
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 app.use(express.json());
