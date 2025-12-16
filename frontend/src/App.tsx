@@ -3,6 +3,7 @@ import NavigationBar from "./imports/NavigationBar";
 import FooterBar from "./imports/FooterBar";
 import PhoneSpecPage from "./components/PhoneSpecPage";
 import PhoneComparisonPage from "./components/PhoneComparisonPage";
+import PhoneCatalogPage from "./components/PhoneCatalogPage";
 import DiscussionsPage from "./components/DiscussionsPage";
 import DiscussionDetailPage from "./components/DiscussionDetailPage";
 import SignInPage from "./components/SignInPage";
@@ -13,18 +14,24 @@ import AIChatWidget from "./components/AIChatWidget";
 import { phonesData } from "./data/phoneData";
 import { Toaster } from "sonner@2.0.3";
 import { DarkModeProvider } from "./components/DarkModeContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import FirebaseConnectionTest from "./components/FirebaseConnectionTest";
 
-type PageType = "spec" | "comparison" | "discussions" | "discussionDetail" | "signIn" | "signUp" | "profile" | "admin";
-
-interface User {
-  name: string;
-  email: string;
-}
+type PageType =
+  | "spec"
+  | "comparison"
+  | "catalog"
+  | "discussions"
+  | "discussionDetail"
+  | "signIn"
+  | "signUp"
+  | "profile"
+  | "admin";
 
 // Helper functions for localStorage
 const getRecentlyViewedFromStorage = (): string[] => {
   try {
-    const stored = localStorage.getItem('recentlyViewedPhones');
+    const stored = localStorage.getItem("recentlyViewedPhones");
     return stored ? JSON.parse(stored) : [];
   } catch {
     return [];
@@ -33,56 +40,32 @@ const getRecentlyViewedFromStorage = (): string[] => {
 
 const saveRecentlyViewedToStorage = (phoneIds: string[]) => {
   try {
-    localStorage.setItem('recentlyViewedPhones', JSON.stringify(phoneIds));
+    localStorage.setItem("recentlyViewedPhones", JSON.stringify(phoneIds));
   } catch {
     // Ignore storage errors
   }
 };
 
-const getUserFromStorage = (): User | null => {
-  try {
-    const stored = localStorage.getItem('currentUser');
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
-};
-
-const saveUserToStorage = (user: User | null) => {
-  try {
-    if (user) {
-      localStorage.setItem('currentUser', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('currentUser');
-    }
-  } catch {
-    // Ignore storage errors
-  }
-};
-
-export default function App() {
+function AppContent() {
+  const { currentUser, signOut } = useAuth();
   const [currentPage, setCurrentPage] = useState<string>("galaxy-s24-ultra");
-  const [pageType, setPageType] = useState<PageType>("spec");
+  const [pageType, setPageType] = useState<PageType>("catalog");
   const [comparisonPhoneIds, setComparisonPhoneIds] = useState<string[]>([]);
   const [recentlyViewedPhones, setRecentlyViewedPhones] = useState<string[]>([]);
   const [currentDiscussionId, setCurrentDiscussionId] = useState<string>("");
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // Load recently viewed phones and user from localStorage on mount
   useEffect(() => {
     const stored = getRecentlyViewedFromStorage();
     setRecentlyViewedPhones(stored);
-    
-    const user = getUserFromStorage();
-    setCurrentUser(user);
   }, []);
 
   // Add current page to recently viewed when it changes
   useEffect(() => {
     if (pageType === "spec" && currentPage) {
-      setRecentlyViewedPhones(prev => {
+      setRecentlyViewedPhones((prev) => {
         // Remove the current phone if it already exists
-        const filtered = prev.filter(id => id !== currentPage);
+        const filtered = prev.filter((id) => id !== currentPage);
         // Add current phone to the beginning
         const updated = [currentPage, ...filtered].slice(0, 8); // Keep max 8 phones
         saveRecentlyViewedToStorage(updated);
@@ -94,22 +77,22 @@ export default function App() {
   const navigateToPhone = (phoneId: string) => {
     setCurrentPage(phoneId);
     setPageType("spec");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const navigateToComparison = (phoneIds: string[]) => {
     setComparisonPhoneIds(phoneIds);
     setPageType("comparison");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleBackToSpecs = () => {
     setPageType("spec");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleRemoveFromComparison = (phoneId: string) => {
-    const updatedIds = comparisonPhoneIds.filter(id => id !== phoneId);
+    const updatedIds = comparisonPhoneIds.filter((id) => id !== phoneId);
     setComparisonPhoneIds(updatedIds);
   };
 
@@ -123,9 +106,9 @@ export default function App() {
 
   // Add a phone to recently viewed without navigating
   const addPhoneToRecentlyViewed = (phoneId: string) => {
-    setRecentlyViewedPhones(prev => {
+    setRecentlyViewedPhones((prev) => {
       // Remove the phone if it already exists
-      const filtered = prev.filter(id => id !== phoneId);
+      const filtered = prev.filter((id) => id !== phoneId);
       // Add phone to the beginning
       const updated = [phoneId, ...filtered].slice(0, 8); // Keep max 8 phones
       saveRecentlyViewedToStorage(updated);
@@ -136,83 +119,72 @@ export default function App() {
   const handleComparisonToolClick = () => {
     // Always navigate to comparison page - it will handle empty states
     setPageType("comparison");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDiscussionsClick = () => {
     setPageType("discussions");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleViewDiscussion = (discussionId: string) => {
     setCurrentDiscussionId(discussionId);
     setPageType("discussionDetail");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleBackToDiscussions = () => {
     setPageType("discussions");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleSignInClick = () => {
     setPageType("signIn");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleSignUpClick = () => {
     setPageType("signUp");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleSignIn = (email: string, password: string) => {
-    // In a real app, this would validate credentials with a backend
-    // For now, we'll create a user from the email
-    const name = email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1);
-    const user: User = { name, email };
-    
-    setCurrentUser(user);
-    saveUserToStorage(user);
-    
-    // Navigate to profile page after sign in
+  const handleSignInSuccess = () => {
+    // Navigate to profile page after successful sign in
     setPageType("profile");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleSignUp = (name: string, email: string, password: string) => {
-    // In a real app, this would create an account with a backend
-    const user: User = { name, email };
-    
-    setCurrentUser(user);
-    saveUserToStorage(user);
-    
-    // Navigate to profile page after sign up
+  const handleSignUpSuccess = () => {
+    // Navigate to profile page after successful sign up
     setPageType("profile");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleSignOut = () => {
-    setCurrentUser(null);
-    saveUserToStorage(null);
+  const handleSignOut = async () => {
+    await signOut();
     setPageType("spec");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleProfileClick = () => {
     setPageType("profile");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleAdminClick = () => {
     setPageType("admin");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCatalogClick = () => {
+    setPageType("catalog");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleLogoClick = () => {
-    // Navigate to default home page (Galaxy S24 Ultra)
-    setCurrentPage("galaxy-s24-ultra");
-    setPageType("spec");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Navigate to catalog page
+    setPageType("catalog");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Get the current phone data
@@ -222,81 +194,90 @@ export default function App() {
     <DarkModeProvider>
       <div className="min-h-screen bg-[#f7f7f7] dark:bg-[#0d1117] flex flex-col transition-colors duration-300">
         <Toaster position="top-right" richColors />
-      <div className="relative h-[80px] shrink-0">
-        <NavigationBar 
-          onComparisonToolClick={handleComparisonToolClick}
-          onDiscussionsClick={handleDiscussionsClick}
-          isAuthenticated={currentUser !== null}
-          user={currentUser}
-          onSignInClick={handleSignInClick}
-          onSignOut={handleSignOut}
-          onProfileClick={handleProfileClick}
-          onAdminClick={handleAdminClick}
-          onLogoClick={handleLogoClick}
-        />
-      </div>
-      
-      <main className="flex-1">
-        {pageType === "admin" ? (
-          <AdminDashboardPage />
-        ) : pageType === "profile" ? (
-          <UserProfilePage />
-        ) : pageType === "signIn" ? (
-          <SignInPage 
-            onSignIn={handleSignIn}
-            onNavigateToSignUp={handleSignUpClick}
+        <div className="relative h-[80px] shrink-0">
+          <NavigationBar
+            onComparisonToolClick={handleComparisonToolClick}
+            onDiscussionsClick={handleDiscussionsClick}
+            isAuthenticated={currentUser !== null}
+            user={currentUser}
+            onSignInClick={handleSignInClick}
+            onSignOut={handleSignOut}
+            onProfileClick={handleProfileClick}
+            onAdminClick={handleAdminClick}
+            onCatalogClick={handleCatalogClick}
+            onLogoClick={handleLogoClick}
           />
-        ) : pageType === "signUp" ? (
-          <SignUpPage 
-            onSignUp={handleSignUp}
-            onNavigateToSignIn={handleSignInClick}
-          />
-        ) : pageType === "discussionDetail" ? (
-          <DiscussionDetailPage 
-            discussionId={currentDiscussionId}
-            onBack={handleBackToDiscussions}
-          />
-        ) : pageType === "discussions" ? (
-          <DiscussionsPage 
-            onNavigate={navigateToPhone}
-            onViewDiscussion={handleViewDiscussion}
-          />
-        ) : pageType === "comparison" ? (
-          <PhoneComparisonPage 
-            phoneIds={comparisonPhoneIds}
-            onRemovePhone={handleRemoveFromComparison}
-            onBackToSpecs={handleBackToSpecs}
-            onAddPhone={handleAddToComparison}
-            onNavigate={navigateToPhone}
-            recentlyViewedPhones={recentlyViewedPhones}
-          />
-        ) : currentPhoneData ? (
-          <PhoneSpecPage 
-            phoneData={currentPhoneData} 
-            onNavigate={navigateToPhone}
-            onNavigateToComparison={navigateToComparison}
-            comparisonPhoneIds={comparisonPhoneIds}
-            onComparisonChange={setComparisonPhoneIds}
-            recentlyViewedPhones={recentlyViewedPhones}
-            onAddToRecentlyViewed={addPhoneToRecentlyViewed}
-          />
-        ) : (
-          <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 pt-8">
-            <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-12 text-center">
-              <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-3">Phone Not Found</h2>
-              <p className="text-[#666] dark:text-[#a0a8b8]">The phone you're looking for doesn't exist.</p>
+        </div>
+
+        <main className="flex-1">
+          {pageType === "admin" ? (
+            <AdminDashboardPage />
+          ) : pageType === "profile" ? (
+            <UserProfilePage />
+          ) : pageType === "signIn" ? (
+            <SignInPage onSignInSuccess={handleSignInSuccess} onNavigateToSignUp={handleSignUpClick} />
+          ) : pageType === "signUp" ? (
+            <SignUpPage onSignUpSuccess={handleSignUpSuccess} onNavigateToSignIn={handleSignInClick} />
+          ) : pageType === "discussionDetail" ? (
+            <DiscussionDetailPage discussionId={currentDiscussionId} onBack={handleBackToDiscussions} />
+          ) : pageType === "discussions" ? (
+            <DiscussionsPage onNavigate={navigateToPhone} onViewDiscussion={handleViewDiscussion} />
+          ) : pageType === "comparison" ? (
+            <PhoneComparisonPage
+              phoneIds={comparisonPhoneIds}
+              onRemovePhone={handleRemoveFromComparison}
+              onBackToSpecs={handleBackToSpecs}
+              onAddPhone={handleAddToComparison}
+              onNavigate={navigateToPhone}
+              recentlyViewedPhones={recentlyViewedPhones}
+            />
+          ) : pageType === "catalog" ? (
+            <PhoneCatalogPage
+              onNavigate={navigateToPhone}
+              comparisonPhoneIds={comparisonPhoneIds}
+              onComparisonChange={setComparisonPhoneIds}
+              onNavigateToComparison={navigateToComparison}
+              recentlyViewedPhones={recentlyViewedPhones}
+            />
+          ) : currentPhoneData ? (
+            <PhoneSpecPage
+              phoneData={currentPhoneData}
+              onNavigate={navigateToPhone}
+              onNavigateToComparison={navigateToComparison}
+              comparisonPhoneIds={comparisonPhoneIds}
+              onComparisonChange={setComparisonPhoneIds}
+              recentlyViewedPhones={recentlyViewedPhones}
+              onAddToRecentlyViewed={addPhoneToRecentlyViewed}
+              onNavigateToCatalog={handleCatalogClick}
+            />
+          ) : (
+            <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 pt-8">
+              <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-12 text-center">
+                <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-3">Phone Not Found</h2>
+                <p className="text-[#666] dark:text-[#a0a8b8]">The phone you're looking for doesn't exist.</p>
+              </div>
             </div>
-          </div>
-        )}
-      </main>
-      
-      <div className="relative h-[60px] shrink-0 mt-12">
-        <FooterBar />
-      </div>
+          )}
+        </main>
+
+        <div className="relative h-[60px] shrink-0 mt-12">
+          <FooterBar />
+        </div>
 
         {/* AI Chat Widget */}
         <AIChatWidget onNavigate={navigateToPhone} />
+
+        {/* Firebase Connection Test - Remove this after testing */}
+        <FirebaseConnectionTest />
       </div>
     </DarkModeProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

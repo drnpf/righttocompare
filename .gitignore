@@ -67,3 +67,7 @@ lerna-debug.log*
 
 # OS generated files
 Thumbs.db
+
+# --- BACKEND IGNORES ---
+# Ignores keys
+backend/src/config/keys/*
