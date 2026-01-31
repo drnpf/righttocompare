@@ -15,7 +15,7 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, resetPassword } = useAuth();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [isResetting, setIsResetting] = useState(false);
@@ -92,6 +92,7 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validation checks for email input field
     if (!resetEmail) {
       toast.error("Please enter your email address");
       return;
@@ -104,13 +105,28 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
 
     setIsResetting(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsResetting(false);
+    // Pushing user email to Firebase servers to handle sending password reset link
+    try {
+      await resetPassword(resetEmail);
+
+      // If password reset link successfully sent
       setShowForgotPassword(false);
       setResetEmail("");
-      toast.success("Password reset link sent! Check your email.");
-    }, 1000);
+      toast.success("If an account exists, a reset link as been sent.");
+    } catch (error: any) {
+      console.error("Reset password error:", error);
+
+      // ERROR 1: Email does not exisT
+      if (error.code === "auth/user-not-found") {
+        toast.error("If an account exists, a reset link as been sent.");
+
+        // ERROR 2: Servers down or some other technical problem
+      } else {
+        toast.error("Unable to process request. Please try again later.");
+      }
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   return (

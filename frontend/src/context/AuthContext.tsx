@@ -8,6 +8,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   updateProfile,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { auth } from "../firebase/config";
 import { getUserProfile, syncUserWithBackend, updateUserProfile } from "../api/userApi";
@@ -20,6 +21,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -110,6 +112,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await firebaseSignOut(auth);
   }
 
+  const resetPassword = (email: string) => {
+    return sendPasswordResetEmail(auth, email);
+  };
+
   // Listen to auth state changes
   useEffect(() => {
     console.log("🔥 AuthContext: Setting up auth listener...");
@@ -135,6 +141,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signUp,
     signInWithGoogle,
     signOut,
+    resetPassword,
   };
 
   return (
