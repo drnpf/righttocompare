@@ -1,15 +1,27 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 // Interfaces (for Review and Phone)
+export interface ICategoryRatings {
+  camera: number;
+  battery: number;
+  design: number;
+  performance: number;
+  value: number;
+}
+
 export interface IReview {
   id: number;
+  userId: string; // Firebase UID
   userName: string;
-  rating: number; // 1-5
+  rating: number; // 1-5 (calculated average from categoryRatings)
+  categoryRatings: ICategoryRatings;
   date: string;
   title: string;
   review: string;
   helpful: number;
   notHelpful: number;
+  helpfulVoters: string[]; // User IDs who voted helpful
+  notHelpfulVoters: string[]; // User IDs who voted not helpful
 }
 
 export interface IPhone extends Document {
@@ -111,14 +123,24 @@ const PhoneSchema: Schema = new Schema(
     },
     reviews: [
       {
-        id: Number,
-        userName: String,
-        rating: Number,
-        date: String,
-        title: String,
-        review: String,
+        id: { type: Number, required: true },
+        userId: { type: String, required: true },
+        userName: { type: String, required: true },
+        rating: { type: Number, required: true, min: 1, max: 5 },
+        categoryRatings: {
+          camera: { type: Number, required: true, min: 1, max: 5 },
+          battery: { type: Number, required: true, min: 1, max: 5 },
+          design: { type: Number, required: true, min: 1, max: 5 },
+          performance: { type: Number, required: true, min: 1, max: 5 },
+          value: { type: Number, required: true, min: 1, max: 5 },
+        },
+        date: { type: String, required: true },
+        title: { type: String, required: true },
+        review: { type: String, required: true },
         helpful: { type: Number, default: 0 },
         notHelpful: { type: Number, default: 0 },
+        helpfulVoters: { type: [String], default: [] },
+        notHelpfulVoters: { type: [String], default: [] },
       },
     ],
   },
