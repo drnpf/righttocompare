@@ -171,16 +171,16 @@ export default function PhoneCatalogPage({
 
         {/* Controls */}
         <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6 mb-8">
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
             {/* Search Bar */}
-            <div className="relative flex-1 w-full md:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999] dark:text-[#707070]" size={20} />
+            <div className="relative flex-1 w-full lg:max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#999] dark:text-[#707070]" size={20} />
               <input
                 type="text"
                 placeholder="Search phones..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
+                className="w-full pl-12 pr-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
               />
             </div>
 
@@ -191,12 +191,6 @@ export default function PhoneCatalogPage({
                   value={manufacturerFilter}
                   onChange={(e) => setManufacturerFilter(e.target.value)}
                   className="appearance-none pl-4 pr-10 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all cursor-pointer"
-                  style={{
-                    WebkitAppearance: "none",
-                    MozAppearance: "none",
-                    appearance: "none",
-                    backgroundImage: "none",
-                  }} // Removes browser default chevron
                 >
                   <option value="all">All Brands</option>
                   {manufacturers.map((manufacturer) => (
@@ -217,12 +211,6 @@ export default function PhoneCatalogPage({
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as "name" | "price" | "release")}
                   className="appearance-none pl-4 pr-10 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all cursor-pointer"
-                  style={{
-                    WebkitAppearance: "none",
-                    MozAppearance: "none",
-                    appearance: "none",
-                    backgroundImage: "none",
-                  }} // Removes browser default chevron
                 >
                   <option value="name">Sort: Name</option>
                   <option value="price">Sort: Price</option>
@@ -301,15 +289,13 @@ export default function PhoneCatalogPage({
           viewMode === "grid" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredPhones.map((phone) => (
-                <div
+                <button
                   key={phone.id}
-                  className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-200 group cursor-pointer"
+                  onClick={() => onNavigate(phone.id)}
+                  className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-200 text-left group"
                 >
                   {/* Phone Image */}
-                  <div
-                    onClick={() => onNavigate(phone.id)}
-                    className="aspect-square bg-gradient-to-br from-[#f7f7f7] to-[#e5e5e5] dark:from-[#1a1f2e] dark:to-[#252b3d] flex items-center justify-center p-8"
-                  >
+                  <div className="aspect-square bg-gradient-to-br from-[#f7f7f7] to-[#e5e5e5] dark:from-[#1a1f2e] dark:to-[#252b3d] flex items-center justify-center p-8">
                     <img
                       src={phone.images.main}
                       alt={phone.name}
@@ -319,7 +305,7 @@ export default function PhoneCatalogPage({
 
                   {/* Phone Info */}
                   <div className="p-5">
-                    <div onClick={() => onNavigate(phone.id)} className="mb-3">
+                    <div className="mb-3">
                       <p className="text-[#999] dark:text-[#707070] mb-1">{phone.manufacturer}</p>
                       <h3 className="text-[#1e1e1e] dark:text-white mb-2">{phone.name}</h3>
                       <div className="flex items-center gap-2 mb-2">
@@ -333,7 +319,7 @@ export default function PhoneCatalogPage({
                       <p className="text-[#2c3968] dark:text-[#4a7cf6]">{phone.price}</p>
                     </div>
 
-                    <div onClick={() => onNavigate(phone.id)} className="space-y-1.5">
+                    <div className="space-y-1.5">
                       {phone.quickSpecs.slice(0, 3).map((spec, index) => (
                         <div key={index} className="flex items-center gap-2 text-[#666] dark:text-[#a0a8b8]">
                           <spec.icon size={16} className="shrink-0" />
@@ -359,7 +345,7 @@ export default function PhoneCatalogPage({
                       )}
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           ) : (
