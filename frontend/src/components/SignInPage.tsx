@@ -114,7 +114,7 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
       setResetEmail("");
       toast.success("If an account exists, a reset link as been sent.");
     } catch (error: any) {
-      console.error("Reset password error:", error);
+      console.error("Reset password error:", error); // logging error
 
       // ERROR 1: Email does not exisT
       if (error.code === "auth/user-not-found") {
