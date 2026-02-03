@@ -9,7 +9,6 @@ interface PasswordResetPageProps {
 export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetPageProps) {
   // Functions from AuthContext
   const { confirmThePassword, verifyTheResetCode } = useAuth();
-
   const [oobCode, setOobCode] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [newPassword, setNewPassword] = useState("");
@@ -59,7 +58,7 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
     }
   };
 
-  // COME BACK - need to add more secure password policy
+  // COME BACK - need to add more robust password policy
   const validatePassword = (password: string) => {
     if (password.length < 6) {
       return "Password must be at least 6 characters long";
