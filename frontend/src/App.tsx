@@ -174,7 +174,7 @@ function AppContent() {
 
   const handleSignOut = async () => {
     await signOut();
-    setPageType("spec");
+    setPageType("catalog");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
