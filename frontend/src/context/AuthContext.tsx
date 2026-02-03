@@ -9,6 +9,8 @@ import {
   signInWithPopup,
   updateProfile,
   sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
 } from "firebase/auth";
 import { auth } from "../firebase/config";
 import { getUserProfile, syncUserWithBackend, updateUserProfile } from "../api/userApi";
@@ -22,6 +24,8 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  verifyTheResetCode: (oobCode: string) => Promise<void>;
+  confirmThePassword: (oobCode: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -112,8 +116,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await firebaseSignOut(auth);
   }
 
+  // Password reset link
   const resetPassword = (email: string) => {
     return sendPasswordResetEmail(auth, email);
+  };
+
+  // Verifying password reset code
+  const verifyTheResetCode = (oobCode: string) => {
+    return verifyPasswordResetCode(auth, oobCode);
+  };
+
+  // Password reset confirmation (for custom page)
+  const confirmThePassword = (oobCode: string, newPassword: string) => {
+    return confirmPasswordReset(auth, oobCode, newPassword);
   };
 
   // Listen to auth state changes
@@ -134,6 +149,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return unsubscribe;
   }, []);
 
+  // Public interface for functions (PUT NEW FUNCTIONS NAMES FOR AuthContext HERE)
   const value = {
     currentUser,
     loading,
@@ -142,6 +158,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signInWithGoogle,
     signOut,
     resetPassword,
+    verifyTheResetCode,
+    confirmThePassword,
   };
 
   return (
