@@ -220,7 +220,6 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
   const [isReviewsOpen, setIsReviewsOpen] = useState(true);
   const [isPriceTrackingOpen, setIsPriceTrackingOpen] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const reviewsPerPage = 3;
   const reviewsSectionRef = useRef<HTMLDivElement>(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isPriceAlertOpen, setIsPriceAlertOpen] = useState(false);
