@@ -1,7 +1,7 @@
 import { User } from "firebase/auth";
 import { AppUser } from "../types/userTypes";
 
-const API_URL = "http://localhost:5000/api/users"; // CHANGE LATER ON PRODUCTION
+const API_URL = "http://localhost:5001/api/users"; // CHANGE LATER ON PRODUCTION
 
 /**
  * Bridges the Frontend and Backend. Sends Firebase ID token to backend.
