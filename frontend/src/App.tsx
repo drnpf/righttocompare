@@ -17,6 +17,7 @@ import { DarkModeProvider } from "./components/DarkModeContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import FirebaseConnectionTest from "./components/FirebaseConnectionTest";
 import PasswordResetPage from "./components/PasswordResetPage";
+import { Shield } from "lucide-react";
 
 type PageType =
   | "spec"
@@ -225,7 +226,34 @@ function AppContent() {
           {pageType === "passwordReset" ? (
             <PasswordResetPage onNavigateToSignIn={handleSignInClick} />
           ) : pageType === "admin" ? (
-            <AdminDashboardPage />
+            currentUser?.role === "admin" ? (
+              <AdminDashboardPage />
+            ) : (
+              // Handles invalid access to admin page
+              <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 pt-8">
+                <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-16 text-center flex flex-col items-center border border-[#e5e5e5] dark:border-[#2d3548]">
+                  <div className="h-16 w-full" />
+                  <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-full mb-6">
+                    <Shield size={48} className="text-red-600 dark:text-red-500" />
+                  </div>
+
+                  <h2 className="text-[#2c3968] dark:text-white text-3xl font-bold mb-4">Access Denied</h2>
+
+                  <p className="text-[#666] dark:text-[#a0a8b8] max-w-md mx-auto mb-8 text-lg">
+                    You don't have the administrative privileges required to view the
+                    <strong> RightToCompare</strong> dashboard.
+                  </p>
+
+                  <button
+                    onClick={handleCatalogClick}
+                    className="bg-[#2c3968] hover:bg-[#3d4a7a] text-white px-8 py-3 rounded-full font-bold transition-all shadow-md hover:shadow-lg active:scale-95"
+                  >
+                    Return to Catalog
+                  </button>
+                  <div className="h-16 w-full" />
+                </div>
+              </div>
+            )
           ) : pageType === "profile" ? (
             <UserProfilePage />
           ) : pageType === "signIn" ? (
