@@ -15,7 +15,7 @@ import "./config/firebase";
 
 // Initializing Express App (BACKEND SERVER)
 const app: Application = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 /**
  * Middleware Configurations (Express)
@@ -25,7 +25,7 @@ const PORT = process.env.PORT || 5000;
 app.use(
   cors({
     // Allows request from the following server URLs
-    origin: "http://localhost:3001", // Frontend URL (CHANGE URL HERE ON PRODUCTION)
+    origin: "http://localhost:3000", // Frontend URL (CHANGE URL HERE ON PRODUCTION)
     credentials: true,
   }),
 );
