@@ -4,6 +4,7 @@ import imgRightToCompareIcon from "figma:asset/18bcc14c7462237f04633edea2ae04031
 import { User, LogOut, UserCircle, Shield, Moon } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useDarkMode } from "../components/DarkModeContext";
+import { AppUser } from "../types/userTypes";
 
 /**
  * @figmaAssetKey 2f445a571b3309ebad6f453668e4e71c19f9efae
@@ -33,11 +34,6 @@ function LogoButton({ className, onClick }: { className?: string; onClick?: () =
   );
 }
 
-interface User {
-  displayName?: string | null;
-  email: string | null;
-}
-
 function NavigationBarLinks({
   onComparisonToolClick,
   onDiscussionsClick,
@@ -52,7 +48,7 @@ function NavigationBarLinks({
   onComparisonToolClick?: () => void;
   onDiscussionsClick?: () => void;
   isAuthenticated: boolean;
-  user: User | null;
+  user: AppUser | null;
   onSignInClick?: () => void;
   onSignOut?: () => void;
   onProfileClick?: () => void;
@@ -185,16 +181,18 @@ function NavigationBarLinks({
                   <UserCircle size={18} className="text-[#666] dark:text-[#a0a0a0]" />
                   <span className="text-[#1e1e1e] dark:text-white">Profile</span>
                 </button>
-                <button
-                  onClick={() => {
-                    onAdminClick?.();
-                    setShowDropdown(false);
-                  }}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#f7f7f7] dark:hover:bg-[#252b3d] transition-colors text-left"
-                >
-                  <Shield size={18} className="text-[#666] dark:text-[#a0a0a0]" />
-                  <span className="text-[#1e1e1e] dark:text-white">Admin Dashboard</span>
-                </button>
+                {user.role === "admin" && (
+                  <button
+                    onClick={() => {
+                      onAdminClick?.();
+                      setShowDropdown(false);
+                    }}
+                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#f7f7f7] dark:hover:bg-[#252b3d] transition-colors text-left"
+                  >
+                    <Shield size={18} className="text-[#666] dark:text-[#a0a0a0]" />
+                    <span className="text-[#1e1e1e] dark:text-white">Admin Dashboard</span>
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     onSignOut?.();
@@ -239,7 +237,7 @@ function NavigationBarLayout({
   onComparisonToolClick?: () => void;
   onDiscussionsClick?: () => void;
   isAuthenticated: boolean;
-  user: User | null;
+  user: AppUser | null;
   onSignInClick?: () => void;
   onSignOut?: () => void;
   onProfileClick?: () => void;
@@ -285,7 +283,7 @@ export default function NavigationBar({
   onComparisonToolClick?: () => void;
   onDiscussionsClick?: () => void;
   isAuthenticated: boolean;
-  user: User | null;
+  user: AppUser | null;
   onSignInClick?: () => void;
   onSignOut?: () => void;
   onProfileClick?: () => void;
