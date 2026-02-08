@@ -16,6 +16,7 @@ import { Toaster } from "sonner@2.0.3";
 import { DarkModeProvider } from "./components/DarkModeContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import FirebaseConnectionTest from "./components/FirebaseConnectionTest";
+import PasswordResetPage from "./components/PasswordResetPage";
 
 type PageType =
   | "spec"
@@ -26,7 +27,8 @@ type PageType =
   | "signIn"
   | "signUp"
   | "profile"
-  | "admin";
+  | "admin"
+  | "passwordReset";
 
 // Helper functions for localStorage
 const getRecentlyViewedFromStorage = (): string[] => {
@@ -58,6 +60,16 @@ function AppContent() {
   useEffect(() => {
     const stored = getRecentlyViewedFromStorage();
     setRecentlyViewedPhones(stored);
+
+    // Check if URL contains password reset code
+    const urlParams = new URLSearchParams(window.location.search);
+    const oobCode = urlParams.get("oobCode");
+    const mode = urlParams.get("mode");
+
+    // If there's a password reset code in the URL, navigate to password reset page
+    if (oobCode && mode === "resetPassword") {
+      setPageType("passwordReset");
+    }
   }, []);
 
   // Add current page to recently viewed when it changes
@@ -162,7 +174,7 @@ function AppContent() {
 
   const handleSignOut = async () => {
     await signOut();
-    setPageType("spec");
+    setPageType("catalog");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -210,7 +222,9 @@ function AppContent() {
         </div>
 
         <main className="flex-1">
-          {pageType === "admin" ? (
+          {pageType === "passwordReset" ? (
+            <PasswordResetPage onNavigateToSignIn={handleSignInClick} />
+          ) : pageType === "admin" ? (
             <AdminDashboardPage />
           ) : pageType === "profile" ? (
             <UserProfilePage />
