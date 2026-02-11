@@ -147,7 +147,7 @@ interface PhoneSpecPageProps {
 
 export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToComparison, comparisonPhoneIds: externalComparisonIds, onComparisonChange, recentlyViewedPhones, onAddToRecentlyViewed, onNavigateToCatalog }: PhoneSpecPageProps) {
   const categories = Object.keys(phoneData.categories);
-  const { user, firebaseUser } = useAuth();
+  const { currentUser } = useAuth();
 
   // Review state - API connected
   const [reviews, setReviews] = useState<ReviewData[]>([]);
@@ -392,14 +392,14 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
 
   // Handle voting on reviews via API
   const handleVoteOnReview = async (reviewId: number, voteType: 'helpful' | 'notHelpful') => {
-    if (!firebaseUser) {
+    if (!currentUser?.firebaseUser) {
       toast.error("Please sign in to vote on reviews");
       return;
     }
 
     setIsVoting(true);
     try {
-      const token = await firebaseUser.getIdToken();
+      const token = await currentUser.firebaseUser.getIdToken();
       const updatedReview = await voteOnReview(phoneData.id, reviewId, voteType, token);
       if (updatedReview) {
         setReviews(prev =>
@@ -419,14 +419,14 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
     review: string;
     categoryRatings: CategoryRatings;
   }) => {
-    if (!firebaseUser) {
+    if (!currentUser?.firebaseUser) {
       toast.error("Please sign in to submit a review");
       return;
     }
 
     setIsSubmittingReview(true);
     try {
-      const token = await firebaseUser.getIdToken();
+      const token = await currentUser.firebaseUser.getIdToken();
       const newReview = await submitReview(phoneData.id, data, token);
       if (newReview) {
         setReviews(prev => [newReview, ...prev]);
@@ -448,10 +448,10 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
 
   // Handle deleting a review via API
   const handleDeleteReview = async (reviewId: number) => {
-    if (!firebaseUser) return;
+    if (!currentUser?.firebaseUser) return;
 
     try {
-      const token = await firebaseUser.getIdToken();
+      const token = await currentUser.firebaseUser.getIdToken();
       await deleteReview(phoneData.id, reviewId, token);
       setReviews(prev => prev.filter(r => r.id !== reviewId));
       setTotalReviews(prev => prev - 1);
@@ -1391,7 +1391,7 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
             {/* Review Form */}
             {showReviewForm && (
               <div className="mb-6">
-                {!user ? (
+                {!currentUser ? (
                   <div className="bg-[#f7f7f7] border-2 border-[#2c3968] rounded-lg p-6 text-center">
                     <p className="text-[#666] mb-4">Please sign in to write a review</p>
                     <Button className="bg-[#2c3968] hover:bg-[#2c3968]/90">
@@ -1424,7 +1424,7 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
                   <ReviewCard
                     key={review.id}
                     review={review}
-                    currentUserId={user?.firebaseUid}
+                    currentUserId={currentUser?.uid}
                     onVote={handleVoteOnReview}
                     onDelete={handleDeleteReview}
                     isVoting={isVoting}
