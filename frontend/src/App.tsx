@@ -16,6 +16,8 @@ import { Toaster } from "sonner@2.0.3";
 import { DarkModeProvider } from "./components/DarkModeContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import FirebaseConnectionTest from "./components/FirebaseConnectionTest";
+import PasswordResetPage from "./components/PasswordResetPage";
+import { Shield } from "lucide-react";
 
 type PageType =
   | "spec"
@@ -26,7 +28,8 @@ type PageType =
   | "signIn"
   | "signUp"
   | "profile"
-  | "admin";
+  | "admin"
+  | "passwordReset";
 
 // Helper functions for localStorage
 const getRecentlyViewedFromStorage = (): string[] => {
@@ -58,6 +61,16 @@ function AppContent() {
   useEffect(() => {
     const stored = getRecentlyViewedFromStorage();
     setRecentlyViewedPhones(stored);
+
+    // Check if URL contains password reset code
+    const urlParams = new URLSearchParams(window.location.search);
+    const oobCode = urlParams.get("oobCode");
+    const mode = urlParams.get("mode");
+
+    // If there's a password reset code in the URL, navigate to password reset page
+    if (oobCode && mode === "resetPassword") {
+      setPageType("passwordReset");
+    }
   }, []);
 
   // Add current page to recently viewed when it changes
@@ -162,7 +175,7 @@ function AppContent() {
 
   const handleSignOut = async () => {
     await signOut();
-    setPageType("spec");
+    setPageType("catalog");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -210,8 +223,37 @@ function AppContent() {
         </div>
 
         <main className="flex-1">
-          {pageType === "admin" ? (
-            <AdminDashboardPage />
+          {pageType === "passwordReset" ? (
+            <PasswordResetPage onNavigateToSignIn={handleSignInClick} />
+          ) : pageType === "admin" ? (
+            currentUser?.role === "admin" ? (
+              <AdminDashboardPage />
+            ) : (
+              // Handles invalid access to admin page
+              <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 pt-8">
+                <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-16 text-center flex flex-col items-center border border-[#e5e5e5] dark:border-[#2d3548]">
+                  <div className="h-16 w-full" />
+                  <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-full mb-6">
+                    <Shield size={48} className="text-red-600 dark:text-red-500" />
+                  </div>
+
+                  <h2 className="text-[#2c3968] dark:text-white text-3xl font-bold mb-4">Access Denied</h2>
+
+                  <p className="text-[#666] dark:text-[#a0a8b8] max-w-md mx-auto mb-8 text-lg">
+                    You don't have the administrative privileges required to view the
+                    <strong> RightToCompare</strong> dashboard.
+                  </p>
+
+                  <button
+                    onClick={handleCatalogClick}
+                    className="bg-[#2c3968] hover:bg-[#3d4a7a] text-white px-8 py-3 rounded-full font-bold transition-all shadow-md hover:shadow-lg active:scale-95"
+                  >
+                    Return to Catalog
+                  </button>
+                  <div className="h-16 w-full" />
+                </div>
+              </div>
+            )
           ) : pageType === "profile" ? (
             <UserProfilePage />
           ) : pageType === "signIn" ? (
