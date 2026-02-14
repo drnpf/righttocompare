@@ -29,11 +29,6 @@ export interface IPhone extends Document {
     main: string;
     // Add 'front', 'back', or 'side' here later if we got those pics
   };
-  quickSpecs: {
-    iconName: string;
-    label: string;
-    value: string;
-  }[];
   specs: {
     display: {
       screenSizeInches: number;
@@ -125,13 +120,6 @@ const PhoneSchema: Schema = new Schema<IPhone>(
       main: { type: String, required: true },
       // If we have 'front', 'back', 'side' images we can add those fields here with the image/path
     },
-    quickSpecs: [
-      {
-        iconName: { type: String },
-        label: { type: String, required: true },
-        value: { type: String, required: true },
-      },
-    ],
     specs: {
       display: {
         screenSizeInches: { type: Number, required: true },
