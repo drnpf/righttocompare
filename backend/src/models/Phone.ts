@@ -43,7 +43,7 @@ export interface IPhone extends Document {
       peakBrightnessNits: number;
       protection: string;
       pixelDensityPpi: number;
-      screenToBodyRatioPercent: number;
+      screenToBodyRatioPercent?: number;
     };
     performance: {
       processor: string;
@@ -210,12 +210,19 @@ const PhoneSchema: Schema = new Schema<IPhone>(
     ],
     reviews: [
       {
-        id: Number,
-        userName: String,
-        rating: Number,
-        date: String,
-        title: String,
-        review: String,
+        id: { type: Number, required: true },
+        userName: { type: String, required: true },
+        rating: { type: Number, required: true }, // 1-5
+        categoryRatings: {
+          camera: { type: Number, required: true }, // 1-5
+          battery: { type: Number, required: true }, // 1-5
+          performance: { type: Number, required: true }, // 1-5
+          design: { type: Number, required: true }, // 1-5
+          value: { type: Number, required: true }, // 1-5
+        },
+        date: { type: String, required: true },
+        title: { type: String, required: true },
+        review: { type: String, required: true },
         helpful: { type: Number, default: 0 },
         notHelpful: { type: Number, default: 0 },
       },
