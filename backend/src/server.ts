@@ -17,7 +17,7 @@ import "./config/firebase";
 
 // Initializing Express App (BACKEND SERVER)
 const app: Application = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 /**
  * Middleware Configurations (Express)
@@ -31,7 +31,7 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-  })
+  }),
 );
 app.use(express.json());
 
