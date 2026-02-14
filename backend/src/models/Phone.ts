@@ -23,7 +23,7 @@ export interface IPhone extends Document {
   id: string; // The ID like galaxy-s24-ultra -- we're going to use this for url
   name: string;
   brand: string;
-  releaseDate: string;
+  releaseDate: Date;
   price: number;
   images: {
     main: string;
@@ -33,11 +33,11 @@ export interface IPhone extends Document {
     display: {
       screenSizeInches: number;
       resolution: string;
-      technology: string;
+      technology: string; // OLED, AMOLED, etc.
       refreshRateHz: number;
       peakBrightnessNits: number;
-      protection: string;
-      pixelDensityPpi: number;
+      protection?: string;
+      pixelDensityPpi?: number;
       screenToBodyRatioPercent?: number;
     };
     performance: {
@@ -49,9 +49,9 @@ export interface IPhone extends Document {
         technology: string;
       };
       storageOptions: number[]; // [256GB, 512GB, 1TB = 1024GB] -- let's use numbers probably easier to sort/compare
-      expandableStorage: boolean;
+      expandableStorage?: boolean;
       operatingSystem: string;
-      upgradability: string;
+      upgradability?: string;
     };
     benchmarks: {
       geekbenchSingleCore: number;
@@ -63,12 +63,12 @@ export interface IPhone extends Document {
       ultrawideMegapixels?: number;
       telephotoMegapixels?: number;
       frontMegapixels: number;
-      features: string[]; // ["Night Mode", "8K Video"]
+      features?: string[]; // ["Night Mode", "8K Video"]
     };
     design: {
       dimensionsMm: string; // "165.1 x 75.6 x 8.9 mm"
       weightGrams: number;
-      buildMaterials: string; // "Aluminum frame, Gorilla Glass Victus+ front and back"
+      buildMaterials?: string; // "Aluminum frame, Gorilla Glass Victus+ front and back"
       colorsAvailable: string[]; // ["Phantom Black", "Green", "Lavender", "Cream"]
     };
     battery: {
@@ -80,7 +80,7 @@ export interface IPhone extends Document {
     };
     connectivity: {
       has5G: boolean;
-      has4GLte: boolean;
+      has4GLte?: boolean;
       bluetoothVersion: string;
       hasNfc: boolean;
       headphoneJack: boolean;
@@ -88,7 +88,7 @@ export interface IPhone extends Document {
     audio: {
       speakers: string; // "Stereo speakers tuned by AKG"
       hasHeadphoneJack: boolean;
-      audioFeatures: string[]; // ["Dolby Atmos", "32-bit/384kHz audio"]
+      audioFeatures?: string[]; // ["Dolby Atmos", "32-bit/384kHz audio"]
     };
     sensors: {
       fingerprint: string; // "Ultrasonic under-display"
@@ -114,7 +114,7 @@ const PhoneSchema: Schema = new Schema<IPhone>(
     id: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
     brand: { type: String, required: true },
-    releaseDate: { type: String },
+    releaseDate: { type: Date, required: true },
     price: { type: Number, required: true },
     images: {
       main: { type: String, required: true },
@@ -170,9 +170,11 @@ const PhoneSchema: Schema = new Schema<IPhone>(
         colorsAvailable: [{ type: String }], // ["Phantom Black", "Green", "Lavender", "Cream"]
       },
       connectivity: {
-        has5G: { type: Boolean, default: true },
-        hasNfc: { type: Boolean, default: true },
-        headphoneJack: { type: Boolean, default: false },
+        has5G: { type: Boolean, required: true },
+        has4GLte: { type: Boolean },
+        bluetoothVersion: { type: String, required: true },
+        hasNfc: { type: Boolean, required: true },
+        headphoneJack: { type: Boolean, required: true },
       },
       audio: {
         speakers: { type: String },
