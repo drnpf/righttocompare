@@ -5,6 +5,13 @@ export interface IReview {
   id: number;
   userName: string;
   rating: number; // 1-5
+  categoryRatings: {
+    camera: number; // 1-5
+    battery: number; // 1-5
+    performance: number; // 1-5
+    design: number; // 1-5
+    value: number; // 1-5
+  };
   date: string;
   title: string;
   review: string;
@@ -22,23 +29,39 @@ export interface IPhone extends Document {
     main: string;
     // Add 'front', 'back', or 'side' here later if we got those pics
   };
+  quickSpecs: {
+    iconName: string;
+    label: string;
+    value: string;
+  }[];
   specs: {
     display: {
-      sizeInches: number;
+      screenSizeInches: number;
       resolution: string;
+      technology: string;
       refreshRateHz: number;
       peakBrightnessNits: number;
-      technology: string;
+      protection: string;
+      pixelDensityPpi: number;
+      screenToBodyRatioPercent: number;
     };
     performance: {
       processor: string;
+      cpu: string;
+      gpu: string;
       ram: {
         options: number[];
         technology: string;
       };
       storageOptions: number[]; // [256GB, 512GB, 1TB = 1024GB] -- let's use numbers probably easier to sort/compare
-      cpu: string;
-      gpu: string;
+      expandableStorage: boolean;
+      operatingSystem: string;
+      upgradability: string;
+    };
+    benchmarks: {
+      geekbenchSingleCore: number;
+      geekbenchMultiCore: number;
+      antutuScore: number;
     };
     camera: {
       mainMegapixels: number;
@@ -47,22 +70,51 @@ export interface IPhone extends Document {
       frontMegapixels: number;
       features: string[]; // ["Night Mode", "8K Video"]
     };
+    design: {
+      dimensionsMm: string; // "165.1 x 75.6 x 8.9 mm"
+      weightGrams: number;
+      buildMaterials: string; // "Aluminum frame, Gorilla Glass Victus+ front and back"
+      colorsAvailable: string[]; // ["Phantom Black", "Green", "Lavender", "Cream"]
+    };
     battery: {
       capacitymAh: number;
       chargingSpeedW: number;
+      batteryType: string;
       wirelessCharging: boolean;
+      chargingTimeHours?: number;
     };
     connectivity: {
       has5G: boolean;
+      has4GLte: boolean;
+      bluetoothVersion: string;
       hasNfc: boolean;
       headphoneJack: boolean;
     };
+    audio: {
+      speakers: string; // "Stereo speakers tuned by AKG"
+      hasHeadphoneJack: boolean;
+      audioFeatures: string[]; // ["Dolby Atmos", "32-bit/384kHz audio"]
+    };
+    sensors: {
+      fingerprint: string; // "Ultrasonic under-display"
+      faceRecognition: boolean;
+      accelerometer: boolean;
+      gyroscope: boolean;
+      proximity: boolean;
+      compass: boolean;
+      barometer: boolean;
+    };
   };
+  carrierCompatibility: {
+    name: string;
+    compatible: boolean;
+    notes?: string;
+  }[];
   reviews: IReview[];
 }
 
 // Phone Schema
-const PhoneSchema: Schema = new Schema(
+const PhoneSchema: Schema = new Schema<IPhone>(
   {
     id: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
@@ -73,23 +125,41 @@ const PhoneSchema: Schema = new Schema(
       main: { type: String, required: true },
       // If we have 'front', 'back', 'side' images we can add those fields here with the image/path
     },
+    quickSpecs: [
+      {
+        iconName: { type: String },
+        label: { type: String, required: true },
+        value: { type: String, required: true },
+      },
+    ],
     specs: {
       display: {
-        sizeInches: { type: Number, required: true },
+        screenSizeInches: { type: Number, required: true },
         resolution: { type: String, required: true },
+        technology: { type: String },
         refreshRateHz: { type: Number, default: 60 },
         peakBrightnessNits: { type: Number },
-        technology: { type: String },
+        protection: { type: String },
+        pixelDensityPpi: { type: Number },
+        screenToBodyRatioPercent: { type: Number },
       },
       performance: {
         processor: { type: String, required: true },
+        cpu: { type: String },
+        gpu: { type: String },
         ram: {
           options: [{ type: Number }],
           technology: { type: String },
         },
         storageOptions: [{ type: Number }],
-        cpu: { type: String },
-        gpu: { type: String },
+        expandableStorage: { type: Boolean },
+        operatingSystem: { type: String },
+        upgradability: { type: String },
+      },
+      benchmarks: {
+        geekbenchSingleCore: { type: Number },
+        geekbenchMultiCore: { type: Number },
+        antutuScore: { type: Number },
       },
       camera: {
         mainMegapixels: { type: Number, required: true },
@@ -101,14 +171,43 @@ const PhoneSchema: Schema = new Schema(
       battery: {
         capacitymAh: { type: Number, required: true },
         chargingSpeedW: { type: Number },
+        batteryType: { type: String },
         wirelessCharging: { type: Boolean, default: false },
+        chargingTimeHours: { type: Number },
+      },
+      design: {
+        dimensionsMm: { type: String }, // "165.1 x 75.6 x 8.9 mm"
+        weightGrams: { type: Number },
+        buildMaterials: { type: String }, // "Aluminum frame, Gorilla Glass Victus+ front and back"
+        colorsAvailable: [{ type: String }], // ["Phantom Black", "Green", "Lavender", "Cream"]
       },
       connectivity: {
         has5G: { type: Boolean, default: true },
         hasNfc: { type: Boolean, default: true },
         headphoneJack: { type: Boolean, default: false },
       },
+      audio: {
+        speakers: { type: String },
+        hasHeadphoneJack: { type: Boolean },
+        audioFeatures: [{ type: String }],
+      },
+      sensors: {
+        fingerprint: { type: String }, // "Ultrasonic under-display"
+        faceRecognition: { type: Boolean },
+        accelerometer: { type: Boolean },
+        gyroscope: { type: Boolean },
+        proximity: { type: Boolean },
+        compass: { type: Boolean },
+        barometer: { type: Boolean },
+      },
     },
+    carrierCompatibility: [
+      {
+        name: { type: String, required: true },
+        compatible: { type: Boolean, required: true },
+        notes: { type: String },
+      },
+    ],
     reviews: [
       {
         id: Number,
@@ -124,7 +223,7 @@ const PhoneSchema: Schema = new Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export default mongoose.model<IPhone>("Phone", PhoneSchema);
