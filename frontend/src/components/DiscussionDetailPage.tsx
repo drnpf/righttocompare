@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { ThumbsUp, ThumbsDown, ArrowLeft, MessageCircle, Eye, Send, Image as ImageIcon, X, Flag, CornerDownRight } from "lucide-react";
+import { ThumbsUp, ThumbsDown, ArrowLeft, MessageCircle, Eye, Send, Image as ImageIcon, X, Flag, CornerDownRight, Loader2, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Badge } from "./ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { toast } from "sonner@2.0.3";
+import { useAuth } from "../context/AuthContext";
 import {
   Discussion,
   Reply,
@@ -23,14 +25,61 @@ import {
   getUserReportsFromStorage,
   saveUserReportsToStorage
 } from "../data/discussionsData";
+import * as discussionApi from "../api/discussionApi";
 
 interface DiscussionDetailPageProps {
   discussionId: string;
   onBack: () => void;
 }
 
+/**
+ * Maps an API discussion response to the frontend Discussion interface.
+ */
+function mapApiDiscussion(d: discussionApi.DiscussionResponse): Discussion {
+  return {
+    id: d._id,
+    title: d.title,
+    content: d.content,
+    author: d.authorName,
+    authorId: d.authorId,
+    authorAvatar: d.authorAvatar,
+    timestamp: new Date(d.createdAt).getTime(),
+    category: d.category,
+    tags: d.tags,
+    images: d.images,
+    upvotes: d.upvotes,
+    downvotes: d.downvotes,
+    upvoters: d.upvoters,
+    downvoters: d.downvoters,
+    replies: d.replyCount,
+    views: d.views,
+  };
+}
+
+/**
+ * Maps an API reply response to the frontend Reply interface.
+ */
+function mapApiReply(r: discussionApi.ReplyResponse): Reply {
+  return {
+    id: r._id,
+    discussionId: r.discussionId,
+    content: r.content,
+    author: r.authorName,
+    authorId: r.authorId,
+    authorAvatar: r.authorAvatar,
+    timestamp: new Date(r.createdAt).getTime(),
+    upvotes: r.upvotes,
+    downvotes: r.downvotes,
+    upvoters: r.upvoters,
+    downvoters: r.downvoters,
+    images: r.images,
+    parentReplyId: r.parentReplyId || undefined,
+  };
+}
+
 export default function DiscussionDetailPage({ discussionId, onBack }: DiscussionDetailPageProps) {
-  const [discussions, setDiscussions] = useState<Discussion[]>([]);
+  const { currentUser } = useAuth();
+  const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [replies, setReplies] = useState<Reply[]>([]);
   const [userVotes, setUserVotes] = useState<Record<string, 'up' | 'down' | null>>({});
   const [replyVotes, setReplyVotes] = useState<Record<string, 'up' | 'down' | null>>({});
@@ -44,104 +93,189 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
   const [reportDetails, setReportDetails] = useState("");
   const [userReports, setUserReports] = useState<Record<string, boolean>>({});
   const [replyingTo, setReplyingTo] = useState<Reply | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [usingApi, setUsingApi] = useState(true);
 
   // Load data on mount
   useEffect(() => {
-    const loadedDiscussions = getDiscussionsFromStorage();
-    const loadedReplies = getRepliesFromStorage();
-    const loadedVotes = getUserVotesFromStorage();
-    const loadedReplyVotes = getReplyVotesFromStorage();
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        // Try API first
+        const [apiDiscussion, apiReplies] = await Promise.all([
+          discussionApi.getDiscussion(discussionId),
+          discussionApi.getReplies(discussionId),
+        ]);
+
+        if (apiDiscussion) {
+          setDiscussion(mapApiDiscussion(apiDiscussion));
+          setReplies(apiReplies.map(mapApiReply));
+          setUsingApi(true);
+
+          // Build vote maps from upvoters/downvoters
+          if (currentUser) {
+            const dVotes: Record<string, 'up' | 'down' | null> = {};
+            if (apiDiscussion.upvoters.includes(currentUser.uid)) {
+              dVotes[discussionId] = 'up';
+            } else if (apiDiscussion.downvoters.includes(currentUser.uid)) {
+              dVotes[discussionId] = 'down';
+            }
+            setUserVotes(dVotes);
+
+            const rVotes: Record<string, 'up' | 'down' | null> = {};
+            apiReplies.forEach((r) => {
+              if (r.upvoters.includes(currentUser.uid)) {
+                rVotes[r._id] = 'up';
+              } else if (r.downvoters.includes(currentUser.uid)) {
+                rVotes[r._id] = 'down';
+              }
+            });
+            setReplyVotes(rVotes);
+          }
+        } else {
+          throw new Error("Discussion not found via API");
+        }
+      } catch {
+        // Fallback to localStorage
+        console.warn("API unavailable, falling back to localStorage");
+        const loadedDiscussions = getDiscussionsFromStorage();
+        const loadedReplies = getRepliesFromStorage();
+        const loadedVotes = getUserVotesFromStorage();
+        const loadedReplyVotes = getReplyVotesFromStorage();
+
+        const disc = loadedDiscussions.find(d => d.id === discussionId);
+        setDiscussion(disc || null);
+        setReplies(loadedReplies);
+        setUserVotes(loadedVotes);
+        setReplyVotes(loadedReplyVotes);
+        setUsingApi(false);
+
+        // Increment view count in localStorage
+        if (disc) {
+          const updatedDiscussions = loadedDiscussions.map(d =>
+            d.id === discussionId ? { ...d, views: d.views + 1 } : d
+          );
+          saveDiscussionsToStorage(updatedDiscussions);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+
     const loadedUserReports = getUserReportsFromStorage();
-    
-    setDiscussions(loadedDiscussions);
-    setReplies(loadedReplies);
-    setUserVotes(loadedVotes);
-    setReplyVotes(loadedReplyVotes);
     setUserReports(loadedUserReports);
+  }, [discussionId, currentUser]);
 
-    // Increment view count
-    const updatedDiscussions = loadedDiscussions.map(disc =>
-      disc.id === discussionId ? { ...disc, views: disc.views + 1 } : disc
-    );
-    setDiscussions(updatedDiscussions);
-    saveDiscussionsToStorage(updatedDiscussions);
-  }, [discussionId]);
-
-  const discussion = discussions.find(d => d.id === discussionId);
   const discussionReplies = replies.filter(r => r.discussionId === discussionId);
-  
-  // Get top-level replies (replies to the discussion, not to other replies)
   const topLevelReplies = discussionReplies.filter(r => !r.parentReplyId);
-  
-  // Get nested replies for a specific reply
+
   const getNestedReplies = (parentId: string): Reply[] => {
     return discussionReplies.filter(r => r.parentReplyId === parentId);
   };
 
   // Handle voting on discussion
-  const handleVote = (voteType: 'up' | 'down') => {
+  const handleVote = async (voteType: 'up' | 'down') => {
     if (!discussion) return;
 
-    const currentVote = userVotes[discussionId];
-    let newVote: 'up' | 'down' | null = voteType;
-
-    if (currentVote === voteType) {
-      newVote = null;
-    }
-
-    const updatedDiscussions = discussions.map(disc => {
-      if (disc.id === discussionId) {
-        let upvotes = disc.upvotes;
-        let downvotes = disc.downvotes;
-
-        if (currentVote === 'up') upvotes--;
-        if (currentVote === 'down') downvotes--;
-        if (newVote === 'up') upvotes++;
-        if (newVote === 'down') downvotes++;
-
-        return { ...disc, upvotes, downvotes };
+    if (usingApi) {
+      if (!currentUser) {
+        toast.error("Please sign in to vote");
+        return;
       }
-      return disc;
-    });
+      try {
+        const token = await currentUser.firebaseUser.getIdToken();
+        const updated = await discussionApi.voteOnDiscussion(discussionId, voteType, token);
+        if (updated) {
+          setDiscussion(mapApiDiscussion(updated));
+          if (updated.upvoters.includes(currentUser.uid)) {
+            setUserVotes((prev) => ({ ...prev, [discussionId]: 'up' }));
+          } else if (updated.downvoters.includes(currentUser.uid)) {
+            setUserVotes((prev) => ({ ...prev, [discussionId]: 'down' }));
+          } else {
+            setUserVotes((prev) => ({ ...prev, [discussionId]: null }));
+          }
+        }
+      } catch {
+        toast.error("Failed to vote");
+      }
+    } else {
+      // localStorage fallback
+      const currentVote = userVotes[discussionId];
+      let newVote: 'up' | 'down' | null = voteType;
+      if (currentVote === voteType) newVote = null;
 
-    const updatedVotes = { ...userVotes, [discussionId]: newVote };
+      let upvotes = discussion.upvotes;
+      let downvotes = discussion.downvotes;
+      if (currentVote === 'up') upvotes--;
+      if (currentVote === 'down') downvotes--;
+      if (newVote === 'up') upvotes++;
+      if (newVote === 'down') downvotes++;
 
-    setDiscussions(updatedDiscussions);
-    setUserVotes(updatedVotes);
-    saveDiscussionsToStorage(updatedDiscussions);
-    saveUserVotesToStorage(updatedVotes);
+      setDiscussion({ ...discussion, upvotes, downvotes });
+      const updatedVotes = { ...userVotes, [discussionId]: newVote };
+      setUserVotes(updatedVotes);
+
+      const loadedDiscussions = getDiscussionsFromStorage();
+      const updatedDiscussions = loadedDiscussions.map(d =>
+        d.id === discussionId ? { ...d, upvotes, downvotes } : d
+      );
+      saveDiscussionsToStorage(updatedDiscussions);
+      saveUserVotesToStorage(updatedVotes);
+    }
   };
 
   // Handle voting on replies
-  const handleReplyVote = (replyId: string, voteType: 'up' | 'down') => {
-    const currentVote = replyVotes[replyId];
-    let newVote: 'up' | 'down' | null = voteType;
-
-    if (currentVote === voteType) {
-      newVote = null;
-    }
-
-    const updatedReplies = replies.map(reply => {
-      if (reply.id === replyId) {
-        let upvotes = reply.upvotes;
-        let downvotes = reply.downvotes;
-
-        if (currentVote === 'up') upvotes--;
-        if (currentVote === 'down') downvotes--;
-        if (newVote === 'up') upvotes++;
-        if (newVote === 'down') downvotes++;
-
-        return { ...reply, upvotes, downvotes };
+  const handleReplyVote = async (replyId: string, voteType: 'up' | 'down') => {
+    if (usingApi) {
+      if (!currentUser) {
+        toast.error("Please sign in to vote");
+        return;
       }
-      return reply;
-    });
+      try {
+        const token = await currentUser.firebaseUser.getIdToken();
+        const updated = await discussionApi.voteOnReply(replyId, voteType, token);
+        if (updated) {
+          const mapped = mapApiReply(updated);
+          setReplies((prev) => prev.map((r) => (r.id === replyId ? mapped : r)));
+          if (updated.upvoters.includes(currentUser.uid)) {
+            setReplyVotes((prev) => ({ ...prev, [replyId]: 'up' }));
+          } else if (updated.downvoters.includes(currentUser.uid)) {
+            setReplyVotes((prev) => ({ ...prev, [replyId]: 'down' }));
+          } else {
+            setReplyVotes((prev) => ({ ...prev, [replyId]: null }));
+          }
+        }
+      } catch {
+        toast.error("Failed to vote");
+      }
+    } else {
+      // localStorage fallback
+      const currentVote = replyVotes[replyId];
+      let newVote: 'up' | 'down' | null = voteType;
+      if (currentVote === voteType) newVote = null;
 
-    const updatedVotes = { ...replyVotes, [replyId]: newVote };
+      const updatedReplies = replies.map(reply => {
+        if (reply.id === replyId) {
+          let upvotes = reply.upvotes;
+          let downvotes = reply.downvotes;
+          if (currentVote === 'up') upvotes--;
+          if (currentVote === 'down') downvotes--;
+          if (newVote === 'up') upvotes++;
+          if (newVote === 'down') downvotes++;
+          return { ...reply, upvotes, downvotes };
+        }
+        return reply;
+      });
 
-    setReplies(updatedReplies);
-    setReplyVotes(updatedVotes);
-    saveRepliesToStorage(updatedReplies);
-    saveReplyVotesToStorage(updatedVotes);
+      const updatedVotes = { ...replyVotes, [replyId]: newVote };
+      setReplies(updatedReplies);
+      setReplyVotes(updatedVotes);
+      saveRepliesToStorage(updatedReplies);
+      saveReplyVotesToStorage(updatedVotes);
+    }
   };
 
   // Handle reply image upload
@@ -161,45 +295,80 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
       }
     });
 
-    // Reset input
     if (replyFileInputRef.current) {
       replyFileInputRef.current.value = '';
     }
   };
 
-  // Remove image from reply
   const handleRemoveReplyImage = (index: number) => {
     setReplyImages(prev => prev.filter((_, i) => i !== index));
   };
 
   // Handle submitting a new reply
-  const handleSubmitReply = () => {
+  const handleSubmitReply = async () => {
     if (!newReply.trim() || !discussion) return;
 
-    const reply: Reply = {
-      id: `r${Date.now()}`,
-      discussionId: discussionId,
-      content: newReply,
-      author: "You",
-      authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=You",
-      timestamp: Date.now(),
-      upvotes: 0,
-      downvotes: 0,
-      images: replyImages.length > 0 ? replyImages : undefined,
-      parentReplyId: replyingTo?.id
-    };
+    if (usingApi) {
+      if (!currentUser) {
+        toast.error("Please sign in to reply");
+        return;
+      }
 
-    const updatedReplies = [...replies, reply];
-    setReplies(updatedReplies);
-    saveRepliesToStorage(updatedReplies);
+      setIsSubmittingReply(true);
+      try {
+        const token = await currentUser.firebaseUser.getIdToken();
+        const created = await discussionApi.createReply(
+          discussionId,
+          {
+            content: newReply,
+            images: replyImages,
+            parentReplyId: replyingTo?.id,
+          },
+          token
+        );
 
-    // Update reply count in discussion (only for top-level replies)
-    if (!replyingTo) {
-      const updatedDiscussions = discussions.map(disc =>
-        disc.id === discussionId ? { ...disc, replies: disc.replies + 1 } : disc
-      );
-      setDiscussions(updatedDiscussions);
-      saveDiscussionsToStorage(updatedDiscussions);
+        if (created) {
+          const mapped = mapApiReply(created);
+          setReplies((prev) => [...prev, mapped]);
+          setDiscussion((prev) =>
+            prev ? { ...prev, replies: prev.replies + 1 } : prev
+          );
+          toast.success("Reply posted!");
+        }
+      } catch {
+        toast.error("Failed to post reply");
+      } finally {
+        setIsSubmittingReply(false);
+      }
+    } else {
+      // localStorage fallback
+      const reply: Reply = {
+        id: `r${Date.now()}`,
+        discussionId: discussionId,
+        content: newReply,
+        author: currentUser?.displayName || "You",
+        authorAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.displayName || "You"}`,
+        timestamp: Date.now(),
+        upvotes: 0,
+        downvotes: 0,
+        images: replyImages.length > 0 ? replyImages : undefined,
+        parentReplyId: replyingTo?.id
+      };
+
+      const updatedReplies = [...replies, reply];
+      setReplies(updatedReplies);
+      saveRepliesToStorage(updatedReplies);
+
+      if (!replyingTo) {
+        setDiscussion((prev) =>
+          prev ? { ...prev, replies: prev.replies + 1 } : prev
+        );
+        const loadedDiscussions = getDiscussionsFromStorage();
+        const updatedDiscussions = loadedDiscussions.map(disc =>
+          disc.id === discussionId ? { ...disc, replies: disc.replies + 1 } : disc
+        );
+        saveDiscussionsToStorage(updatedDiscussions);
+      }
     }
 
     setNewReply("");
@@ -207,19 +376,36 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
     setReplyingTo(null);
   };
 
-  // Handle clicking reply button on a specific reply
+  // Handle deleting a reply
+  const handleDeleteReply = async (replyId: string) => {
+    if (!currentUser) return;
+    if (!window.confirm("Are you sure you want to delete this reply?")) return;
+
+    if (usingApi) {
+      try {
+        const token = await currentUser.firebaseUser.getIdToken();
+        await discussionApi.deleteReply(replyId, token);
+        setReplies((prev) => prev.filter((r) => r.id !== replyId));
+        setDiscussion((prev) =>
+          prev ? { ...prev, replies: Math.max(0, prev.replies - 1) } : prev
+        );
+        toast.success("Reply deleted!");
+      } catch {
+        toast.error("Failed to delete reply");
+      }
+    }
+  };
+
   const handleReplyToReply = (reply: Reply) => {
     setReplyingTo(reply);
-    // Scroll to reply form
     window.scrollTo({ top: document.querySelector('#reply-section')?.getBoundingClientRect().top! + window.scrollY - 100, behavior: 'smooth' });
   };
 
-  // Cancel replying to a specific reply
   const handleCancelReplyTo = () => {
     setReplyingTo(null);
   };
 
-  // Handle opening report dialog
+  // Report handling
   const handleOpenReportDialog = (itemId: string, itemType: 'discussion' | 'reply') => {
     setReportItemId(itemId);
     setReportItemType(itemType);
@@ -228,7 +414,6 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
     setIsReportDialogOpen(true);
   };
 
-  // Handle submitting report
   const handleSubmitReport = () => {
     if (!reportReason) return;
 
@@ -238,7 +423,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
       itemType: reportItemType,
       reason: reportReason,
       details: reportDetails || undefined,
-      reportedBy: "You",
+      reportedBy: currentUser?.displayName || "You",
       timestamp: Date.now()
     };
 
@@ -246,21 +431,20 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
     const updatedReports = [...reports, report];
     saveReportsToStorage(updatedReports);
 
-    // Track that this user has reported this item
     const updatedUserReports = { ...userReports, [reportItemId]: true };
     setUserReports(updatedUserReports);
     saveUserReportsToStorage(updatedUserReports);
 
-    // Close dialog and reset
     setIsReportDialogOpen(false);
     setReportReason("");
     setReportDetails("");
+    toast.success("Report submitted. Thank you!");
   };
 
   // Format time ago
   const getTimeAgo = (timestamp: number) => {
     const seconds = Math.floor((Date.now() - timestamp) / 1000);
-    
+
     if (seconds < 60) return "just now";
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
@@ -274,6 +458,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
     const replyNetScore = reply.upvotes - reply.downvotes;
     const nestedReplies = getNestedReplies(reply.id);
     const isNested = depth > 0;
+    const isOwnReply = currentUser && reply.authorId === currentUser.uid;
 
     return (
       <div key={reply.id} className={isNested ? "ml-12 mt-4" : ""}>
@@ -339,7 +524,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
               <p className="text-[#333] whitespace-pre-wrap leading-relaxed mb-3">
                 {reply.content}
               </p>
-              
+
               {/* Reply Images */}
               {reply.images && reply.images.length > 0 && (
                 <div className={`grid gap-2 mb-3 ${
@@ -358,7 +543,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                   ))}
                 </div>
               )}
-              
+
               {/* Action Buttons */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -377,16 +562,29 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                     </span>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleOpenReportDialog(reply.id, 'reply')}
-                  disabled={userReports[reply.id]}
-                  className={`text-xs ${userReports[reply.id] ? 'text-red-400' : 'text-[#999] hover:text-red-500'}`}
-                >
-                  <Flag className="w-3.5 h-3.5 mr-1" />
-                  {userReports[reply.id] ? 'Reported' : 'Report'}
-                </Button>
+                <div className="flex items-center gap-2">
+                  {isOwnReply && usingApi && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteReply(reply.id)}
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50 text-xs"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-1" />
+                      Delete
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOpenReportDialog(reply.id, 'reply')}
+                    disabled={userReports[reply.id]}
+                    className={`text-xs ${userReports[reply.id] ? 'text-red-400' : 'text-[#999] hover:text-red-500'}`}
+                  >
+                    <Flag className="w-3.5 h-3.5 mr-1" />
+                    {userReports[reply.id] ? 'Reported' : 'Report'}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -403,6 +601,19 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
       </div>
     );
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#f7f7f7] pb-12">
+        <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 pt-8">
+          <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+            <Loader2 className="w-8 h-8 text-[#2c3968] mx-auto mb-4 animate-spin" />
+            <p className="text-[#666]">Loading discussion...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!discussion) {
     return (
@@ -432,7 +643,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
           <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl"></div>
           <div className="absolute bottom-20 right-20 w-96 h-96 bg-white rounded-full blur-3xl"></div>
         </div>
-        
+
         <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 py-8 relative z-10">
           <Button
             onClick={onBack}
@@ -568,92 +779,107 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
           <h3 className="text-[#2c3968] mb-4">
             {replyingTo ? `Replying to ${replyingTo.author}` : 'Add a Reply'}
           </h3>
-          
-          {replyingTo && (
-            <div className="mb-4 p-4 bg-[#f0f2f5] rounded-lg border-l-4 border-[#2c3968]">
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div className="flex items-center gap-2">
-                  <img
-                    src={replyingTo.authorAvatar}
-                    alt={replyingTo.author}
-                    className="w-8 h-8 rounded-full"
-                  />
-                  <span className="text-[#2c3968]">{replyingTo.author}</span>
+
+          {!currentUser ? (
+            <p className="text-[#666] text-center py-4">Please sign in to reply.</p>
+          ) : (
+            <>
+              {replyingTo && (
+                <div className="mb-4 p-4 bg-[#f0f2f5] rounded-lg border-l-4 border-[#2c3968]">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={replyingTo.authorAvatar}
+                        alt={replyingTo.author}
+                        className="w-8 h-8 rounded-full"
+                      />
+                      <span className="text-[#2c3968]">{replyingTo.author}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCancelReplyTo}
+                      className="h-auto p-1"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <p className="text-[#666] text-sm line-clamp-2">{replyingTo.content}</p>
                 </div>
+              )}
+
+              <Textarea
+                placeholder={replyingTo ? "Write your reply..." : "Share your thoughts..."}
+                value={newReply}
+                onChange={(e) => setNewReply(e.target.value)}
+                className="mb-4 min-h-[120px]"
+              />
+
+              {/* Image Upload Section */}
+              <div className="mb-4">
+                <input
+                  ref={replyFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleReplyImageUpload}
+                  className="hidden"
+                  id="reply-image-upload"
+                />
                 <Button
-                  variant="ghost"
+                  type="button"
+                  variant="outline"
+                  onClick={() => replyFileInputRef.current?.click()}
+                  disabled={replyImages.length >= 4}
                   size="sm"
-                  onClick={handleCancelReplyTo}
-                  className="h-auto p-1"
                 >
-                  <X className="w-4 h-4" />
+                  <ImageIcon className="w-4 h-4 mr-2" />
+                  Add Images ({replyImages.length}/4)
+                </Button>
+
+                {replyImages.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                    {replyImages.map((img, idx) => (
+                      <div key={idx} className="relative group">
+                        <img
+                          src={img}
+                          alt={`Reply upload ${idx + 1}`}
+                          className="w-full h-24 object-cover rounded-lg border border-[#e0e0e0]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveReplyImage(idx)}
+                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSubmitReply}
+                  disabled={!newReply.trim() || isSubmittingReply}
+                  className="bg-[#2c3968] hover:bg-[#1e2547]"
+                >
+                  {isSubmittingReply ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Posting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Post Reply
+                    </>
+                  )}
                 </Button>
               </div>
-              <p className="text-[#666] text-sm line-clamp-2">{replyingTo.content}</p>
-            </div>
+            </>
           )}
-          
-          <Textarea
-            placeholder={replyingTo ? "Write your reply..." : "Share your thoughts..."}
-            value={newReply}
-            onChange={(e) => setNewReply(e.target.value)}
-            className="mb-4 min-h-[120px]"
-          />
-          
-          {/* Image Upload Section */}
-          <div className="mb-4">
-            <input
-              ref={replyFileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleReplyImageUpload}
-              className="hidden"
-              id="reply-image-upload"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => replyFileInputRef.current?.click()}
-              disabled={replyImages.length >= 4}
-              size="sm"
-            >
-              <ImageIcon className="w-4 h-4 mr-2" />
-              Add Images ({replyImages.length}/4)
-            </Button>
-            
-            {replyImages.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
-                {replyImages.map((img, idx) => (
-                  <div key={idx} className="relative group">
-                    <img
-                      src={img}
-                      alt={`Reply upload ${idx + 1}`}
-                      className="w-full h-24 object-cover rounded-lg border border-[#e0e0e0]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveReplyImage(idx)}
-                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSubmitReply}
-              disabled={!newReply.trim()}
-              className="bg-[#2c3968] hover:bg-[#1e2547]"
-            >
-              <Send className="w-4 h-4 mr-2" />
-              Post Reply
-            </Button>
-          </div>
         </div>
 
         {/* Replies List */}

@@ -88,16 +88,16 @@ export default function RecentlyViewedPhones({ currentPhone, onNavigate, recentl
     ? scrollPosition < (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth - 1)
     : false;
   return (
-    <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 py-12">
-      <div className="bg-white rounded-2xl shadow-sm p-6 md:p-10">
+    <div className="px-6 py-12">
+      <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-6 md:p-10 transition-colors duration-300">
         {/* Title */}
         <div className="mb-8">
-          <h2 className="text-[#2c3968] mb-2">Recently Viewed</h2>
-          <div className="h-1 w-20 bg-[#2c3968] rounded-full"></div>
+          <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-2">Recently Viewed</h2>
+          <div className="h-1 w-20 bg-[#2c3968] dark:bg-[#4a7cf6] rounded-full"></div>
         </div>
         
         {/* Container with refined border and enhanced background */}
-        <div className="relative border-2 border-[#e0e0e0] rounded-[40px] px-4 md:px-8 lg:px-16 py-8 md:py-12 bg-gradient-to-br from-[#f5f7fa] via-[#fafbfc] to-[#f0f2f5] shadow-inner overflow-hidden">
+        <div className="relative border-2 border-[#e0e0e0] dark:border-[#2d3548] rounded-[40px] px-4 md:px-8 lg:px-16 py-8 md:py-12 bg-gradient-to-br from-[#f5f7fa] via-[#fafbfc] to-[#f0f2f5] dark:from-[#1a1f2e] dark:via-[#1e2530] dark:to-[#1a1f2e] shadow-inner overflow-hidden transition-colors duration-300">
           {/* Decorative subtle pattern overlay */}
           <div className="absolute inset-0 opacity-30 pointer-events-none rounded-[40px]" style={{
             backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(44, 57, 104, 0.05) 1px, transparent 0)',
@@ -108,10 +108,10 @@ export default function RecentlyViewedPhones({ currentPhone, onNavigate, recentl
           {showLeftArrow && (
             <button
               onClick={() => handleScroll('left')}
-              className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 border-2 border-[#2c3968]/10 hover:border-[#2c3968]/30"
+              className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-white dark:bg-[#252b3d] rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 border-2 border-[#2c3968]/10 dark:border-[#4a7cf6]/10 hover:border-[#2c3968]/30 dark:hover:border-[#4a7cf6]/30"
               aria-label="Scroll left"
             >
-              <ChevronLeft className="w-6 h-6 text-[#2c3968]" />
+              <ChevronLeft className="w-6 h-6 text-[#2c3968] dark:text-[#4a7cf6]" />
             </button>
           )}
           
@@ -143,20 +143,20 @@ export default function RecentlyViewedPhones({ currentPhone, onNavigate, recentl
                 }}
               >
                 {/* Phone Card */}
-                <div className="bg-white rounded-2xl p-3 md:p-5 shadow-md group-hover:shadow-xl transition-all duration-300 w-full border border-transparent group-hover:border-[#2c3968]/10 h-full flex flex-col">
+                <div className="bg-white dark:bg-[#252b3d] rounded-2xl p-3 md:p-5 shadow-md group-hover:shadow-xl transition-all duration-300 w-full border border-transparent group-hover:border-[#2c3968]/10 dark:group-hover:border-[#4a7cf6]/10 h-full flex flex-col">
                   {/* Badge for current or most recent phone */}
                   {phone.phoneId === currentPhone ? (
-                    <div className="absolute -top-2 md:-top-3 -right-2 md:-right-3 bg-[#2c3968] text-white px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs z-10 shadow-md">
+                    <div className="absolute -top-2 md:-top-3 -right-2 md:-right-3 bg-[#2c3968] dark:bg-[#4a7cf6] text-white px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs z-10 shadow-md">
                       Current
                     </div>
                   ) : index === 0 && phone.phoneId !== currentPhone && (
-                    <div className="absolute -top-2 md:-top-3 -right-2 md:-right-3 bg-[#2c3968] text-white px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs z-10 shadow-md">
+                    <div className="absolute -top-2 md:-top-3 -right-2 md:-right-3 bg-[#2c3968] dark:bg-[#4a7cf6] text-white px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs z-10 shadow-md">
                       Latest
                     </div>
                   )}
                   
                   {/* Phone Image */}
-                  <div className="w-full h-[100px] sm:h-[120px] md:h-[140px] mb-3 md:mb-4 overflow-hidden rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                  <div className="w-full h-[100px] sm:h-[120px] md:h-[140px] mb-3 md:mb-4 overflow-hidden rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#1a1f2e] dark:to-[#1e2530] flex items-center justify-center">
                     <img 
                       src={phone.image} 
                       alt={phone.name}
@@ -164,7 +164,7 @@ export default function RecentlyViewedPhones({ currentPhone, onNavigate, recentl
                     />
                   </div>
                   {/* Phone Name */}
-                  <p className="text-center text-[#2c3968] text-xs md:text-sm transition-colors duration-300 group-hover:text-[#1e2547] mt-auto h-[35px] md:h-[40px] flex items-center justify-center leading-tight">{phone.name}</p>
+                  <p className="text-center text-[#2c3968] dark:text-[#4a7cf6] text-xs md:text-sm transition-colors duration-300 group-hover:text-[#1e2547] dark:group-hover:text-[#5b8df7] mt-auto h-[35px] md:h-[40px] flex items-center justify-center leading-tight">{phone.name}</p>
                 </div>
               </div>
             ))}
@@ -174,10 +174,10 @@ export default function RecentlyViewedPhones({ currentPhone, onNavigate, recentl
           {showRightArrow && (
             <button
               onClick={() => handleScroll('right')}
-              className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 border-2 border-[#2c3968]/10 hover:border-[#2c3968]/30"
+              className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-white dark:bg-[#252b3d] rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 border-2 border-[#2c3968]/10 dark:border-[#4a7cf6]/10 hover:border-[#2c3968]/30 dark:hover:border-[#4a7cf6]/30"
               aria-label="Scroll right"
             >
-              <ChevronRight className="w-6 h-6 text-[#2c3968]" />
+              <ChevronRight className="w-6 h-6 text-[#2c3968] dark:text-[#4a7cf6]" />
             </button>
           )}
         </div>

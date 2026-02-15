@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useAuth } from "../context/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
 import { Checkbox } from "./ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
-import { Star, Smartphone, Camera, Cpu, Battery, Ruler, Weight, Droplet, ChevronDown, ThumbsUp, ThumbsDown, X, Monitor, Wifi, Mic, HardDrive, Zap, Radio, BarChart3, Palette, Heart, Bell, Plus, HelpCircle, DollarSign, PenSquare, TrendingDown, TrendingUp } from "lucide-react";
+import { Star, Smartphone, Camera, Cpu, Battery, Ruler, Weight, Droplet, ChevronDown, ThumbsUp, ThumbsDown, X, Monitor, Wifi, Mic, HardDrive, Zap, Radio, BarChart3, Palette, Heart, Bell, Plus, Check, HelpCircle, DollarSign, PenSquare, TrendingDown, TrendingUp } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Button } from "./ui/button";
@@ -21,6 +22,10 @@ import RecentlyViewedPhones from "./RecentlyViewedPhones";
 import SpecTableOfContents from "./SpecTableOfContents";
 import ComparisonCart from "./ComparisonCart";
 import { PhoneData, phonesData } from "../data/phoneData";
+import { ReviewForm } from "./ReviewForm";
+import { ReviewCard, ReviewData } from "./ReviewCard";
+import { CategoryRatings } from "./MultiRatingInput";
+import { getPhoneReviews, submitReview, voteOnReview, deleteReview, ReviewsResponse } from "../api/reviewApi";
 
 // Category icons mapping - minimalistic uniform color scheme
 const categoryConfig: Record<string, { icon: any }> = {
@@ -137,37 +142,75 @@ interface PhoneSpecPageProps {
   onComparisonChange?: (phoneIds: string[]) => void;
   recentlyViewedPhones?: string[];
   onAddToRecentlyViewed?: (phoneId: string) => void;
+  onNavigateToCatalog?: () => void;
 }
 
-export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToComparison, comparisonPhoneIds: externalComparisonIds, onComparisonChange, recentlyViewedPhones, onAddToRecentlyViewed }: PhoneSpecPageProps) {
+export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToComparison, comparisonPhoneIds: externalComparisonIds, onComparisonChange, recentlyViewedPhones, onAddToRecentlyViewed, onNavigateToCatalog }: PhoneSpecPageProps) {
   const categories = Object.keys(phoneData.categories);
-  
-  // Calculate overall rating from user reviews
+  const { currentUser } = useAuth();
+
+  // Review state - API connected
+  const [reviews, setReviews] = useState<ReviewData[]>([]);
+  const [totalReviews, setTotalReviews] = useState(0);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(true);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isVoting, setIsVoting] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+
+  // Fetch reviews from API
+  const fetchReviews = useCallback(async (page: number = 1) => {
+    setIsLoadingReviews(true);
+    try {
+      const response = await getPhoneReviews(phoneData.id, page, 3);
+      if (response) {
+        setReviews(response.reviews);
+        setTotalReviews(response.totalReviews);
+      } else {
+        // Fallback to mock data if API fails
+        setReviews(phoneData.reviews as unknown as ReviewData[]);
+        setTotalReviews(phoneData.reviews.length);
+      }
+    } catch (error) {
+      console.error("Failed to fetch reviews:", error);
+      // Fallback to mock data
+      setReviews(phoneData.reviews as unknown as ReviewData[]);
+      setTotalReviews(phoneData.reviews.length);
+    } finally {
+      setIsLoadingReviews(false);
+    }
+  }, [phoneData.id, phoneData.reviews]);
+
+  // Fetch reviews on mount and when phone changes
+  useEffect(() => {
+    fetchReviews(1);
+    setCurrentPage(1);
+  }, [phoneData.id, fetchReviews]);
+
+  // Calculate overall rating from reviews
   const calculateOverallRating = () => {
-    if (phoneData.reviews.length === 0) return 0;
-    
-    const totalRating = phoneData.reviews.reduce((sum, review) => {
-      // Calculate average from category ratings for each review
-      const reviewAvg = review.categoryRatings 
-        ? (review.categoryRatings.camera + review.categoryRatings.battery + 
-           review.categoryRatings.design + review.categoryRatings.performance + 
+    if (reviews.length === 0) return 0;
+
+    const totalRating = reviews.reduce((sum, review) => {
+      const reviewAvg = review.categoryRatings
+        ? (review.categoryRatings.camera + review.categoryRatings.battery +
+           review.categoryRatings.design + review.categoryRatings.performance +
            review.categoryRatings.value) / 5
         : review.rating;
       return sum + reviewAvg;
     }, 0);
-    
-    return Number((totalRating / phoneData.reviews.length).toFixed(1));
+
+    return Number((totalRating / reviews.length).toFixed(1));
   };
-  
+
   const overallRating = calculateOverallRating();
-  const ratingsCount = phoneData.reviews.length;
-  
+  const ratingsCount = totalReviews;
+
   // Initialize with all specs selected
   const initialSelectedSpecs: Record<string, string[]> = {};
   categories.forEach(category => {
     initialSelectedSpecs[category] = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
   });
-  
+
   const [selectedSpecs, setSelectedSpecs] = useState<Record<string, string[]>>(initialSelectedSpecs);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
   const [isFilterOpen, setIsFilterOpen] = useState(true);
@@ -176,27 +219,7 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
   const [isCarrierCompatOpen, setIsCarrierCompatOpen] = useState(true);
   const [isReviewsOpen, setIsReviewsOpen] = useState(true);
   const [isPriceTrackingOpen, setIsPriceTrackingOpen] = useState(true);
-  const [helpfulClicks, setHelpfulClicks] = useState<Record<number, 'helpful' | 'notHelpful' | null>>({});
-  const [reviews, setReviews] = useState(phoneData.reviews);
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [newReview, setNewReview] = useState({
-    userName: "",
-    rating: 0,
-    categoryRatings: {
-      camera: 0,
-      battery: 0,
-      design: 0,
-      performance: 0,
-      value: 0,
-    },
-    title: "",
-    review: "",
-  });
-  const [hoverRating, setHoverRating] = useState(0);
-  const [hoverCategoryRating, setHoverCategoryRating] = useState<{ [key: string]: number }>({});
-  const [expandedCategoryRatings, setExpandedCategoryRatings] = useState<{ [key: number]: boolean }>({});
   const [currentPage, setCurrentPage] = useState(1);
-  const reviewsPerPage = 3;
   const reviewsSectionRef = useRef<HTMLDivElement>(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isPriceAlertOpen, setIsPriceAlertOpen] = useState(false);
@@ -297,10 +320,14 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
   }, [phoneData.id]);
 
   // Calculate pagination values
-  const totalPages = Math.ceil(reviews.length / reviewsPerPage);
-  const startIndex = (currentPage - 1) * reviewsPerPage;
-  const endIndex = startIndex + reviewsPerPage;
-  const currentReviews = reviews.slice(startIndex, endIndex);
+  const reviewsPerPage = 3;
+  const totalPages = Math.ceil(totalReviews / reviewsPerPage);
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchReviews(page);
+  };
 
   const handleLeaveReviewClick = () => {
     // Ensure reviews section is expanded
@@ -363,83 +390,79 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
     }));
   };
 
-  const handleHelpfulClick = (reviewId: number, type: 'helpful' | 'notHelpful') => {
-    setHelpfulClicks(prev => {
-      const current = prev[reviewId];
-      if (current === type) {
-        // If already clicked, unclick it
-        return { ...prev, [reviewId]: null };
-      } else {
-        // Click it (either from null or switching from the other type)
-        return { ...prev, [reviewId]: type };
-      }
-    });
-  };
-
-  const handleSubmitReview = () => {
-    const categoryRatings = newReview.categoryRatings;
-    const allCategoryRatingsGiven = Object.values(categoryRatings).every(rating => rating > 0);
-    
-    if (!newReview.userName || !newReview.title || !newReview.review || !allCategoryRatingsGiven) {
+  // Handle voting on reviews via API
+  const handleVoteOnReview = async (reviewId: number, voteType: 'helpful' | 'notHelpful') => {
+    if (!currentUser?.firebaseUser) {
+      toast.error("Please sign in to vote on reviews");
       return;
     }
 
-    // Calculate average rating from category ratings
-    const averageRating = (
-      categoryRatings.camera +
-      categoryRatings.battery +
-      categoryRatings.design +
-      categoryRatings.performance +
-      categoryRatings.value
-    ) / 5;
+    setIsVoting(true);
+    try {
+      const token = await currentUser.firebaseUser.getIdToken();
+      const updatedReview = await voteOnReview(phoneData.id, reviewId, voteType, token);
+      if (updatedReview) {
+        setReviews(prev =>
+          prev.map(r => (r.id === reviewId ? updatedReview : r))
+        );
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to vote on review");
+    } finally {
+      setIsVoting(false);
+    }
+  };
 
-    const reviewToAdd = {
-      id: reviews.length + 1,
-      userName: newReview.userName,
-      rating: Math.round(averageRating * 2) / 2, // Round to nearest 0.5
-      categoryRatings: { ...categoryRatings },
-      date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-      title: newReview.title,
-      review: newReview.review,
-      helpful: 0,
-      notHelpful: 0,
-    };
+  // Handle submitting a new review via API
+  const handleSubmitReview = async (data: {
+    title: string;
+    review: string;
+    categoryRatings: CategoryRatings;
+  }) => {
+    if (!currentUser?.firebaseUser) {
+      toast.error("Please sign in to submit a review");
+      return;
+    }
 
-    setReviews([reviewToAdd, ...reviews]);
-    setCurrentPage(1); // Reset to first page after adding a review
-    setNewReview({
-      userName: "",
-      rating: 0,
-      categoryRatings: {
-        camera: 0,
-        battery: 0,
-        design: 0,
-        performance: 0,
-        value: 0,
-      },
-      title: "",
-      review: "",
-    });
-    setShowReviewForm(false);
+    setIsSubmittingReview(true);
+    try {
+      const token = await currentUser.firebaseUser.getIdToken();
+      const newReview = await submitReview(phoneData.id, data, token);
+      if (newReview) {
+        setReviews(prev => [newReview, ...prev]);
+        setTotalReviews(prev => prev + 1);
+        setShowReviewForm(false);
+        setCurrentPage(1);
+        toast.success("Review submitted successfully!");
+      }
+    } catch (error: any) {
+      if (error.message?.includes("already reviewed")) {
+        toast.error("You have already reviewed this phone");
+      } else {
+        toast.error(error.message || "Failed to submit review");
+      }
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  // Handle deleting a review via API
+  const handleDeleteReview = async (reviewId: number) => {
+    if (!currentUser?.firebaseUser) return;
+
+    try {
+      const token = await currentUser.firebaseUser.getIdToken();
+      await deleteReview(phoneData.id, reviewId, token);
+      setReviews(prev => prev.filter(r => r.id !== reviewId));
+      setTotalReviews(prev => prev - 1);
+      toast.success("Review deleted successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete review");
+    }
   };
 
   const handleCancelReview = () => {
-    if (window.confirm("Are you sure you want to cancel? Your review will not be saved.")) {
-      setNewReview({
-        userName: "",
-        rating: 0,
-        categoryRatings: {
-          camera: 0,
-          battery: 0,
-          design: 0,
-          performance: 0,
-          value: 0,
-        },
-        title: "",
-        review: "",
-      });
-      setShowReviewForm(false);
-    }
+    setShowReviewForm(false);
   };
 
   const handleWishlistToggle = () => {
@@ -575,7 +598,7 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
               </div>
               
               {/* Browse Phone Catalog Section - Dashed Rectangle - Positioned to the right */}
-              <div className="hidden xl:flex absolute top-1/2 -translate-y-1/2 left-[calc(100%-40px)] flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent w-52 group/catalog hover:border-[#2c3968]/50 transition-all duration-300 min-h-[400px] z-10 cursor-pointer" onClick={() => alert('Navigate to Phone Catalog')}>
+              <div className="hidden xl:flex absolute top-1/2 -translate-y-1/2 left-[calc(100%-40px)] flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 dark:border-[#4a7cf6]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent dark:from-[#4a7cf6]/5 w-52 group/catalog hover:border-[#2c3968]/50 dark:hover:border-[#4a7cf6]/50 transition-all duration-300 min-h-[400px] z-10 cursor-pointer" onClick={onNavigateToCatalog}>
                 {/* Decorative Corner Accents */}
                 <div className="absolute top-0 left-0 w-3 h-3 border-t-4 border-l-4 border-[#2c3968] rounded-tl-sm"></div>
                 <div className="absolute top-0 right-0 w-3 h-3 border-t-4 border-r-4 border-[#2c3968] rounded-tr-sm"></div>
@@ -728,17 +751,31 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
             {/* Add to Compare Button - Second Row */}
             <div className="flex justify-center mt-3 w-full px-4 sm:px-0">
               <Button
-                className="bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] text-white hover:from-[#243059] hover:to-[#354368] shadow-lg hover:shadow-xl w-full sm:w-auto transition-all duration-300 hover:scale-105 group"
+                className={
+                  comparisonPhones.some(phone => phone.id === phoneData.id)
+                    ? "bg-green-500 dark:bg-green-600 text-white hover:bg-green-600 dark:hover:bg-green-700 shadow-lg w-full sm:w-auto transition-all duration-300 cursor-default"
+                    : "bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white hover:from-[#243059] hover:to-[#354368] dark:hover:from-[#3d6be5] dark:hover:to-[#4a7cf6] shadow-lg hover:shadow-xl w-full sm:w-auto transition-all duration-300 hover:scale-105 group"
+                }
                 onClick={handleAddToComparison}
+                disabled={comparisonPhones.some(phone => phone.id === phoneData.id)}
               >
-                <Plus className="w-4 h-4 mr-2 transition-transform group-hover:rotate-90" />
-                Add to Compare
+                {comparisonPhones.some(phone => phone.id === phoneData.id) ? (
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    Already in Compare
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2 transition-transform group-hover:rotate-90" />
+                    Add to Compare
+                  </>
+                )}
               </Button>
             </div>
             
             {/* Mobile Browse Phones Section - Shows below XL screens */}
             <div className="xl:hidden flex justify-center mt-6 px-4">
-              <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent w-full max-w-md py-6 px-4 group/catalog hover:border-[#2c3968]/50 transition-all duration-300 rounded-lg cursor-pointer" onClick={() => alert('Navigate to Phone Catalog')}>
+              <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 dark:border-[#4a7cf6]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent dark:from-[#4a7cf6]/5 w-full max-w-md py-6 px-4 group/catalog hover:border-[#2c3968]/50 dark:hover:border-[#4a7cf6]/50 transition-all duration-300 rounded-lg cursor-pointer" onClick={onNavigateToCatalog}>
                 {/* Decorative Corner Accents */}
                 <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-3 border-l-3 border-[#2c3968] rounded-tl-sm"></div>
                 <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t-3 border-r-3 border-[#2c3968] rounded-tr-sm"></div>
@@ -1305,12 +1342,13 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {(() => {
                       // Calculate average for each category
+                      const reviewCount = reviews.length || 1; // Prevent division by zero
                       const categoryAverages = {
-                        camera: phoneData.reviews.reduce((sum, r) => sum + (r.categoryRatings?.camera || 0), 0) / phoneData.reviews.length,
-                        battery: phoneData.reviews.reduce((sum, r) => sum + (r.categoryRatings?.battery || 0), 0) / phoneData.reviews.length,
-                        design: phoneData.reviews.reduce((sum, r) => sum + (r.categoryRatings?.design || 0), 0) / phoneData.reviews.length,
-                        performance: phoneData.reviews.reduce((sum, r) => sum + (r.categoryRatings?.performance || 0), 0) / phoneData.reviews.length,
-                        value: phoneData.reviews.reduce((sum, r) => sum + (r.categoryRatings?.value || 0), 0) / phoneData.reviews.length,
+                        camera: reviews.reduce((sum, r) => sum + (r.categoryRatings?.camera || 0), 0) / reviewCount,
+                        battery: reviews.reduce((sum, r) => sum + (r.categoryRatings?.battery || 0), 0) / reviewCount,
+                        design: reviews.reduce((sum, r) => sum + (r.categoryRatings?.design || 0), 0) / reviewCount,
+                        performance: reviews.reduce((sum, r) => sum + (r.categoryRatings?.performance || 0), 0) / reviewCount,
+                        value: reviews.reduce((sum, r) => sum + (r.categoryRatings?.value || 0), 0) / reviewCount,
                       };
 
                       const categories = [
@@ -1352,558 +1390,47 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
 
             {/* Review Form */}
             {showReviewForm && (
-              <div className="bg-[#f7f7f7] border-2 border-[#2c3968] rounded-lg p-6 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-[#2c3968]">Write Your Review</h3>
-                    <p className="text-[#666]">Share your experience with the {phoneData.name}</p>
-                  </div>
-                  <button
-                    onClick={handleCancelReview}
-                    className="text-[#666] hover:text-[#2c3968] transition-colors"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-                
-                <div className="space-y-4">
-                  {/* Name Input */}
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Your Name</Label>
-                    <Input
-                      id="name"
-                      placeholder="Enter your name"
-                      value={newReview.userName}
-                      onChange={(e) => setNewReview({ ...newReview, userName: e.target.value })}
-                      className="bg-white"
-                    />
-                  </div>
-
-                  {/* Category Ratings */}
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Rate by Category</Label>
-                      <p className="text-sm text-[#666] mt-1">Your overall rating will be calculated from these categories</p>
-                    </div>
-                    
-                    {/* Camera Rating */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm">Camera</Label>
-                        <span className="text-sm text-[#2c3968]">
-                          {newReview.categoryRatings.camera > 0 ? newReview.categoryRatings.camera : '-'}/5
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onMouseEnter={() => setHoverCategoryRating({ ...hoverCategoryRating, camera: star })}
-                            onMouseLeave={() => setHoverCategoryRating({ ...hoverCategoryRating, camera: 0 })}
-                            onClick={() => setNewReview({ 
-                              ...newReview, 
-                              categoryRatings: { ...newReview.categoryRatings, camera: star }
-                            })}
-                            className="focus:outline-none"
-                          >
-                            <Star
-                              className={`w-6 h-6 transition-colors ${
-                                star <= (hoverCategoryRating.camera || newReview.categoryRatings.camera)
-                                  ? 'fill-[#2c3968] text-[#2c3968]'
-                                  : 'text-[#e0e0e0]'
-                              }`}
-                            />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Battery Rating */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm">Battery Life</Label>
-                        <span className="text-sm text-[#2c3968]">
-                          {newReview.categoryRatings.battery > 0 ? newReview.categoryRatings.battery : '-'}/5
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onMouseEnter={() => setHoverCategoryRating({ ...hoverCategoryRating, battery: star })}
-                            onMouseLeave={() => setHoverCategoryRating({ ...hoverCategoryRating, battery: 0 })}
-                            onClick={() => setNewReview({ 
-                              ...newReview, 
-                              categoryRatings: { ...newReview.categoryRatings, battery: star }
-                            })}
-                            className="focus:outline-none"
-                          >
-                            <Star
-                              className={`w-6 h-6 transition-colors ${
-                                star <= (hoverCategoryRating.battery || newReview.categoryRatings.battery)
-                                  ? 'fill-[#2c3968] text-[#2c3968]'
-                                  : 'text-[#e0e0e0]'
-                              }`}
-                            />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Design Rating */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm">Design</Label>
-                        <span className="text-sm text-[#2c3968]">
-                          {newReview.categoryRatings.design > 0 ? newReview.categoryRatings.design : '-'}/5
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onMouseEnter={() => setHoverCategoryRating({ ...hoverCategoryRating, design: star })}
-                            onMouseLeave={() => setHoverCategoryRating({ ...hoverCategoryRating, design: 0 })}
-                            onClick={() => setNewReview({ 
-                              ...newReview, 
-                              categoryRatings: { ...newReview.categoryRatings, design: star }
-                            })}
-                            className="focus:outline-none"
-                          >
-                            <Star
-                              className={`w-6 h-6 transition-colors ${
-                                star <= (hoverCategoryRating.design || newReview.categoryRatings.design)
-                                  ? 'fill-[#2c3968] text-[#2c3968]'
-                                  : 'text-[#e0e0e0]'
-                              }`}
-                            />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Performance Rating */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm">Performance</Label>
-                        <span className="text-sm text-[#2c3968]">
-                          {newReview.categoryRatings.performance > 0 ? newReview.categoryRatings.performance : '-'}/5
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onMouseEnter={() => setHoverCategoryRating({ ...hoverCategoryRating, performance: star })}
-                            onMouseLeave={() => setHoverCategoryRating({ ...hoverCategoryRating, performance: 0 })}
-                            onClick={() => setNewReview({ 
-                              ...newReview, 
-                              categoryRatings: { ...newReview.categoryRatings, performance: star }
-                            })}
-                            className="focus:outline-none"
-                          >
-                            <Star
-                              className={`w-6 h-6 transition-colors ${
-                                star <= (hoverCategoryRating.performance || newReview.categoryRatings.performance)
-                                  ? 'fill-[#2c3968] text-[#2c3968]'
-                                  : 'text-[#e0e0e0]'
-                              }`}
-                            />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Value Rating */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm">Value</Label>
-                        <span className="text-sm text-[#2c3968]">
-                          {newReview.categoryRatings.value > 0 ? newReview.categoryRatings.value : '-'}/5
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onMouseEnter={() => setHoverCategoryRating({ ...hoverCategoryRating, value: star })}
-                            onMouseLeave={() => setHoverCategoryRating({ ...hoverCategoryRating, value: 0 })}
-                            onClick={() => setNewReview({ 
-                              ...newReview, 
-                              categoryRatings: { ...newReview.categoryRatings, value: star }
-                            })}
-                            className="focus:outline-none"
-                          >
-                            <Star
-                              className={`w-6 h-6 transition-colors ${
-                                star <= (hoverCategoryRating.value || newReview.categoryRatings.value)
-                                  ? 'fill-[#2c3968] text-[#2c3968]'
-                                  : 'text-[#e0e0e0]'
-                              }`}
-                            />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Overall Rating Display */}
-                    {Object.values(newReview.categoryRatings).some(rating => rating > 0) && (
-                      <div className="bg-white rounded-lg p-4 border-2 border-[#2c3968]/20">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm">Overall Rating:</span>
-                          <div className="flex items-center gap-2">
-                            <div className="flex gap-0.5">
-                              {(() => {
-                                const avg = Object.values(newReview.categoryRatings).reduce((sum, r) => sum + r, 0) / 5;
-                                return [...Array(5)].map((_, i) => {
-                                  const fillPercentage = Math.max(0, Math.min(1, avg - i));
-                                  return (
-                                    <PartialStar
-                                      key={i}
-                                      fillPercentage={fillPercentage}
-                                      fillColor="#2c3968"
-                                      strokeColor="#2c3968"
-                                      size={20}
-                                    />
-                                  );
-                                });
-                              })()}
-                            </div>
-                            <span className="text-[#2c3968]">
-                              {(Object.values(newReview.categoryRatings).reduce((sum, r) => sum + r, 0) / 5).toFixed(1)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Review Title */}
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Review Title</Label>
-                    <Input
-                      id="title"
-                      placeholder="Summarize your experience"
-                      value={newReview.title}
-                      onChange={(e) => setNewReview({ ...newReview, title: e.target.value })}
-                      className="bg-white"
-                    />
-                  </div>
-
-                  {/* Review Content */}
-                  <div className="space-y-2">
-                    <Label htmlFor="review">Your Review</Label>
-                    <Textarea
-                      id="review"
-                      placeholder="Tell us about your experience with this phone..."
-                      value={newReview.review}
-                      onChange={(e) => setNewReview({ ...newReview, review: e.target.value })}
-                      rows={6}
-                      className="bg-white resize-y min-h-[150px]"
-                    />
-                  </div>
-
-                  {/* Submit Button */}
-                  <div className="flex justify-end gap-3 pt-4">
-                    <Button
-                      variant="outline"
-                      onClick={handleCancelReview}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      className="bg-[#2c3968] hover:bg-[#2c3968]/90"
-                      onClick={handleSubmitReview}
-                      disabled={
-                        !newReview.userName || 
-                        !newReview.title || 
-                        !newReview.review || 
-                        Object.values(newReview.categoryRatings).some(rating => rating === 0)
-                      }
-                    >
-                      Submit Review
+              <div className="mb-6">
+                {!currentUser ? (
+                  <div className="bg-[#f7f7f7] border-2 border-[#2c3968] rounded-lg p-6 text-center">
+                    <p className="text-[#666] mb-4">Please sign in to write a review</p>
+                    <Button className="bg-[#2c3968] hover:bg-[#2c3968]/90">
+                      Sign In
                     </Button>
                   </div>
-                </div>
+                ) : (
+                  <ReviewForm
+                    onSubmit={handleSubmitReview}
+                    onCancel={handleCancelReview}
+                    isSubmitting={isSubmittingReview}
+                  />
+                )}
               </div>
             )}
 
             {/* Existing Reviews */}
             <div className="space-y-6">
-              {currentReviews.map((review) => {
-                const userClick = helpfulClicks[review.id];
-                const helpfulCount = review.helpful + (userClick === 'helpful' ? 1 : 0) - (helpfulClicks[review.id] === null && userClick !== 'helpful' ? 0 : 0);
-                const notHelpfulCount = review.notHelpful + (userClick === 'notHelpful' ? 1 : 0);
-                
-                // Get user initials for avatar
-                const getInitials = (name: string) => {
-                  return name
-                    .split(' ')
-                    .map(n => n[0])
-                    .join('')
-                    .toUpperCase()
-                    .slice(0, 2);
-                };
-                
-                return (
-                  <div 
-                    key={review.id} 
-                    className="border border-[#e0e0e0] rounded-xl p-6 hover:border-[#2c3968]/20 hover:shadow-md transition-all duration-200 bg-white"
-                  >
-                    {/* Review Header */}
-                    <div className="flex items-start gap-4 mb-4">
-                      {/* Avatar */}
-                      <Avatar className="w-12 h-12 border-2 border-[#2c3968]/10">
-                        <AvatarFallback className="bg-gradient-to-br from-[#2c3968] to-[#2c3968]/80 text-white">
-                          {getInitials(review.userName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      
-                      {/* User Info and Rating */}
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between gap-4 mb-2">
-                          <div>
-                            <p className="text-[#2c3968] mb-1">{review.userName}</p>
-                            <p className="text-sm text-[#666]">{review.date}</p>
-                          </div>
-                          
-                          {/* Rating Stars */}
-                          <div className="flex items-center gap-2 bg-[#f7f9fc] px-3 py-2 rounded-lg">
-                            <div className="flex gap-0.5">
-                              {(() => {
-                                // Calculate average rating from category ratings
-                                const avgRating = review.categoryRatings 
-                                  ? (review.categoryRatings.camera + review.categoryRatings.battery + 
-                                     review.categoryRatings.design + review.categoryRatings.performance + 
-                                     review.categoryRatings.value) / 5
-                                  : review.rating;
-                                
-                                return [...Array(5)].map((_, i) => {
-                                  const fillPercentage = Math.max(0, Math.min(1, avgRating - i));
-                                  return (
-                                    <PartialStar
-                                      key={i}
-                                      fillPercentage={fillPercentage}
-                                      fillColor="#2c3968"
-                                      strokeColor="#2c3968"
-                                      size={16}
-                                    />
-                                  );
-                                });
-                              })()}
-                            </div>
-                            <span className="text-sm text-[#2c3968]">
-                              {review.categoryRatings 
-                                ? ((review.categoryRatings.camera + review.categoryRatings.battery + 
-                                    review.categoryRatings.design + review.categoryRatings.performance + 
-                                    review.categoryRatings.value) / 5).toFixed(1)
-                                : review.rating}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Review Title */}
-                    <h3 className="text-[#1e1e1e] mb-3 text-lg">{review.title}</h3>
-
-                    {/* Review Content */}
-                    <p className="text-[#666] mb-5 leading-relaxed">{review.review}</p>
-
-                    {/* Category Ratings Dropdown */}
-                    {review.categoryRatings && (
-                      <div className="mb-4">
-                        <button
-                          onClick={() => setExpandedCategoryRatings(prev => ({
-                            ...prev,
-                            [review.id]: !prev[review.id]
-                          }))}
-                          className="flex items-center gap-2 text-sm text-[#2c3968] hover:text-[#2c3968]/80 transition-colors"
-                        >
-                          <ChevronDown 
-                            className={`w-4 h-4 transition-transform ${
-                              expandedCategoryRatings[review.id] ? 'rotate-180' : ''
-                            }`}
-                          />
-                          <span>View detailed ratings</span>
-                        </button>
-                        
-                        {expandedCategoryRatings[review.id] && (
-                          <div className="mt-3 bg-white border-2 border-[#2c3968]/10 rounded-xl p-5 shadow-sm">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {/* Camera */}
-                              <div className="flex items-center justify-between p-3 bg-[#f7f9fc] rounded-lg hover:bg-[#eef2f9] transition-colors">
-                                <div className="flex items-center gap-2">
-                                  <Camera className="w-4 h-4 text-[#2c3968]" />
-                                  <span className="text-sm text-[#1e1e1e]">Camera</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex gap-0.5">
-                                    {[...Array(5)].map((_, i) => {
-                                      const fillPercentage = Math.max(0, Math.min(1, review.categoryRatings.camera - i));
-                                      return (
-                                        <PartialStar
-                                          key={i}
-                                          fillPercentage={fillPercentage}
-                                          fillColor="#2c3968"
-                                          strokeColor="#2c3968"
-                                          size={14}
-                                        />
-                                      );
-                                    })}
-                                  </div>
-                                  <span className="text-sm text-[#2c3968] min-w-[20px] text-right">{review.categoryRatings.camera}</span>
-                                </div>
-                              </div>
-
-                              {/* Battery */}
-                              <div className="flex items-center justify-between p-3 bg-[#f7f9fc] rounded-lg hover:bg-[#eef2f9] transition-colors">
-                                <div className="flex items-center gap-2">
-                                  <Battery className="w-4 h-4 text-[#2c3968]" />
-                                  <span className="text-sm text-[#1e1e1e]">Battery</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex gap-0.5">
-                                    {[...Array(5)].map((_, i) => {
-                                      const fillPercentage = Math.max(0, Math.min(1, review.categoryRatings.battery - i));
-                                      return (
-                                        <PartialStar
-                                          key={i}
-                                          fillPercentage={fillPercentage}
-                                          fillColor="#2c3968"
-                                          strokeColor="#2c3968"
-                                          size={14}
-                                        />
-                                      );
-                                    })}
-                                  </div>
-                                  <span className="text-sm text-[#2c3968] min-w-[20px] text-right">{review.categoryRatings.battery}</span>
-                                </div>
-                              </div>
-
-                              {/* Design */}
-                              <div className="flex items-center justify-between p-3 bg-[#f7f9fc] rounded-lg hover:bg-[#eef2f9] transition-colors">
-                                <div className="flex items-center gap-2">
-                                  <Palette className="w-4 h-4 text-[#2c3968]" />
-                                  <span className="text-sm text-[#1e1e1e]">Design</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex gap-0.5">
-                                    {[...Array(5)].map((_, i) => {
-                                      const fillPercentage = Math.max(0, Math.min(1, review.categoryRatings.design - i));
-                                      return (
-                                        <PartialStar
-                                          key={i}
-                                          fillPercentage={fillPercentage}
-                                          fillColor="#2c3968"
-                                          strokeColor="#2c3968"
-                                          size={14}
-                                        />
-                                      );
-                                    })}
-                                  </div>
-                                  <span className="text-sm text-[#2c3968] min-w-[20px] text-right">{review.categoryRatings.design}</span>
-                                </div>
-                              </div>
-
-                              {/* Performance */}
-                              <div className="flex items-center justify-between p-3 bg-[#f7f9fc] rounded-lg hover:bg-[#eef2f9] transition-colors">
-                                <div className="flex items-center gap-2">
-                                  <Cpu className="w-4 h-4 text-[#2c3968]" />
-                                  <span className="text-sm text-[#1e1e1e]">Performance</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex gap-0.5">
-                                    {[...Array(5)].map((_, i) => {
-                                      const fillPercentage = Math.max(0, Math.min(1, review.categoryRatings.performance - i));
-                                      return (
-                                        <PartialStar
-                                          key={i}
-                                          fillPercentage={fillPercentage}
-                                          fillColor="#2c3968"
-                                          strokeColor="#2c3968"
-                                          size={14}
-                                        />
-                                      );
-                                    })}
-                                  </div>
-                                  <span className="text-sm text-[#2c3968] min-w-[20px] text-right">{review.categoryRatings.performance}</span>
-                                </div>
-                              </div>
-
-                              {/* Value */}
-                              <div className="flex items-center justify-between p-3 bg-[#f7f9fc] rounded-lg hover:bg-[#eef2f9] transition-colors md:col-span-2">
-                                <div className="flex items-center gap-2">
-                                  <DollarSign className="w-4 h-4 text-[#2c3968]" />
-                                  <span className="text-sm text-[#1e1e1e]">Value</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex gap-0.5">
-                                    {[...Array(5)].map((_, i) => {
-                                      const fillPercentage = Math.max(0, Math.min(1, review.categoryRatings.value - i));
-                                      return (
-                                        <PartialStar
-                                          key={i}
-                                          fillPercentage={fillPercentage}
-                                          fillColor="#2c3968"
-                                          strokeColor="#2c3968"
-                                          size={14}
-                                        />
-                                      );
-                                    })}
-                                  </div>
-                                  <span className="text-sm text-[#2c3968] min-w-[20px] text-right">{review.categoryRatings.value}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Separator */}
-                    <Separator className="bg-[#e0e0e0] my-4" />
-
-                    {/* Helpful Buttons */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-[#666]">Was this review helpful?</span>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleHelpfulClick(review.id, 'helpful')}
-                          className={`flex items-center gap-2 rounded-lg transition-all duration-200 ${
-                            userClick === 'helpful' 
-                              ? 'bg-[#2c3968] text-white border-[#2c3968] hover:bg-[#2c3968]/90 hover:text-white' 
-                              : 'hover:bg-[#f7f9fc] border-[#e0e0e0]'
-                          }`}
-                        >
-                          <ThumbsUp className="w-4 h-4" />
-                          <span>{helpfulCount}</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleHelpfulClick(review.id, 'notHelpful')}
-                          className={`flex items-center gap-2 rounded-lg transition-all duration-200 ${
-                            userClick === 'notHelpful' 
-                              ? 'bg-[#2c3968] text-white border-[#2c3968] hover:bg-[#2c3968]/90 hover:text-white' 
-                              : 'hover:bg-[#f7f9fc] border-[#e0e0e0]'
-                          }`}
-                        >
-                          <ThumbsDown className="w-4 h-4" />
-                          <span>{notHelpfulCount}</span>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {isLoadingReviews ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2c3968]"></div>
+                  <span className="ml-3 text-[#666]">Loading reviews...</span>
+                </div>
+              ) : reviews.length === 0 ? (
+                <div className="text-center py-12 text-[#666]">
+                  <p>No reviews yet. Be the first to review this phone!</p>
+                </div>
+              ) : (
+                reviews.map((review) => (
+                  <ReviewCard
+                    key={review.id}
+                    review={review}
+                    currentUserId={currentUser?.uid}
+                    onVote={handleVoteOnReview}
+                    onDelete={handleDeleteReview}
+                    isVoting={isVoting}
+                  />
+                ))
+              )}
             </div>
 
             {/* Pagination */}
@@ -1912,15 +1439,15 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
                 <Pagination>
                   <PaginationContent>
                     <PaginationItem>
-                      <PaginationPrevious 
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      <PaginationPrevious
+                        onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                         className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                       />
                     </PaginationItem>
-                    
+
                     {[...Array(totalPages)].map((_, index) => {
                       const pageNumber = index + 1;
-                      
+
                       // Show first page, last page, current page, and pages around current page
                       if (
                         pageNumber === 1 ||
@@ -1930,7 +1457,7 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
                         return (
                           <PaginationItem key={pageNumber}>
                             <PaginationLink
-                              onClick={() => setCurrentPage(pageNumber)}
+                              onClick={() => handlePageChange(pageNumber)}
                               isActive={currentPage === pageNumber}
                               className="cursor-pointer"
                             >
@@ -1950,10 +1477,10 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
                       }
                       return null;
                     })}
-                    
+
                     <PaginationItem>
-                      <PaginationNext 
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      <PaginationNext
+                        onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                         className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                       />
                     </PaginationItem>
@@ -1964,15 +1491,15 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
           </CollapsibleContent>
         </div>
       </Collapsible>
+    </div>
 
-      {/* Recently Viewed Phones */}
-      <div id="recently-viewed">
-        <RecentlyViewedPhones 
-          currentPhone={phoneData.id} 
-          onNavigate={onNavigate}
-          recentlyViewedPhones={recentlyViewedPhones}
-        />
-      </div>
+    {/* Recently Viewed Phones */}
+    <div id="recently-viewed" className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto">
+      <RecentlyViewedPhones 
+        currentPhone={phoneData.id} 
+        onNavigate={onNavigate}
+        recentlyViewedPhones={recentlyViewedPhones}
+      />
     </div>
 
     {/* Comparison Cart */}
