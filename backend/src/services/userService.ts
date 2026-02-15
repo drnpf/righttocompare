@@ -11,6 +11,16 @@ export const findUserByUid = async (uid: string): Promise<IUser | null> => {
 };
 
 /**
+ * Finds a user by their email address.
+ * Used as fallback when UID lookup fails (e.g., UID changed).
+ * @param email The user's email address
+ * @returns The User document, if found, or null
+ */
+export const findUserByEmail = async (email: string): Promise<IUser | null> => {
+  return await User.findOne({ email: email });
+};
+
+/**
  * Updates the last login timestamp for existing user to the current time.
  * Should be called every time user loggs in.
  * @param user The existing User document retrieved from database

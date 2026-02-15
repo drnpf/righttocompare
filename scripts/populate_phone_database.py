@@ -1,5 +1,5 @@
 import os
-import re
+import argparse
 from pymongo import MongoClient
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
@@ -101,7 +101,7 @@ def generate_mock_phones(num_phones=12):
     return mock_phones
 
 
-def populate_phone_db():
+def populate_phone_db(num_phones=12, clear_first=False):
     try: # Attempting to connect Mongo client to DB and add mock phones
         client = get_mongodb_client()
         if client is None: return
@@ -109,8 +109,13 @@ def populate_phone_db():
         db = client[DB_NAME]
         phones_collection = db.phones
 
+        # Deletes existing phones in DB if --clear flag is set
+        if clear_first:
+            delete_result = phones_collection.delete_many({})
+            print(f"Cleared existing phones in the database. Deleted {delete_result.deleted_count} documents.")
+
         # Generates and upserts mock phones into DB (update or insert if not exist)
-        mock_phones = generate_mock_phones()
+        mock_phones = generate_mock_phones(num_phones)
         for phone in mock_phones:
             phones_collection.update_one({"id": phone["id"]}, {"$set": phone}, upsert=True)
         print(f"Successfully upserted {len(mock_phones)} mock phones into the database.")
@@ -125,4 +130,8 @@ def populate_phone_db():
 
 
 if __name__ == "__main__":
-    populate_phone_db()
+    parser = argparse.ArgumentParser(description="Populate the phone database with mock data.")
+    parser.add_argument("--numPhones", type=int, default=12, help="Number of mock phones to generate (default: 12)")
+    parser.add_argument("--clear", action="store_true", help="Clear existing phones in the database before populating")
+    args = parser.parse_args()
+    populate_phone_db(args.numPhones, args.clear)

@@ -7,6 +7,7 @@ import pixel10Image from "figma:asset/97e15958dda8a68c72375b01cfb9d69534512ed8.p
 
 export interface Review {
   id: number;
+  userId?: string; // Optional for mock data, required when fetched from API
   userName: string;
   rating: number;
   categoryRatings: {
@@ -21,6 +22,8 @@ export interface Review {
   review: string;
   helpful: number;
   notHelpful: number;
+  helpfulVoters?: string[];
+  notHelpfulVoters?: string[];
 }
 
 export interface QuickSpec {
