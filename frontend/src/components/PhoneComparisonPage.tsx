@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/t
 import SpecTableOfContents from "./SpecTableOfContents";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
 import { toast } from "sonner@2.0.3";
+import { useParams, useNavigate } from "react-router-dom";
 
 // Category icons mapping
 const categoryConfig: Record<string, { icon: any }> = {
@@ -51,7 +52,10 @@ const specTooltips: Record<string, string> = {
 interface PhoneComparisonPageProps {
   phoneIds: string[];
   onRemovePhone: (phoneId: string) => void;
-  onBackToSpecs: () => void;
+
+  //refactor? unneeded even?
+  // onBackToSpecs: () => void;
+  // onBackToSpecs: (phoneId: string) => void;
   onAddPhone?: (phoneId: string) => void;
   onNavigate?: (phoneId: string) => void;
   recentlyViewedPhones?: string[];
@@ -60,11 +64,16 @@ interface PhoneComparisonPageProps {
 export default function PhoneComparisonPage({
   phoneIds,
   onRemovePhone,
-  onBackToSpecs,
+  
+  //unneeded?
+  // onBackToSpecs,
   onAddPhone,
   onNavigate,
   recentlyViewedPhones,
 }: PhoneComparisonPageProps) {
+  // Routing
+  const navigate = useNavigate();
+
   const [stickyHeader, setStickyHeader] = useState(false);
   const [searchOpenIndex, setSearchOpenIndex] = useState<number | null>(null);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
@@ -888,7 +897,10 @@ export default function PhoneComparisonPage({
         <div id="recently-viewed">
           <RecentlyViewedPhones 
             currentPhone="" 
-            onNavigate={onNavigate}
+
+            //refactor?
+            // onNavigate={onNavigate}
+            onNavigate={(phoneId) => navigate(`/phones/${phoneId}`)}
             recentlyViewedPhones={recentlyViewedPhones}
           />
         </div>

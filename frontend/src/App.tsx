@@ -18,18 +18,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import FirebaseConnectionTest from "./components/FirebaseConnectionTest";
 import PasswordResetPage from "./components/PasswordResetPage";
 import { Shield } from "lucide-react";
-
-type PageType =
-  | "spec"
-  | "comparison"
-  | "catalog"
-  | "discussions"
-  | "discussionDetail"
-  | "signIn"
-  | "signUp"
-  | "profile"
-  | "admin"
-  | "passwordReset";
+import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
 
 // Helper functions for localStorage
 const getRecentlyViewedFromStorage = (): string[] => {
@@ -51,8 +40,9 @@ const saveRecentlyViewedToStorage = (phoneIds: string[]) => {
 
 function AppContent() {
   const { currentUser, signOut } = useAuth();
-  const [currentPage, setCurrentPage] = useState<string>("galaxy-s24-ultra");
-  const [pageType, setPageType] = useState<PageType>("catalog");
+  // React Router hook
+  const navigate = useNavigate();
+
   const [comparisonPhoneIds, setComparisonPhoneIds] = useState<string[]>([]);
   const [recentlyViewedPhones, setRecentlyViewedPhones] = useState<string[]>([]);
   const [currentDiscussionId, setCurrentDiscussionId] = useState<string>("");
@@ -69,39 +59,78 @@ function AppContent() {
 
     // If there's a password reset code in the URL, navigate to password reset page
     if (oobCode && mode === "resetPassword") {
-      setPageType("passwordReset");
+      navigate("/password-reset", {replace: true});
     }
   }, []);
 
-  // Add current page to recently viewed when it changes
-  useEffect(() => {
-    if (pageType === "spec" && currentPage) {
-      setRecentlyViewedPhones((prev) => {
-        // Remove the current phone if it already exists
-        const filtered = prev.filter((id) => id !== currentPage);
-        // Add current phone to the beginning
-        const updated = [currentPage, ...filtered].slice(0, 8); // Keep max 8 phones
-        saveRecentlyViewedToStorage(updated);
-        return updated;
-      });
-    }
-  }, [currentPage, pageType]);
-
-  const navigateToPhone = (phoneId: string) => {
-    setCurrentPage(phoneId);
-    setPageType("spec");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  // Add a phone to recently viewed
+  const addPhoneToRecentlyViewed = (phoneId: string) => {
+    setRecentlyViewedPhones((prev) => {
+      const filtered = prev.filter((id) => id !== phoneId);
+      const updated = [phoneId, ...filtered].slice(0, 8);
+      saveRecentlyViewedToStorage(updated);
+      return updated;
+    });
   };
 
-  const navigateToComparison = (phoneIds: string[]) => {
-    setComparisonPhoneIds(phoneIds);
-    setPageType("comparison");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  // Navigation functions
+  const handleNavigateToPhone = (phoneId: string) => {
+    addPhoneToRecentlyViewed(phoneId);
+    navigate(`/phones/${phoneId}`);
   };
 
-  const handleBackToSpecs = () => {
-    setPageType("spec");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const handleNavigateToComparison = () => {
+    navigate("/compare");
+  };
+
+  const handleDiscussionsClick = () => {
+    navigate("/discussions");
+  };
+
+  const handleViewDiscussion = (discussionId: string) => {
+    setCurrentDiscussionId(discussionId);
+    navigate(`/discussions/${discussionId}`);
+  };
+
+  const handleSignInClick = () => {
+    navigate("/sign-in");
+  };
+
+  const handleSignUpClick = () => {
+    navigate("/sign-up");
+  };
+
+  const handleSignInSuccess = () => {
+    navigate("/profile");
+  };
+
+  const handleSignUpSuccess = () => {
+    navigate("/profile");
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  const handleProfileClick = () => {
+    navigate("/profile");
+  };
+
+  const handleAdminClick = () => {
+    navigate("/admin");
+  };
+
+  const handleCatalogClick = () => {
+    navigate("/");
+  };
+
+  const handleLogoClick = () => {
+    navigate("/");
+  };
+
+  const handleBackToDiscussions = () => {
+    navigate("/discussions");
   };
 
   const handleRemoveFromComparison = (phoneId: string) => {
@@ -117,102 +146,16 @@ function AppContent() {
     }
   };
 
-  // Add a phone to recently viewed without navigating
-  const addPhoneToRecentlyViewed = (phoneId: string) => {
-    setRecentlyViewedPhones((prev) => {
-      // Remove the phone if it already exists
-      const filtered = prev.filter((id) => id !== phoneId);
-      // Add phone to the beginning
-      const updated = [phoneId, ...filtered].slice(0, 8); // Keep max 8 phones
-      saveRecentlyViewedToStorage(updated);
-      return updated;
-    });
-  };
-
-  const handleComparisonToolClick = () => {
-    // Always navigate to comparison page - it will handle empty states
-    setPageType("comparison");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleDiscussionsClick = () => {
-    setPageType("discussions");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleViewDiscussion = (discussionId: string) => {
-    setCurrentDiscussionId(discussionId);
-    setPageType("discussionDetail");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleBackToDiscussions = () => {
-    setPageType("discussions");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleSignInClick = () => {
-    setPageType("signIn");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleSignUpClick = () => {
-    setPageType("signUp");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleSignInSuccess = () => {
-    // Navigate to profile page after successful sign in
-    setPageType("profile");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleSignUpSuccess = () => {
-    // Navigate to profile page after successful sign up
-    setPageType("profile");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    setPageType("catalog");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleProfileClick = () => {
-    setPageType("profile");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleAdminClick = () => {
-    setPageType("admin");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleCatalogClick = () => {
-    setPageType("catalog");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleLogoClick = () => {
-    // Navigate to catalog page
-    setPageType("catalog");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  // Get the current phone data
-  const currentPhoneData = phonesData[currentPage];
-
   return (
     <DarkModeProvider>
       <div className="min-h-screen bg-[#f7f7f7] dark:bg-[#0d1117] flex flex-col transition-colors duration-300">
         <Toaster position="top-right" richColors />
         <div className="relative h-[80px] shrink-0">
           <NavigationBar
-            onComparisonToolClick={handleComparisonToolClick}
-            onDiscussionsClick={handleDiscussionsClick}
             isAuthenticated={currentUser !== null}
             user={currentUser}
+            onComparisonToolClick={handleNavigateToComparison}
+            onDiscussionsClick={handleDiscussionsClick}
             onSignInClick={handleSignInClick}
             onSignOut={handleSignOut}
             onProfileClick={handleProfileClick}
@@ -223,83 +166,67 @@ function AppContent() {
         </div>
 
         <main className="flex-1">
-          {pageType === "passwordReset" ? (
-            <PasswordResetPage onNavigateToSignIn={handleSignInClick} />
-          ) : pageType === "admin" ? (
-            currentUser?.role === "admin" ? (
-              <AdminDashboardPage />
-            ) : (
-              // Handles invalid access to admin page
-              <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 pt-8">
-                <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-16 text-center flex flex-col items-center border border-[#e5e5e5] dark:border-[#2d3548]">
-                  <div className="h-16 w-full" />
-                  <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-full mb-6">
-                    <Shield size={48} className="text-red-600 dark:text-red-500" />
-                  </div>
-
-                  <h2 className="text-[#2c3968] dark:text-white text-3xl font-bold mb-4">Access Denied</h2>
-
-                  <p className="text-[#666] dark:text-[#a0a8b8] max-w-md mx-auto mb-8 text-lg">
-                    You don't have the administrative privileges required to view the
-                    <strong> RightToCompare</strong> dashboard.
-                  </p>
-
-                  <button
-                    onClick={handleCatalogClick}
-                    className="bg-[#2c3968] hover:bg-[#3d4a7a] text-white px-8 py-3 rounded-full font-bold transition-all shadow-md hover:shadow-lg active:scale-95"
-                  >
-                    Return to Catalog
-                  </button>
-                  <div className="h-16 w-full" />
-                </div>
-              </div>
-            )
-          ) : pageType === "profile" ? (
-            <UserProfilePage />
-          ) : pageType === "signIn" ? (
-            <SignInPage onSignInSuccess={handleSignInSuccess} onNavigateToSignUp={handleSignUpClick} />
-          ) : pageType === "signUp" ? (
-            <SignUpPage onSignUpSuccess={handleSignUpSuccess} onNavigateToSignIn={handleSignInClick} />
-          ) : pageType === "discussionDetail" ? (
-            <DiscussionDetailPage discussionId={currentDiscussionId} onBack={handleBackToDiscussions} />
-          ) : pageType === "discussions" ? (
-            <DiscussionsPage onNavigate={navigateToPhone} onViewDiscussion={handleViewDiscussion} />
-          ) : pageType === "comparison" ? (
-            <PhoneComparisonPage
-              phoneIds={comparisonPhoneIds}
-              onRemovePhone={handleRemoveFromComparison}
-              onBackToSpecs={handleBackToSpecs}
-              onAddPhone={handleAddToComparison}
-              onNavigate={navigateToPhone}
-              recentlyViewedPhones={recentlyViewedPhones}
+          <Routes>
+            {/* Catalog page */}
+            <Route
+              path="/"
+              element={
+                <PhoneCatalogPage
+                  onNavigate={handleNavigateToPhone}
+                  comparisonPhoneIds={comparisonPhoneIds}
+                  onComparisonChange={setComparisonPhoneIds}
+                  onNavigateToComparison={handleNavigateToComparison}
+                  recentlyViewedPhones={recentlyViewedPhones}
+                />
+              }
             />
-          ) : pageType === "catalog" ? (
-            <PhoneCatalogPage
-              onNavigate={navigateToPhone}
-              comparisonPhoneIds={comparisonPhoneIds}
-              onComparisonChange={setComparisonPhoneIds}
-              onNavigateToComparison={navigateToComparison}
-              recentlyViewedPhones={recentlyViewedPhones}
+
+            {/* Phone detail page */}
+            <Route
+              path="/phones/:phoneId"
+              element={
+                <PhoneSpecPage
+                  comparisonPhoneIds={comparisonPhoneIds}
+                  onComparisonChange={setComparisonPhoneIds}
+                  recentlyViewedPhones={recentlyViewedPhones}
+                  onAddToRecentlyViewed={addPhoneToRecentlyViewed}
+                  onNavigateToComparison={handleNavigateToComparison}
+                />
+              }
             />
-          ) : currentPhoneData ? (
-            <PhoneSpecPage
-              phoneData={currentPhoneData}
-              onNavigate={navigateToPhone}
-              onNavigateToComparison={navigateToComparison}
-              comparisonPhoneIds={comparisonPhoneIds}
-              onComparisonChange={setComparisonPhoneIds}
-              recentlyViewedPhones={recentlyViewedPhones}
-              onAddToRecentlyViewed={addPhoneToRecentlyViewed}
-              onNavigateToCatalog={handleCatalogClick}
+
+            {/* Comparison page */}
+            <Route
+              path="/compare"
+              element={
+                <PhoneComparisonPage
+                  phoneIds={comparisonPhoneIds}
+                  onRemovePhone={handleRemoveFromComparison}
+                  onAddPhone={handleAddToComparison}
+                  recentlyViewedPhones={recentlyViewedPhones}
+                  onNavigate={handleNavigateToPhone}
+                />
+              }
             />
-          ) : (
-            <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 pt-8">
-              <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-12 text-center">
-                <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-3">Phone Not Found</h2>
-                <p className="text-[#666] dark:text-[#a0a8b8]">The phone you're looking for doesn't exist.</p>
-              </div>
-            </div>
-          )}
+
+            {/* Discussions */}
+            <Route path="/discussions" element={<DiscussionsPage onNavigate={handleNavigateToPhone} onViewDiscussion={handleViewDiscussion} />} />
+            <Route path="/discussions/:discussionId" element={<DiscussionDetailPage discussionId={currentDiscussionId} onBack={handleBackToDiscussions} />} />
+
+            {/* Auth */}
+            <Route path="/sign-in" element={<SignInPage onSignInSuccess={handleSignInSuccess} onNavigateToSignUp={handleSignUpClick} />} />
+            <Route path="/sign-up" element={<SignUpPage onSignUpSuccess={handleSignUpSuccess} onNavigateToSignIn={handleSignInClick} />} />
+            <Route path="/profile" element={currentUser ? <UserProfilePage /> : <Navigate to="/sign-in" />} />
+
+            {/* Admin */}
+            <Route path="/admin" element={currentUser?.role === "admin" ? <AdminDashboardPage /> : <Navigate to="/" />} />
+
+            {/* Password reset */}
+            <Route path="/password-reset" element={<PasswordResetPage onNavigateToSignIn={handleSignInClick} />} />
+
+            {/* Catch all */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </main>
 
         <div className="relative h-[60px] shrink-0 mt-12">
@@ -307,7 +234,9 @@ function AppContent() {
         </div>
 
         {/* AI Chat Widget */}
-        <AIChatWidget onNavigate={navigateToPhone} />
+
+        {/* refactor? */}
+        <AIChatWidget onNavigate={handleNavigateToPhone} />
 
         {/* Firebase Connection Test - Remove this after testing */}
         <FirebaseConnectionTest />

@@ -21,6 +21,7 @@ import RecentlyViewedPhones from "./RecentlyViewedPhones";
 import SpecTableOfContents from "./SpecTableOfContents";
 import ComparisonCart from "./ComparisonCart";
 import { PhoneData, phonesData } from "../data/phoneData";
+import { useParams, useNavigate } from "react-router-dom";
 
 // Category icons mapping - minimalistic uniform color scheme
 const categoryConfig: Record<string, { icon: any }> = {
@@ -130,8 +131,6 @@ const specTooltips: Record<string, string> = {
 };
 
 interface PhoneSpecPageProps {
-  phoneData: PhoneData;
-  onNavigate: (phoneId: string) => void;
   onNavigateToComparison?: (phoneIds: string[]) => void;
   comparisonPhoneIds?: string[];
   onComparisonChange?: (phoneIds: string[]) => void;
@@ -140,7 +139,18 @@ interface PhoneSpecPageProps {
   onNavigateToCatalog?: () => void;
 }
 
-export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToComparison, comparisonPhoneIds: externalComparisonIds, onComparisonChange, recentlyViewedPhones, onAddToRecentlyViewed, onNavigateToCatalog }: PhoneSpecPageProps) {
+export default function PhoneSpecPage({ onNavigateToComparison, comparisonPhoneIds: externalComparisonIds, onComparisonChange, recentlyViewedPhones, onAddToRecentlyViewed, onNavigateToCatalog }: PhoneSpecPageProps) {
+  // Routing
+  const { phoneId } = useParams<{ phoneId: string }>();
+  const navigate = useNavigate();
+
+  // Find the phone data based on the ID from the URL
+  const phoneData: PhoneData | undefined = phoneId ? phonesData[phoneId] : undefined;
+
+  if (!phoneData) {
+    return <div>Phone not found</div>;
+  }
+
   const categories = Object.keys(phoneData.categories);
   
   // Calculate overall rating from user reviews
@@ -1984,8 +1994,8 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
     {/* Recently Viewed Phones */}
     <div id="recently-viewed" className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto">
       <RecentlyViewedPhones 
-        currentPhone={phoneData.id} 
-        onNavigate={onNavigate}
+        currentPhone={phoneData.id}
+        onNavigate={(phoneId) => navigate(`/phones/${phoneId}`)}
         recentlyViewedPhones={recentlyViewedPhones}
       />
     </div>
