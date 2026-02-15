@@ -1,20 +1,4 @@
-export interface Review {
-  id: number;
-  userName: string;
-  rating: number;
-  categoryRatings: {
-    camera: number;
-    battery: number;
-    design: number;
-    performance: number;
-    value: number;
-  };
-  date: string;
-  title: string;
-  review: string;
-  helpful: number;
-  notHelpful: number;
-}
+import { ReviewData } from "../components/ReviewCard";
 
 export interface QuickSpec {
   icon: any;
@@ -40,5 +24,5 @@ export interface PhoneData {
   quickSpecs: QuickSpec[];
   categories: Record<string, Record<string, string>>;
   carrierCompatibility: CarrierCompatibility[];
-  reviews: Review[];
+  reviews: ReviewData[];
 }
