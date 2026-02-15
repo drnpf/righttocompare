@@ -56,8 +56,12 @@ export default function PhoneCatalogPage({
         return allPhones
           .filter((phone) => isWithinPastYear(phone.releaseDate))
           .sort((a, b) => {
-            // Sort by release date (newest first)
-            return b.releaseDate.localeCompare(a.releaseDate);
+            // // Sort by release date (newest first)
+            // Better long-term solution would be to store dates in ISO format in database
+            const dateA = new Date(a.releaseDate).getTime();
+            const dateB = new Date(b.releaseDate).getTime();
+
+            return dateB - dateA;
           });
       case "popular":
         // Empty for now
@@ -86,7 +90,12 @@ export default function PhoneCatalogPage({
           const priceB = parseInt(b.price.replace(/[^0-9]/g, ""));
           return priceB - priceA;
         case "release":
-          return b.releaseDate.localeCompare(a.releaseDate);
+          // Sort by release date (newest first)
+          // Better long-term solution would be to store dates in ISO format in database
+          const dateA = new Date(a.releaseDate).getTime();
+          const dateB = new Date(b.releaseDate).getTime();
+
+          return dateB - dateA;
         default:
           return 0;
       }
