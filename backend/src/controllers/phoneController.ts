@@ -11,6 +11,11 @@ import * as phoneService from "../services/phoneService";
 export const getAllPhones = async (req: Request, res: Response) => {
   try {
     const phones = await phoneService.findAllPhones();
+
+    // If no phones are found
+    if (phones.length === 0) {
+      return res.status(204).json([]); // 204 - No conent found
+    }
     res.status(200).json(phones);
   } catch (err) {
     console.error("Error fetching phones:", err);
