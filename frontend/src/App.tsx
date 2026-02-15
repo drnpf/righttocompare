@@ -310,7 +310,7 @@ function AppContent() {
         <AIChatWidget onNavigate={navigateToPhone} />
 
         {/* Firebase Connection Test - Remove this after testing */}
-        <FirebaseConnectionTest />
+        {/* <FirebaseConnectionTest /> */}
       </div>
     </DarkModeProvider>
   );
