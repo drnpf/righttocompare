@@ -27,20 +27,20 @@ def get_mongodb_client():
 
 
 def generate_mock_phones(num_phones=12):
-    brands = ['Apple', 'Samsung', 'Google', 'OnePlus', 'Xiaomi']
+    manufacturers = ['Apple', 'Samsung', 'Google', 'OnePlus', 'Xiaomi']
     mock_phones = []
 
     # Generates mock phones
     for i in range(1, num_phones + 1):
-        brand = random.choice(brands)
+        manufacturer = random.choice(manufacturers)
 
         # Generates a random release date in the last 2 years
         release_date = datetime.now() - timedelta(days=random.randint(0, 365*2))
         
         phone = {
-            "id": f"{brand.lower()}-x{i}-pro",
-            "name": f"{brand} X{i} Pro",
-            "brand": brand,
+            "id": f"{manufacturer.lower()}-x{i}-pro",
+            "name": f"{manufacturer} X{i} Pro",
+            "manufacturer": manufacturer,
             "releaseDate": release_date,
             "price": random.choice([699, 799, 899, 999, 1099, 1199]),
             "images": {"main": f"https://picsum.photos/seed/phone{i}/400/600"}, # using a random pic from picsum
