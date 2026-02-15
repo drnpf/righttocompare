@@ -22,7 +22,7 @@ export interface IReview {
 export interface IPhone extends Document {
   id: string; // The ID like galaxy-s24-ultra -- we're going to use this for url
   name: string;
-  brand: string;
+  manufacturer: string;
   releaseDate: Date;
   price: number;
   images: {
@@ -113,7 +113,7 @@ const PhoneSchema: Schema = new Schema<IPhone>(
   {
     id: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
-    brand: { type: String, required: true },
+    manufacturer: { type: String, required: true },
     releaseDate: { type: Date, required: true },
     price: { type: Number, required: true },
     images: {
