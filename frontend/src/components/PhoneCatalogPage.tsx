@@ -1,6 +1,8 @@
-import { Search, Grid3x3, List, ChevronDown, Plus, Check } from "lucide-react";
-import { useState } from "react";
-import { phonesData } from "../data/phoneData";
+import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+//import { phonesData } from "../data/phoneData"; // need to remove later. this is static phone data for development purposes
+import { PhoneData } from "../types/phoneTypes";
+import { getAllPhones } from "../api/phoneApi";
 import ComparisonCart from "./ComparisonCart";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
 import { toast } from "sonner@2.0.3";
@@ -21,6 +23,10 @@ export default function PhoneCatalogPage({
   onNavigateToComparison,
   recentlyViewedPhones = [],
 }: PhoneCatalogPageProps) {
+  // State for phones, loading, error, search, filters, view mode, etc.
+  const [allPhones, setAllPhones] = useState<PhoneData[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"name" | "price" | "release">("name");
@@ -28,24 +34,31 @@ export default function PhoneCatalogPage({
   const [isCartMinimized, setIsCartMinimized] = useState(false);
   const [activeTab, setActiveTab] = useState<"catalog" | "hot" | "popular">("catalog");
 
-  // Get all phones as an array
-  const allPhones = Object.values(phonesData);
+  // Fetch phones on mount of catalog page
+  useEffect(() => {
+    const fetchPhones = async () => {
+      try {
+        setLoading(true);
+        const phones = await getAllPhones();
+        setAllPhones(phones);
+        setError(null);
+      } catch (error) {
+        setError("Failed to fetch phones");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPhones();
+  }, []);
 
-  // Get unique manufacturers
   const manufacturers = Array.from(new Set(allPhones.map((phone) => phone.manufacturer)));
 
   // Helper function to check if a phone was released within the past year
+  const parsePhoneDate = (dateStr: string) => new Date(dateStr);
   const isWithinPastYear = (releaseDate: string) => {
-    const currentDate = new Date();
     const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(currentDate.getFullYear() - 1);
-
-    // Parse release date (format: "Month Year")
-    const [month, year] = releaseDate.split(" ");
-    const monthIndex = new Date(Date.parse(month + " 1, 2000")).getMonth();
-    const phoneDate = new Date(parseInt(year), monthIndex);
-
-    return phoneDate >= oneYearAgo;
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    return parsePhoneDate(releaseDate) >= oneYearAgo;
   };
 
   // Get phones based on active tab
@@ -94,11 +107,11 @@ export default function PhoneCatalogPage({
 
   const handleAddToComparison = (phoneId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const phone = phonesData[phoneId];
+    const phone = allPhones.find((p) => p.id === phoneId);
     if (!phone) return;
 
     if (comparisonPhoneIds.includes(phoneId)) {
-      // Already in comparison, do nothing
+      // Already in comparison do nothing
       return;
     }
 
@@ -123,6 +136,16 @@ export default function PhoneCatalogPage({
   const isPhoneInComparison = (phoneId: string) => {
     return comparisonPhoneIds.includes(phoneId);
   };
+
+  // Handle loading and error views
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="animate-spin text-[#2c3968] dark:text-[#4a7cf6]" size={48} />
+        <p className="text-[#666] dark:text-[#a0a8b8]">Fetching live catalog...</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -441,31 +464,25 @@ export default function PhoneCatalogPage({
         )}
 
         {/* Comparison Cart - Only show if there are phones in cart */}
-        {comparisonPhoneIds.length > 0 && onNavigateToComparison && onComparisonChange && (
+        {comparisonPhoneIds.length > 0 && (
           <ComparisonCart
             phones={comparisonPhoneIds.map((id) => {
-              const phone = phonesData[id];
+              const phone = allPhones.find((p) => p.id === id);
               return {
-                id: phone.id,
-                name: phone.name,
-                manufacturer: phone.manufacturer,
-                image: phone.images.main,
-                price: phone.price,
+                id: id,
+                name: phone?.name || "Unknown",
+                manufacturer: phone?.manufacturer || "Unknown",
+                image: phone?.images?.main || "",
+                price: phone?.price || "N/A",
               };
             })}
             onRemovePhone={(phoneId) => {
-              const updatedIds = comparisonPhoneIds.filter((id) => id !== phoneId);
-              onComparisonChange(updatedIds);
+              onComparisonChange?.(comparisonPhoneIds.filter((id) => id !== phoneId));
             }}
-            onCompare={() => {
-              onNavigateToComparison(comparisonPhoneIds);
-            }}
-            onClose={() => {
-              // Don't actually close, just minimize
-              setIsCartMinimized(true);
-            }}
+            onCompare={() => onNavigateToComparison?.(comparisonPhoneIds)}
             isMinimized={isCartMinimized}
             onMinimizedChange={setIsCartMinimized}
+            onClose={() => setIsCartMinimized(true)}
           />
         )}
       </div>
