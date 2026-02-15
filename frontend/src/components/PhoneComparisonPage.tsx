@@ -52,10 +52,6 @@ const specTooltips: Record<string, string> = {
 interface PhoneComparisonPageProps {
   phoneIds: string[];
   onRemovePhone: (phoneId: string) => void;
-
-  //refactor? unneeded even?
-  // onBackToSpecs: () => void;
-  // onBackToSpecs: (phoneId: string) => void;
   onAddPhone?: (phoneId: string) => void;
   onNavigate?: (phoneId: string) => void;
   recentlyViewedPhones?: string[];
@@ -64,9 +60,6 @@ interface PhoneComparisonPageProps {
 export default function PhoneComparisonPage({
   phoneIds,
   onRemovePhone,
-  
-  //unneeded?
-  // onBackToSpecs,
   onAddPhone,
   onNavigate,
   recentlyViewedPhones,
@@ -897,9 +890,6 @@ export default function PhoneComparisonPage({
         <div id="recently-viewed">
           <RecentlyViewedPhones 
             currentPhone="" 
-
-            //refactor?
-            // onNavigate={onNavigate}
             onNavigate={(phoneId) => navigate(`/phones/${phoneId}`)}
             recentlyViewedPhones={recentlyViewedPhones}
           />
