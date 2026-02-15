@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { ThumbsUp, ThumbsDown, MessageCircle, Eye, Plus, TrendingUp, Clock, Flame, Search, Image as ImageIcon, X, Flag, CornerDownRight } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { ThumbsUp, ThumbsDown, MessageCircle, Eye, Plus, TrendingUp, Clock, Flame, Search, Image as ImageIcon, X, Flag, CornerDownRight, Loader2, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Input } from "./ui/input";
@@ -7,6 +7,8 @@ import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { toast } from "sonner@2.0.3";
+import { useAuth } from "../context/AuthContext";
 import {
   Discussion,
   Report,
@@ -19,6 +21,7 @@ import {
   getUserReportsFromStorage,
   saveUserReportsToStorage
 } from "../data/discussionsData";
+import * as discussionApi from "../api/discussionApi";
 
 type FilterType = "recent" | "trending" | "popular";
 
@@ -27,13 +30,41 @@ interface DiscussionsPageProps {
   onViewDiscussion?: (discussionId: string) => void;
 }
 
+/**
+ * Maps an API discussion response to the frontend Discussion interface.
+ */
+function mapApiDiscussion(d: discussionApi.DiscussionResponse): Discussion {
+  return {
+    id: d._id,
+    title: d.title,
+    content: d.content,
+    author: d.authorName,
+    authorId: d.authorId,
+    authorAvatar: d.authorAvatar,
+    timestamp: new Date(d.createdAt).getTime(),
+    category: d.category,
+    tags: d.tags,
+    images: d.images,
+    upvotes: d.upvotes,
+    downvotes: d.downvotes,
+    upvoters: d.upvoters,
+    downvoters: d.downvoters,
+    replies: d.replyCount,
+    views: d.views,
+  };
+}
+
 export default function DiscussionsPage({ onNavigate, onViewDiscussion }: DiscussionsPageProps) {
+  const { currentUser } = useAuth();
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const [userVotes, setUserVotes] = useState<Record<string, 'up' | 'down' | null>>({});
   const [filter, setFilter] = useState<FilterType>("trending");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+  const [usingApi, setUsingApi] = useState(true);
   const [newPost, setNewPost] = useState({
     title: "",
     content: "",
@@ -48,13 +79,59 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
   const [reportDetails, setReportDetails] = useState("");
   const [userReports, setUserReports] = useState<Record<string, boolean>>({});
 
-  // Load discussions and votes on mount
+  // Fetch discussions from API with localStorage fallback
+  const fetchDiscussions = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await discussionApi.getDiscussions(
+        1,
+        100,
+        filter,
+        searchQuery || undefined,
+        selectedCategories.length > 0 ? selectedCategories : undefined
+      );
+
+      if (result && result.discussions.length >= 0) {
+        const mapped = result.discussions.map(mapApiDiscussion);
+        setDiscussions(mapped);
+        setUsingApi(true);
+
+        // Build user votes from upvoters/downvoters arrays
+        if (currentUser) {
+          const votes: Record<string, 'up' | 'down' | null> = {};
+          mapped.forEach((d) => {
+            if (d.upvoters?.includes(currentUser.uid)) {
+              votes[d.id] = 'up';
+            } else if (d.downvoters?.includes(currentUser.uid)) {
+              votes[d.id] = 'down';
+            }
+          });
+          setUserVotes(votes);
+        }
+      } else {
+        throw new Error("API returned null");
+      }
+    } catch {
+      // Fallback to localStorage
+      console.warn("API unavailable, falling back to localStorage");
+      const loadedDiscussions = getDiscussionsFromStorage();
+      const loadedVotes = getUserVotesFromStorage();
+      setDiscussions(loadedDiscussions);
+      setUserVotes(loadedVotes);
+      setUsingApi(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filter, searchQuery, selectedCategories, currentUser]);
+
+  // Load discussions on mount and when filters change
   useEffect(() => {
-    const loadedDiscussions = getDiscussionsFromStorage();
-    const loadedVotes = getUserVotesFromStorage();
+    fetchDiscussions();
+  }, [fetchDiscussions]);
+
+  // Load reports from localStorage (reports stay local for now)
+  useEffect(() => {
     const loadedUserReports = getUserReportsFromStorage();
-    setDiscussions(loadedDiscussions);
-    setUserVotes(loadedVotes);
     setUserReports(loadedUserReports);
   }, []);
 
@@ -62,41 +139,60 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
   const allCategories = Array.from(new Set(discussions.map(d => d.category))).sort();
 
   // Handle voting
-  const handleVote = (discussionId: string, voteType: 'up' | 'down') => {
-    const currentVote = userVotes[discussionId];
-    let newVote: 'up' | 'down' | null = voteType;
-
-    // If clicking the same vote again, remove it
-    if (currentVote === voteType) {
-      newVote = null;
-    }
-
-    // Update discussions
-    const updatedDiscussions = discussions.map(disc => {
-      if (disc.id === discussionId) {
-        let upvotes = disc.upvotes;
-        let downvotes = disc.downvotes;
-
-        // Remove previous vote effect
-        if (currentVote === 'up') upvotes--;
-        if (currentVote === 'down') downvotes--;
-
-        // Add new vote effect
-        if (newVote === 'up') upvotes++;
-        if (newVote === 'down') downvotes++;
-
-        return { ...disc, upvotes, downvotes };
+  const handleVote = async (discussionId: string, voteType: 'up' | 'down') => {
+    if (usingApi) {
+      if (!currentUser) {
+        toast.error("Please sign in to vote");
+        return;
       }
-      return disc;
-    });
+      try {
+        const token = await currentUser.firebaseUser.getIdToken();
+        const updated = await discussionApi.voteOnDiscussion(discussionId, voteType, token);
+        if (updated) {
+          const mapped = mapApiDiscussion(updated);
+          setDiscussions((prev) =>
+            prev.map((d) => (d.id === discussionId ? mapped : d))
+          );
+          // Update local vote tracking
+          if (updated.upvoters.includes(currentUser.uid)) {
+            setUserVotes((prev) => ({ ...prev, [discussionId]: 'up' }));
+          } else if (updated.downvoters.includes(currentUser.uid)) {
+            setUserVotes((prev) => ({ ...prev, [discussionId]: 'down' }));
+          } else {
+            setUserVotes((prev) => ({ ...prev, [discussionId]: null }));
+          }
+        }
+      } catch {
+        toast.error("Failed to vote");
+      }
+    } else {
+      // localStorage fallback
+      const currentVote = userVotes[discussionId];
+      let newVote: 'up' | 'down' | null = voteType;
 
-    // Update user votes
-    const updatedVotes = { ...userVotes, [discussionId]: newVote };
+      if (currentVote === voteType) {
+        newVote = null;
+      }
 
-    setDiscussions(updatedDiscussions);
-    setUserVotes(updatedVotes);
-    saveDiscussionsToStorage(updatedDiscussions);
-    saveUserVotesToStorage(updatedVotes);
+      const updatedDiscussions = discussions.map(disc => {
+        if (disc.id === discussionId) {
+          let upvotes = disc.upvotes;
+          let downvotes = disc.downvotes;
+          if (currentVote === 'up') upvotes--;
+          if (currentVote === 'down') downvotes--;
+          if (newVote === 'up') upvotes++;
+          if (newVote === 'down') downvotes++;
+          return { ...disc, upvotes, downvotes };
+        }
+        return disc;
+      });
+
+      const updatedVotes = { ...userVotes, [discussionId]: newVote };
+      setDiscussions(updatedDiscussions);
+      setUserVotes(updatedVotes);
+      saveDiscussionsToStorage(updatedDiscussions);
+      saveUserVotesToStorage(updatedVotes);
+    }
   };
 
   // Handle image upload
@@ -116,45 +212,92 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
       }
     });
 
-    // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  // Remove image from upload
   const handleRemoveImage = (index: number) => {
     setNewPostImages(prev => prev.filter((_, i) => i !== index));
   };
 
   // Handle creating new post
-  const handleCreatePost = () => {
+  const handleCreatePost = async () => {
     if (!newPost.title.trim() || !newPost.content.trim()) return;
 
-    const newDiscussion: Discussion = {
-      id: Date.now().toString(),
-      title: newPost.title,
-      content: newPost.content,
-      author: "You",
-      authorAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=You",
-      timestamp: Date.now(),
-      category: newPost.category,
-      tags: newPost.tags.split(",").map(tag => tag.trim()).filter(tag => tag),
-      upvotes: 0,
-      downvotes: 0,
-      replies: 0,
-      views: 0,
-      images: newPostImages.length > 0 ? newPostImages : undefined
-    };
+    if (usingApi) {
+      if (!currentUser) {
+        toast.error("Please sign in to create a discussion");
+        return;
+      }
 
-    const updatedDiscussions = [newDiscussion, ...discussions];
-    setDiscussions(updatedDiscussions);
-    saveDiscussionsToStorage(updatedDiscussions);
+      setIsCreating(true);
+      try {
+        const token = await currentUser.firebaseUser.getIdToken();
+        const created = await discussionApi.createDiscussion(
+          {
+            title: newPost.title,
+            content: newPost.content,
+            category: newPost.category,
+            tags: newPost.tags.split(",").map(tag => tag.trim()).filter(tag => tag),
+            images: newPostImages,
+          },
+          token
+        );
 
-    // Reset form
+        if (created) {
+          const mapped = mapApiDiscussion(created);
+          setDiscussions((prev) => [mapped, ...prev]);
+          toast.success("Discussion created successfully!");
+        }
+      } catch {
+        toast.error("Failed to create discussion");
+      } finally {
+        setIsCreating(false);
+      }
+    } else {
+      // localStorage fallback
+      const newDiscussion: Discussion = {
+        id: Date.now().toString(),
+        title: newPost.title,
+        content: newPost.content,
+        author: currentUser?.displayName || "You",
+        authorAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.displayName || "You"}`,
+        timestamp: Date.now(),
+        category: newPost.category,
+        tags: newPost.tags.split(",").map(tag => tag.trim()).filter(tag => tag),
+        upvotes: 0,
+        downvotes: 0,
+        replies: 0,
+        views: 0,
+        images: newPostImages.length > 0 ? newPostImages : undefined
+      };
+
+      const updatedDiscussions = [newDiscussion, ...discussions];
+      setDiscussions(updatedDiscussions);
+      saveDiscussionsToStorage(updatedDiscussions);
+    }
+
     setNewPost({ title: "", content: "", category: "Discussion", tags: "" });
     setNewPostImages([]);
     setIsCreateDialogOpen(false);
+  };
+
+  // Handle deleting a discussion
+  const handleDeleteDiscussion = async (discussionId: string) => {
+    if (!currentUser) return;
+    if (!window.confirm("Are you sure you want to delete this discussion?")) return;
+
+    if (usingApi) {
+      try {
+        const token = await currentUser.firebaseUser.getIdToken();
+        await discussionApi.deleteDiscussion(discussionId, token);
+        setDiscussions((prev) => prev.filter((d) => d.id !== discussionId));
+        toast.success("Discussion deleted successfully!");
+      } catch {
+        toast.error("Failed to delete discussion");
+      }
+    }
   };
 
   // Handle opening report dialog
@@ -175,7 +318,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
       itemType: 'discussion',
       reason: reportReason,
       details: reportDetails || undefined,
-      reportedBy: "You",
+      reportedBy: currentUser?.displayName || "You",
       timestamp: Date.now()
     };
 
@@ -183,36 +326,35 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
     const updatedReports = [...reports, report];
     saveReportsToStorage(updatedReports);
 
-    // Track that this user has reported this item
     const updatedUserReports = { ...userReports, [reportItemId]: true };
     setUserReports(updatedUserReports);
     saveUserReportsToStorage(updatedUserReports);
 
-    // Close dialog and reset
     setIsReportDialogOpen(false);
     setReportReason("");
     setReportDetails("");
+    toast.success("Report submitted. Thank you!");
   };
 
   // Toggle category filter
   const toggleCategory = (category: string) => {
-    setSelectedCategories(prev => 
+    setSelectedCategories(prev =>
       prev.includes(category)
         ? prev.filter(c => c !== category)
         : [...prev, category]
     );
   };
 
-  // Filter and sort discussions
+  // Filter and sort discussions (only needed for localStorage fallback - API handles this)
   const getFilteredDiscussions = () => {
+    if (usingApi) return discussions; // API already handles filtering/sorting
+
     let filtered = [...discussions];
 
-    // Apply category filter
     if (selectedCategories.length > 0) {
       filtered = filtered.filter(disc => selectedCategories.includes(disc.category));
     }
 
-    // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(disc =>
@@ -222,19 +364,16 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
       );
     }
 
-    // Apply sorting
     switch (filter) {
       case "recent":
         return filtered.sort((a, b) => b.timestamp - a.timestamp);
       case "trending":
-        // Trending: recent activity + engagement
         return filtered.sort((a, b) => {
           const aScore = (a.upvotes - a.downvotes) * 2 + a.replies * 1.5 + a.views * 0.1 - (Date.now() - a.timestamp) / (1000 * 60 * 60 * 24);
           const bScore = (b.upvotes - b.downvotes) * 2 + b.replies * 1.5 + b.views * 0.1 - (Date.now() - b.timestamp) / (1000 * 60 * 60 * 24);
           return bScore - aScore;
         });
       case "popular":
-        // Popular: highest upvotes and engagement
         return filtered.sort((a, b) => {
           const aScore = (a.upvotes - a.downvotes) * 3 + a.replies * 2 + a.views * 0.2;
           const bScore = (b.upvotes - b.downvotes) * 3 + b.replies * 2 + b.views * 0.2;
@@ -250,7 +389,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
   // Format time ago
   const getTimeAgo = (timestamp: number) => {
     const seconds = Math.floor((Date.now() - timestamp) / 1000);
-    
+
     if (seconds < 60) return "just now";
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
@@ -267,14 +406,14 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
           <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl"></div>
           <div className="absolute bottom-20 right-20 w-96 h-96 bg-white rounded-full blur-3xl"></div>
         </div>
-        
+
         <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 py-16 relative z-10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
               <h1 className="text-white mb-3">Community Discussions</h1>
               <p className="text-white/80 text-lg">Share your thoughts, ask questions, and connect with the community</p>
             </div>
-            
+
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-white text-[#2c3968] hover:bg-white/90 shadow-lg self-start md:self-auto">
@@ -289,107 +428,118 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                     Start a new conversation with the community
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="title">Title</Label>
-                    <Input
-                      id="title"
-                      placeholder="What's on your mind?"
-                      value={newPost.title}
-                      onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-                      className="mt-1.5"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="content">Content</Label>
-                    <Textarea
-                      id="content"
-                      placeholder="Share your thoughts, questions, or insights..."
-                      value={newPost.content}
-                      onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-                      className="mt-1.5 min-h-[150px]"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="category">Category</Label>
-                    <Input
-                      id="category"
-                      placeholder="e.g., Reviews, Comparisons, Help"
-                      value={newPost.category}
-                      onChange={(e) => setNewPost({ ...newPost, category: e.target.value })}
-                      className="mt-1.5"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="tags">Tags (comma separated)</Label>
-                    <Input
-                      id="tags"
-                      placeholder="e.g., Samsung, Camera, Battery"
-                      value={newPost.tags}
-                      onChange={(e) => setNewPost({ ...newPost, tags: e.target.value })}
-                      className="mt-1.5"
-                    />
-                  </div>
-                  <div>
-                    <Label>Images (up to 4)</Label>
-                    <div className="mt-1.5 space-y-3">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        id="image-upload"
+                {!currentUser ? (
+                  <p className="text-center text-[#666] py-8">Please sign in to create a discussion.</p>
+                ) : (
+                  <div className="space-y-4 mt-4">
+                    <div>
+                      <Label htmlFor="title">Title</Label>
+                      <Input
+                        id="title"
+                        placeholder="What's on your mind?"
+                        value={newPost.title}
+                        onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
+                        className="mt-1.5"
                       />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={newPostImages.length >= 4}
-                        className="w-full"
-                      >
-                        <ImageIcon className="w-4 h-4 mr-2" />
-                        Upload Images ({newPostImages.length}/4)
+                    </div>
+                    <div>
+                      <Label htmlFor="content">Content</Label>
+                      <Textarea
+                        id="content"
+                        placeholder="Share your thoughts, questions, or insights..."
+                        value={newPost.content}
+                        onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
+                        className="mt-1.5 min-h-[150px]"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="category">Category</Label>
+                      <Input
+                        id="category"
+                        placeholder="e.g., Reviews, Comparisons, Help"
+                        value={newPost.category}
+                        onChange={(e) => setNewPost({ ...newPost, category: e.target.value })}
+                        className="mt-1.5"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="tags">Tags (comma separated)</Label>
+                      <Input
+                        id="tags"
+                        placeholder="e.g., Samsung, Camera, Battery"
+                        value={newPost.tags}
+                        onChange={(e) => setNewPost({ ...newPost, tags: e.target.value })}
+                        className="mt-1.5"
+                      />
+                    </div>
+                    <div>
+                      <Label>Images (up to 4)</Label>
+                      <div className="mt-1.5 space-y-3">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          id="image-upload"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={newPostImages.length >= 4}
+                          className="w-full"
+                        >
+                          <ImageIcon className="w-4 h-4 mr-2" />
+                          Upload Images ({newPostImages.length}/4)
+                        </Button>
+                        {newPostImages.length > 0 && (
+                          <div className="grid grid-cols-2 gap-3">
+                            {newPostImages.map((img, idx) => (
+                              <div key={idx} className="relative group">
+                                <img
+                                  src={img}
+                                  alt={`Upload ${idx + 1}`}
+                                  className="w-full h-32 object-cover rounded-lg border border-[#e0e0e0]"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveImage(idx)}
+                                  className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4">
+                      <Button variant="outline" onClick={() => {
+                        setIsCreateDialogOpen(false);
+                        setNewPostImages([]);
+                      }}>
+                        Cancel
                       </Button>
-                      {newPostImages.length > 0 && (
-                        <div className="grid grid-cols-2 gap-3">
-                          {newPostImages.map((img, idx) => (
-                            <div key={idx} className="relative group">
-                              <img
-                                src={img}
-                                alt={`Upload ${idx + 1}`}
-                                className="w-full h-32 object-cover rounded-lg border border-[#e0e0e0]"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveImage(idx)}
-                                className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      <Button
+                        onClick={handleCreatePost}
+                        disabled={!newPost.title.trim() || !newPost.content.trim() || isCreating}
+                        className="bg-[#2c3968] hover:bg-[#1e2547]"
+                      >
+                        {isCreating ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          "Create Discussion"
+                        )}
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex justify-end gap-3 pt-4">
-                    <Button variant="outline" onClick={() => {
-                      setIsCreateDialogOpen(false);
-                      setNewPostImages([]);
-                    }}>
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleCreatePost}
-                      disabled={!newPost.title.trim() || !newPost.content.trim()}
-                      className="bg-[#2c3968] hover:bg-[#1e2547]"
-                    >
-                      Create Discussion
-                    </Button>
-                  </div>
-                </div>
+                )}
               </DialogContent>
             </Dialog>
           </div>
@@ -476,7 +626,12 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
       {/* Discussion List */}
       <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 mt-8">
         <div className="space-y-4">
-          {filteredDiscussions.length === 0 ? (
+          {isLoading ? (
+            <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+              <Loader2 className="w-8 h-8 text-[#2c3968] mx-auto mb-4 animate-spin" />
+              <p className="text-[#666]">Loading discussions...</p>
+            </div>
+          ) : filteredDiscussions.length === 0 ? (
             <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
               <MessageCircle className="w-16 h-16 text-[#ccc] mx-auto mb-4" />
               <h3 className="text-[#2c3968] mb-2">No discussions found</h3>
@@ -488,6 +643,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
             filteredDiscussions.map((discussion) => {
               const userVote = userVotes[discussion.id];
               const netScore = discussion.upvotes - discussion.downvotes;
+              const isOwnDiscussion = currentUser && discussion.authorId === currentUser.uid;
 
               return (
                 <div
@@ -544,7 +700,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                       </div>
 
                       {/* Title */}
-                      <h3 
+                      <h3
                         className="text-[#2c3968] mb-2 cursor-pointer hover:text-[#1e2547] transition-colors"
                         onClick={() => onViewDiscussion?.(discussion.id)}
                       >
@@ -595,6 +751,20 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                             <CornerDownRight className="w-4 h-4 mr-1.5" />
                             Reply
                           </Button>
+                          {isOwnDiscussion && usingApi && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteDiscussion(discussion.id);
+                              }}
+                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-1" />
+                              Delete
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"

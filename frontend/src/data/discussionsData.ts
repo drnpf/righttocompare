@@ -13,10 +13,13 @@ export interface Reply {
   discussionId: string;
   content: string;
   author: string;
+  authorId?: string; // Firebase UID (from API)
   authorAvatar: string;
   timestamp: number;
   upvotes: number;
   downvotes: number;
+  upvoters?: string[];
+  downvoters?: string[];
   images?: string[]; // Base64 encoded images
   parentReplyId?: string; // For threaded replies
 }
@@ -26,6 +29,7 @@ export interface Discussion {
   title: string;
   content: string;
   author: string;
+  authorId?: string; // Firebase UID (from API)
   authorAvatar: string;
   timestamp: number; // Unix timestamp
   category: string;
@@ -33,6 +37,8 @@ export interface Discussion {
   images?: string[]; // Base64 encoded images
   upvotes: number;
   downvotes: number;
+  upvoters?: string[];
+  downvoters?: string[];
   replies: number;
   views: number;
 }
