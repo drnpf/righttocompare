@@ -19,6 +19,7 @@ import FirebaseConnectionTest from "./components/FirebaseConnectionTest";
 import PasswordResetPage from "./components/PasswordResetPage";
 import { Shield } from "lucide-react";
 import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
+import BackToTopButton from "./components/BackToTopButton";
 
 // Helper functions for localStorage
 const getRecentlyViewedFromStorage = (): string[] => {
@@ -234,12 +235,13 @@ function AppContent() {
         </div>
 
         {/* AI Chat Widget */}
-
-        {/* refactor? */}
         <AIChatWidget onNavigate={handleNavigateToPhone} />
 
+        {/* Back to Top Button */}
+        <BackToTopButton />
+
         {/* Firebase Connection Test - Remove this after testing */}
-        <FirebaseConnectionTest />
+        {/* <FirebaseConnectionTest /> */}
       </div>
     </DarkModeProvider>
   );
