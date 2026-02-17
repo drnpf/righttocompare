@@ -26,7 +26,7 @@ npm install
 1. `backend/.env` file for environment variables
 
 ```dotenv
-PORT=5000
+PORT=5001
 MONGO_URL=mongodb+srv://<YOUR_DB_ACCESS_USERNAME>:<YOUR_DB_ACCESS_PASSWORD>@righttocomparecluster.g0jxqgn.mongodb.net/?appName=RightToCompareCluster
 ```
 
