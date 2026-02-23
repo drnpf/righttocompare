@@ -39,7 +39,7 @@ export default function PhoneCatalogPage({
     const fetchPhones = async () => {
       try {
         setLoading(true);
-        const phones = await getAllPhones();
+        const { phones, total } = await getAllPhones();
         setAllPhones(phones);
         setError(null);
       } catch (error) {
