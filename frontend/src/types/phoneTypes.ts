@@ -22,7 +22,7 @@ export interface PhoneData {
     main: string;
   };
   quickSpecs: QuickSpec[];
-  categories: Record<string, Record<string, string>>;
+  categories: Record<string, Record<string, string | number>>;
   carrierCompatibility: CarrierCompatibility[];
   reviews: ReviewData[];
 }
