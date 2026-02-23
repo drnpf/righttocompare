@@ -2,21 +2,62 @@ import { Request, Response } from "express";
 import * as phoneService from "../services/phoneService";
 
 /**
- * Fetches all available phones from the database.
+ * Fetches a paginated list of phones. Supports parameters for page number and
+ * limit per page. The response includes pagination metadata which indicates:
+ *    - totalPages: The total number of pages available based on the total
+ *      number of phones and the limit per page.
+ *    - currentPage: The current page number being retrieved.
+ *    - itemsPerPage: The number of phones returned per page (the limit).
+ *    - hasNextPage: A boolean indicating if there is a next page available.
+ *    - hasPrevPage: A boolean indicating if there is a previous page available.
  * @route GET /api/phones
- * @param req The Express request object
+ * @param req The Express request object which may contain 'page' and 'limit'
+ * query parameters for pagination
  * @param res The Express response object
- * @returns The list of phones
+ * @returns A JSON response containing list of phones and pagination metadata
  */
 export const getAllPhones = async (req: Request, res: Response) => {
   try {
-    const phones = await phoneService.findAllPhones();
+    // Setting default values and limits for pagination
+    const MAX_LIMIT = 50; // Limiting number of phones per page to prevent DDoS or memory issues
+    const DEFAULT_LIMIT = 12; // Default limit if not specified of phones per page
+    const PAGE_DEFAULT = 1; // Default page if not specified
+
+    // Input sanitization for findAllPhones function
+    const page = parseInt(req.query.page as string) || PAGE_DEFAULT;
+    const limit = Math.min(parseInt(req.query.limit as string) || DEFAULT_LIMIT, MAX_LIMIT);
+    const { phones, total } = await phoneService.findAllPhones(page, limit);
 
     // If no phones are found
-    if (phones.length === 0) {
-      return res.status(204).json([]); // 204 - No conent found
+    if (phones.length === 0 && total === 0) {
+      return res.status(204).json({
+        // 204 - No content found but successful request
+        success: true,
+        message: "No phones found",
+        data: [],
+        pagination: {
+          totalPages: 0,
+          currentPage: page,
+          itemsPerPage: limit,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+      });
     }
-    res.status(200).json(phones);
+
+    // Returning a list of phones with pagination metadata
+    res.status(200).json({
+      success: true,
+      message: "Phones retrieved successfully",
+      data: phones,
+      pagination: {
+        totalPages: Math.ceil(total / limit), // calculates total # of pages
+        currentPage: page,
+        itemsPerPage: limit,
+        hasNextPage: page * limit < total,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (err) {
     console.error("Error fetching phones:", err);
     res.status(500).json({ message: "Server error fetching phones" });
