@@ -7,20 +7,24 @@ const API_URL = "http://localhost:5001/api/phones"; // CHANGE LATER ON PRODUCTIO
  * Fetches the full catalog of phones from the backend.
  * @returns A list of PhoneData objects containing the phone data
  */
-export const getAllPhones = async (): Promise<PhoneData[]> => {
+export const getAllPhones = async (
+  page: number = 1,
+  limit: number = 5,
+): Promise<{ phones: PhoneData[]; total: number }> => {
   try {
-    const response = await fetch(API_URL);
+    // Fetching phones from a certain page
+    const response = await fetch(`${API_URL}?page=${page}&limit=${limit}`);
 
     // Handles failed sync with backend
     if (!response.ok) throw new Error(`Failed to fetch full phone catalog: ${response.statusText}`);
 
     // Mapping raw JSON data to frontend PhoneData type
     const rawJson = await response.json();
-    const mappedPhones = rawJson.map((dbPhone: any) => mapBackendToFrontend(dbPhone)); // Maps each JSON to a phone object
-    return mappedPhones;
+    const mappedPhones = rawJson.data.map((dbPhone: any) => mapBackendToFrontend(dbPhone)); // Maps each JSON to a phone object
+    return { phones: mappedPhones, total: rawJson.total };
   } catch (error) {
     console.error("Error fetching phones from backend:", error);
-    return [];
+    return { phones: [], total: 0 };
   }
 };
 
