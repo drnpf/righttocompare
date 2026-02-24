@@ -64,7 +64,7 @@ export const mapBackendToFrontend = (dbPhone: any): PhoneData => {
       design: {
         Dimensions: specs.design.dimensionsMm,
         Weight: `${specs.design.weightGrams} grams`,
-        "Build Materials": specs.design.buildMaterials || "N/A",
+        Build: specs.design.buildMaterials || "N/A",
         Colors: specs.design.colorsAvailable.join(", "),
       },
       connectivity: {

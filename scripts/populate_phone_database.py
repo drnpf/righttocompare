@@ -75,6 +75,12 @@ def generate_mock_phones(num_phones=12):
                     "batteryType": "Li-Ion",
                     "wirelessCharging": random.choice([True, False])
                 },
+                "design": {
+                    "dimensionsMm": f"{random.uniform(150, 170):.1f} x {random.uniform(70, 80):.1f} x {random.uniform(7, 9):.1f} mm",
+                    "weightGrams": random.randint(180, 220),
+                    "buildMaterials": random.choice(["Aluminum frame with glass back", "Plastic frame with plastic back"]),
+                    "colorsAvailable": random.sample(["Black", "White", "Blue", "Red", "Green"], 3)
+                },
                 "connectivity": {
                     "has5G": True,
                     "bluetoothVersion": "5.3",
