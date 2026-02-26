@@ -1,8 +1,11 @@
-import { useState } from "react";
-import { LayoutDashboard, FileEdit, Globe, Upload, Plus, Trash2, Save, Play, Clock, CheckCircle, XCircle } from "lucide-react";
-import { toast } from "sonner@2.0.3";
+import { useState, useEffect } from "react";
+import { LayoutDashboard, FileEdit, Globe, Upload, Plus, Trash2, Save, Play, Clock, CheckCircle, XCircle, Pencil, Search, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "../context/AuthContext";
 
 type AdminView = "dashboard" | "manual" | "scraping";
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
 
 interface ScrapingJob {
   id: string;
@@ -24,23 +27,51 @@ interface PhoneSpecForm {
   resolution: string;
   refreshRate: string;
   displayType: string;
+  peakBrightness: string;
+  protection: string;
   // Performance
   processor: string;
+  cpu: string;
+  gpu: string;
   ram: string;
   storage: string;
+  operatingSystem: string;
+  // Benchmarks
+  geekbenchSingle: string;
+  geekbenchMulti: string;
+  antutuScore: string;
   // Camera
   mainCamera: string;
+  ultrawideMegapixels: string;
+  telephotoMegapixels: string;
   frontCamera: string;
   videoRecording: string;
   // Battery
   batteryCapacity: string;
   chargingSpeed: string;
+  batteryType: string;
   wirelessCharging: string;
   // Design
   dimensions: string;
   weight: string;
   colors: string;
   materials: string;
+  // Connectivity
+  has5G: string;
+  bluetoothVersion: string;
+  hasNfc: string;
+  headphoneJack: string;
+  // Audio
+  speakers: string;
+  audioFeatures: string;
+  // Sensors
+  fingerprint: string;
+  faceRecognition: string;
+  accelerometer: string;
+  gyroscope: string;
+  proximity: string;
+  compass: string;
+  barometer: string;
 }
 
 const emptyForm: PhoneSpecForm = {
@@ -53,24 +84,56 @@ const emptyForm: PhoneSpecForm = {
   resolution: "",
   refreshRate: "",
   displayType: "",
+  peakBrightness: "",
+  protection: "",
   processor: "",
+  cpu: "",
+  gpu: "",
   ram: "",
   storage: "",
+  operatingSystem: "",
+  geekbenchSingle: "",
+  geekbenchMulti: "",
+  antutuScore: "",
   mainCamera: "",
+  ultrawideMegapixels: "",
+  telephotoMegapixels: "",
   frontCamera: "",
   videoRecording: "",
   batteryCapacity: "",
   chargingSpeed: "",
+  batteryType: "",
   wirelessCharging: "",
   dimensions: "",
   weight: "",
   colors: "",
-  materials: ""
+  materials: "",
+  has5G: "Yes",
+  bluetoothVersion: "5.3",
+  hasNfc: "Yes",
+  headphoneJack: "No",
+  speakers: "",
+  audioFeatures: "",
+  fingerprint: "",
+  faceRecognition: "No",
+  accelerometer: "Yes",
+  gyroscope: "Yes",
+  proximity: "Yes",
+  compass: "Yes",
+  barometer: "No"
 };
 
 export default function AdminDashboardPage() {
+  const { currentUser } = useAuth();
   const [currentView, setCurrentView] = useState<AdminView>("dashboard");
   const [formData, setFormData] = useState<PhoneSpecForm>(emptyForm);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Phone list, editing, and search
+  const [phones, setPhones] = useState<any[]>([]);
+  const [loadingPhones, setLoadingPhones] = useState(false);
+  const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [scrapingJobs, setScrapingJobs] = useState<ScrapingJob[]>([
     {
       id: "1",
@@ -100,21 +163,249 @@ export default function AdminDashboardPage() {
   const [selectedSource, setSelectedSource] = useState("GSMArena");
   const [isScrapingRunning, setIsScrapingRunning] = useState(false);
 
+  // Fetch all phones from database 
+  const fetchPhones = async () => {
+    try {
+      setLoadingPhones(true);
+      const res = await fetch(`${API_BASE}/api/phones`);
+      if (!res.ok) throw new Error("Failed to fetch phones");
+      const data = await res.json();
+      setPhones(data);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to load phones");
+    } finally {
+      setLoadingPhones(false);
+    }
+  };
+
+  // Load phones when switching to manual tab
+  useEffect(() => {
+    if (currentView === "manual") {
+      fetchPhones();
+    }
+  }, [currentView]);
+  
   const handleInputChange = (field: keyof PhoneSpecForm, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSaveSpecs = () => {
+  // handleSaveSpecs calls API
+  const handleSaveSpecs = async () => {
     if (!formData.name || !formData.brand) {
       toast.error("Please fill in at least the phone name and brand");
       return;
     }
 
-    // In a real app, this would save to database
-    toast.success(`Specifications for ${formData.name} saved successfully!`);
-    setFormData(emptyForm);
+    if (!currentUser?.firebaseUser) {
+      toast.error("You must be signed in to save specifications");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const token = await currentUser.firebaseUser.getIdToken();
+
+      // Slug ID from brand + name
+      const slug = `${formData.brand}-${formData.name}`
+        .trim().toLowerCase()
+        .replace(/['"]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 64);
+
+      // Convert the form's string values into the Phone schema format
+      const phoneData = {
+        id: editingPhoneId || slug,
+        name: formData.name,
+        brand: formData.brand,
+        releaseDate: formData.releaseDate ? new Date(formData.releaseDate) : undefined,
+        price: parseFloat(formData.price.replace(/[^0-9.]/g, "")) || 0,
+        images: { main: formData.image || "placeholder.com" },
+        specs: {
+          display: {
+            screenSizeInches: parseFloat(formData.screenSize) || 0,
+            resolution: formData.resolution,
+            technology: formData.displayType,
+            refreshRateHz: parseInt(formData.refreshRate) || 60,
+            peakBrightnessNits: parseInt(formData.peakBrightness) || undefined,
+            protection: formData.protection || undefined,
+          },
+          performance: {
+            processor: formData.processor,
+            cpu: formData.cpu || undefined,
+            gpu: formData.gpu || undefined,
+            ram: { options: formData.ram.split(/[,\/]/).map((s: string) => parseInt(s)).filter((n: number) => !isNaN(n)), technology: "" },
+            storageOptions: formData.storage.split(/[,\/]/).map((s: string) => parseInt(s)).filter((n: number) => !isNaN(n)),
+            operatingSystem: formData.operatingSystem || undefined,
+          },
+          benchmarks: {
+            geekbenchSingleCore: parseInt(formData.geekbenchSingle) || undefined,
+            geekbenchMultiCore: parseInt(formData.geekbenchMulti) || undefined,
+            antutuScore: parseInt(formData.antutuScore) || undefined,
+          },
+          camera: {
+            mainMegapixels: parseInt(formData.mainCamera) || 0,
+            ultrawideMegapixels: parseInt(formData.ultrawideMegapixels) || undefined,
+            telephotoMegapixels: parseInt(formData.telephotoMegapixels) || undefined,
+            frontMegapixels: parseInt(formData.frontCamera) || 0,
+            features: formData.videoRecording ? formData.videoRecording.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
+          },
+          battery: {
+            capacitymAh: parseInt(formData.batteryCapacity) || 0,
+            chargingSpeedW: parseInt(formData.chargingSpeed) || 0,
+            batteryType: formData.batteryType || undefined,
+            wirelessCharging: formData.wirelessCharging.toLowerCase() !== "" && formData.wirelessCharging.toLowerCase() !== "no",
+          },
+          design: {
+            dimensionsMm: formData.dimensions,
+            weightGrams: parseInt(formData.weight) || 0,
+            buildMaterials: formData.materials,
+            colorsAvailable: formData.colors ? formData.colors.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
+          },
+          connectivity: {
+            has5G: formData.has5G.toLowerCase() !== "no",
+            bluetoothVersion: formData.bluetoothVersion || "5.3",
+            hasNfc: formData.hasNfc.toLowerCase() !== "no",
+            headphoneJack: formData.headphoneJack.toLowerCase() === "yes",
+          },
+          audio: {
+            speakers: formData.speakers || undefined,
+            hasHeadphoneJack: formData.headphoneJack.toLowerCase() === "yes",
+            audioFeatures: formData.audioFeatures ? formData.audioFeatures.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
+          },
+          sensors: {
+            fingerprint: formData.fingerprint || undefined,
+            faceRecognition: formData.faceRecognition.toLowerCase() === "yes",
+            accelerometer: formData.accelerometer.toLowerCase() !== "no",
+            gyroscope: formData.gyroscope.toLowerCase() !== "no",
+            proximity: formData.proximity.toLowerCase() !== "no",
+            compass: formData.compass.toLowerCase() !== "no",
+            barometer: formData.barometer.toLowerCase() === "yes",
+          },
+        },
+      };
+
+      let res;
+      if (editingPhoneId) {
+        // UPDATE existing phone
+        res = await fetch(`${API_BASE}/api/phones/${editingPhoneId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(phoneData),
+        });
+      } else {
+        // CREATE new phone
+        res = await fetch(`${API_BASE}/api/phones`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(phoneData),
+        });
+      }
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to save phone");
+      }
+
+      toast.success(editingPhoneId
+        ? `${formData.name} updated successfully!`
+        : `Specifications for ${formData.name} saved successfully!`
+      );
+      setFormData(emptyForm);
+      setEditingPhoneId(null);
+      await fetchPhones(); // Refresh the list
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save specifications");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+ // Edit phone 
+ const handleEditPhone = (phone: any) => {
+    setEditingPhoneId(phone.id);
+    setFormData({
+      name: phone.name || "", brand: phone.brand || "", image: phone.images?.main || "", releaseDate: phone.releaseDate || "",
+      price: phone.price ? String(phone.price) : "",
+      screenSize: phone.specs?.display?.screenSizeInches ? String(phone.specs.display.screenSizeInches) : "",
+      resolution: phone.specs?.display?.resolution || "",
+      refreshRate: phone.specs?.display?.refreshRateHz ? String(phone.specs.display.refreshRateHz) : "",
+      displayType: phone.specs?.display?.technology || "",
+      peakBrightness: phone.specs?.display?.peakBrightnessNits ? String(phone.specs.display.peakBrightnessNits) : "",
+      protection: phone.specs?.display?.protection || "",
+      processor: phone.specs?.performance?.processor || "",
+      cpu: phone.specs?.performance?.cpu || "",
+      gpu: phone.specs?.performance?.gpu || "",
+      ram: phone.specs?.performance?.ram?.options?.join(", ") || "",
+      storage: phone.specs?.performance?.storageOptions?.join(", ") || "",
+      operatingSystem: phone.specs?.performance?.operatingSystem || "",
+      geekbenchSingle: phone.specs?.benchmarks?.geekbenchSingleCore ? String(phone.specs.benchmarks.geekbenchSingleCore) : "",
+      geekbenchMulti: phone.specs?.benchmarks?.geekbenchMultiCore ? String(phone.specs.benchmarks.geekbenchMultiCore) : "",
+      antutuScore: phone.specs?.benchmarks?.antutuScore ? String(phone.specs.benchmarks.antutuScore) : "",
+      mainCamera: phone.specs?.camera?.mainMegapixels ? String(phone.specs.camera.mainMegapixels) : "",
+      ultrawideMegapixels: phone.specs?.camera?.ultrawideMegapixels ? String(phone.specs.camera.ultrawideMegapixels) : "",
+      telephotoMegapixels: phone.specs?.camera?.telephotoMegapixels ? String(phone.specs.camera.telephotoMegapixels) : "",
+      frontCamera: phone.specs?.camera?.frontMegapixels ? String(phone.specs.camera.frontMegapixels) : "",
+      videoRecording: phone.specs?.camera?.features?.join(", ") || "",
+      batteryCapacity: phone.specs?.battery?.capacitymAh ? String(phone.specs.battery.capacitymAh) : "",
+      chargingSpeed: phone.specs?.battery?.chargingSpeedW ? String(phone.specs.battery.chargingSpeedW) : "",
+      batteryType: phone.specs?.battery?.batteryType || "",
+      wirelessCharging: phone.specs?.battery?.wirelessCharging ? "Yes" : "No",
+      dimensions: phone.specs?.design?.dimensionsMm || "",
+      weight: phone.specs?.design?.weightGrams ? String(phone.specs.design.weightGrams) : "",
+      colors: phone.specs?.design?.colorsAvailable?.join(", ") || "",
+      materials: phone.specs?.design?.buildMaterials || "",
+      has5G: phone.specs?.connectivity?.has5G ? "Yes" : "No",
+      bluetoothVersion: phone.specs?.connectivity?.bluetoothVersion || "5.3",
+      hasNfc: phone.specs?.connectivity?.hasNfc ? "Yes" : "No",
+      headphoneJack: phone.specs?.connectivity?.headphoneJack ? "Yes" : "No",
+      speakers: phone.specs?.audio?.speakers || "",
+      audioFeatures: phone.specs?.audio?.audioFeatures?.join(", ") || "",
+      fingerprint: phone.specs?.sensors?.fingerprint || "",
+      faceRecognition: phone.specs?.sensors?.faceRecognition ? "Yes" : "No",
+      accelerometer: phone.specs?.sensors?.accelerometer ? "Yes" : "No",
+      gyroscope: phone.specs?.sensors?.gyroscope ? "Yes" : "No",
+      proximity: phone.specs?.sensors?.proximity ? "Yes" : "No",
+      compass: phone.specs?.sensors?.compass ? "Yes" : "No",
+      barometer: phone.specs?.sensors?.barometer ? "Yes" : "No",
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Delete a phone 
+  const handleDeletePhone = async (phoneId: string, phoneName: string) => {
+    if (!confirm(`Are you sure you want to delete "${phoneName}"?`)) return;
+
+    if (!currentUser?.firebaseUser) {
+      toast.error("You must be signed in to delete specifications");
+      return;
+    }
+
+    try {
+      const token = await currentUser.firebaseUser.getIdToken();
+      const res = await fetch(`${API_BASE}/api/phones/${phoneId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to delete phone");
+      }
+
+      toast.success(`${phoneName} deleted`);
+      await fetchPhones(); // Refresh the list
+
+      // Clear form if we were editing the deleted phone
+      if (editingPhoneId === phoneId) {
+        setFormData(emptyForm);
+        setEditingPhoneId(null);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete phone");
+    }
+  };
+  
   const handleStartScraping = () => {
     setIsScrapingRunning(true);
     toast.info(`Starting web scraping from ${selectedSource}...`);
@@ -149,6 +440,13 @@ export default function AdminDashboardPage() {
       }, 5000);
     }, 500);
   };
+
+  // Filter phones by search query 
+  const filteredPhones = phones.filter((p) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return [p.id, p.name, p.brand].some((v: string) => (v || "").toLowerCase().includes(q));
+  });
 
   const renderSidebar = () => (
     <div className="w-64 bg-white border-r border-[#e5e5e5] min-h-screen">
@@ -277,6 +575,8 @@ export default function AdminDashboardPage() {
     </div>
   );
 
+  const inputClass = "w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all";
+
   const renderManualSpecs = () => (
     <div>
       <div className="mb-8">
@@ -284,6 +584,97 @@ export default function AdminDashboardPage() {
         <p className="text-[#666]">Add or edit phone specifications manually</p>
       </div>
 
+      {/*Phone List Table Read */}
+      <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-[#2c3968]">Existing Phones</h3>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#d9d9d9]">
+              <Search size={16} className="text-[#999]" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search phones..."
+                className="outline-none text-[#1e1e1e] placeholder:text-[#999] bg-transparent"
+              />
+            </div>
+            <button
+              onClick={fetchPhones}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#d9d9d9] text-[#666] hover:bg-[#f7f7f7] transition-all"
+            >
+              <RefreshCw size={16} />
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {loadingPhones ? (
+          <p className="text-center py-8 text-[#999]">Loading phones...</p>
+        ) : filteredPhones.length === 0 ? (
+          <p className="text-center py-8 text-[#999]">
+            {phones.length === 0 ? "No phones in the database yet. Add one below!" : "No phones match your search."}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-[#e5e5e5]">
+                  <th className="px-4 py-3 text-[#666] font-medium">Brand</th>
+                  <th className="px-4 py-3 text-[#666] font-medium">Name</th>
+                  <th className="px-4 py-3 text-[#666] font-medium">Price</th>
+                  <th className="px-4 py-3 text-[#666] font-medium">ID</th>
+                  <th className="px-4 py-3 text-[#666] font-medium w-[140px]">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPhones.map((phone: any) => (
+                  <tr key={phone.id} className="border-b border-[#f0f0f0] hover:bg-[#f7f7f7] transition-all">
+                    <td className="px-4 py-3 text-[#1e1e1e]">{phone.brand}</td>
+                    <td className="px-4 py-3 text-[#1e1e1e]">{phone.name}</td>
+                    <td className="px-4 py-3 text-[#1e1e1e]">${phone.price?.toLocaleString() || "—"}</td>
+                    <td className="px-4 py-3 text-[#999] font-mono text-sm">{phone.id}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditPhone(phone)}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#d9d9d9] text-[#2c3968] hover:bg-[#f7f7f7] transition-all text-sm"
+                        >
+                          <Pencil size={14} />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeletePhone(phone.id, phone.name)}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#d9d9d9] text-red-600 hover:bg-red-50 transition-all text-sm"
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="text-[#999] text-sm mt-3">{filteredPhones.length} phone{filteredPhones.length !== 1 ? "s" : ""} found</p>
+      </div>
+  
+      {editingPhoneId && (
+        <div className="mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+          <p className="text-[#2c3968]">
+            Editing: <strong>{formData.brand} {formData.name}</strong>
+          </p>
+          <button
+            onClick={() => { setFormData(emptyForm); setEditingPhoneId(null); }}
+            className="text-sm text-[#666] hover:text-[#1e1e1e] transition-all"
+          >
+            Cancel Edit
+          </button>
+        </div>
+      )}
+      
       <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-8">
         <div className="space-y-6">
           {/* Basic Information */}
@@ -388,7 +779,23 @@ export default function AdminDashboardPage() {
                 />
               </div>
             </div>
+          <label className="block mb-2 text-[#1e1e1e]">Peak Brightness (nits)</label>
+          <input 
+          type="text" 
+          value={formData.peakBrightness} 
+          onChange={(e) => handleInputChange("peakBrightness", e.target.value)} 
+          placeholder="e.g., 2600" 
+          className={inputClass} />
           </div>
+          <div>
+            <label className="block mb-2 text-[#1e1e1e]">Screen Protection</label>
+            <input 
+            type="text" value={formData.protection} 
+            onChange={(e) => handleInputChange("protection", e.target.value)} 
+            placeholder="e.g., Gorilla Glass Victus 2" 
+            className={inputClass} />
+            </div>
+
 
           {/* Performance Specifications */}
           <div>
@@ -405,6 +812,34 @@ export default function AdminDashboardPage() {
                 />
               </div>
               <div>
+                <label className="block mb-2 text-[#1e1e1e]">CPU</label>
+                <input 
+                type="text" 
+                value={formData.cpu} 
+                onChange={(e) => handleInputChange("cpu", e.target.value)} placeholder="e.g., Octa-core (1x3.39 GHz)" 
+                className={inputClass} />
+                </div>
+                <div>
+                  <label className="block mb-2 text-[#1e1e1e]">GPU</label>
+                  <input 
+                  type="text" 
+                  value={formData.gpu} 
+                  onChange={(e) => handleInputChange("gpu", e.target.value)} 
+                  placeholder="e.g., Adreno 750" 
+                  className={inputClass} 
+                  />
+                  </div>
+                  <div>
+                    <label className="block mb-2 text-[#1e1e1e]">Operating System</label>
+                    <input 
+                    type="text" 
+                    value={formData.operatingSystem} 
+                    onChange={(e) => handleInputChange("operatingSystem", e.target.value)} 
+                    placeholder="e.g., Android 14, One UI 6.1" 
+                    className={inputClass} 
+                    />
+                    </div>
+                    <div>
                 <label className="block mb-2 text-[#1e1e1e]">RAM</label>
                 <input
                   type="text"
@@ -426,6 +861,42 @@ export default function AdminDashboardPage() {
               </div>
             </div>
           </div>
+          {/* Benchmarks Specifications */}
+          <div>
+            <h3 className="text-[#2c3968] mb-4">Benchmarks</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">Geekbench Single-Core</label>
+                <input 
+                type="text" 
+                value={formData.geekbenchSingle} 
+                onChange={(e) => handleInputChange("geekbenchSingle", e.target.value)} 
+                placeholder="e.g., 2200" 
+                className={inputClass} 
+                />
+                </div>
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">Geekbench Multi-Core</label>
+                <input 
+                type="text" 
+                value={formData.geekbenchMulti} 
+                onChange={(e) => handleInputChange("geekbenchMulti", e.target.value)} 
+                placeholder="e.g., 7100" 
+                className={inputClass} 
+                />
+                </div>
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">AnTuTu Score</label>
+                <input 
+                type="text" value={formData.antutuScore} 
+                onChange={(e) => handleInputChange("antutuScore", e.target.value)} 
+                placeholder="e.g., 2000000" 
+                className={inputClass} 
+                />
+                </div>
+            </div>
+          </div>
+
 
           {/* Camera Specifications */}
           <div>
@@ -452,6 +923,24 @@ export default function AdminDashboardPage() {
                 />
               </div>
               <div>
+                <label className="block mb-2 text-[#1e1e1e]">Ultrawide Camera (MP)</label>
+                <input 
+                type="text" 
+                value={formData.ultrawideMegapixels} 
+                onChange={(e) => handleInputChange("ultrawideMegapixels", e.target.value)} 
+                placeholder="e.g., 12" 
+                className={inputClass} 
+                />
+                </div>
+                <div>
+                  <label className="block mb-2 text-[#1e1e1e]">Telephoto Camera (MP)</label>
+                  <input type="text" value={formData.telephotoMegapixels} 
+                  onChange={(e) => handleInputChange("telephotoMegapixels", e.target.value)} 
+                  placeholder="e.g., 10" 
+                  className={inputClass} 
+                  />
+                  </div>
+                  <div>
                 <label className="block mb-2 text-[#1e1e1e]">Video Recording</label>
                 <input
                   type="text"
@@ -489,6 +978,15 @@ export default function AdminDashboardPage() {
                 />
               </div>
               <div>
+                <label className="block mb-2 text-[#1e1e1e]">Battery Type</label>
+                <input type="text" 
+                value={formData.batteryType} 
+                onChange={(e) => handleInputChange("batteryType", e.target.value)} 
+                placeholder="e.g., Li-Ion" 
+                className={inputClass} 
+                />
+                </div>
+                <div>
                 <label className="block mb-2 text-[#1e1e1e]">Wireless Charging</label>
                 <input
                   type="text"
@@ -548,17 +1046,159 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
+          {/* Connectivity */}
+          <div>
+            <h3 className="text-[#2c3968] mb-4">Connectivity</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">5G Support</label>
+                <select 
+                value={formData.has5G} 
+                onChange={(e) => handleInputChange("has5G", e.target.value)} 
+                className={inputClass}>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                  </select>
+                  </div>
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">Bluetooth Version</label>
+                <input 
+                type="text" 
+                value={formData.bluetoothVersion} 
+                onChange={(e) => handleInputChange("bluetoothVersion", e.target.value)} 
+                placeholder="e.g., 5.3" 
+                className={inputClass} /></div>
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">NFC</label>
+                <select 
+                value={formData.hasNfc} 
+                onChange={(e) => handleInputChange("hasNfc", e.target.value)} 
+                className={inputClass}>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                  </select>
+                  </div>
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">Headphone Jack</label>
+                <select value={formData.headphoneJack} 
+                onChange={(e) => handleInputChange("headphoneJack", e.target.value)} 
+                className={inputClass}>
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                  </select>
+                  </div>
+            </div>
+          </div>
+
+           {/* Audio */}
+          <div>
+            <h3 className="text-[#2c3968] mb-4">Audio</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">Speakers</label>
+                <input 
+                type="text" 
+                value={formData.speakers} 
+                onChange={(e) => handleInputChange("speakers", e.target.value)} 
+                placeholder="e.g., Stereo speakers tuned by AKG" 
+                className={inputClass} 
+                />
+                </div>
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">Audio Features</label>
+                <input type="text" value={formData.audioFeatures} 
+                onChange={(e) => handleInputChange("audioFeatures", e.target.value)} 
+                placeholder="e.g., Dolby Atmos, 32-bit/384kHz" 
+                className={inputClass} 
+                />
+                </div>
+            </div>
+          </div>
+
+          {/* Sensors */}
+          <div>
+            <h3 className="text-[#2c3968] mb-4">Sensors</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">Fingerprint</label>
+                <input 
+                type="text" 
+                value={formData.fingerprint} 
+                onChange={(e) => handleInputChange("fingerprint", e.target.value)} 
+                placeholder="e.g., Ultrasonic under-display" 
+                className={inputClass} 
+                />
+                </div>
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">Face Recognition</label>
+                <select value={formData.faceRecognition} 
+                onChange={(e) => handleInputChange("faceRecognition", e.target.value)} 
+                className={inputClass}>
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                  </select>
+                  </div>
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">Accelerometer</label>
+                <select value={formData.accelerometer} 
+                onChange={(e) => handleInputChange("accelerometer", e.target.value)} 
+                className={inputClass}>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                  </select>
+                  </div>
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">Gyroscope</label>
+                <select value={formData.gyroscope} 
+                onChange={(e) => handleInputChange("gyroscope", e.target.value)} 
+                className={inputClass}>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                  </select>
+                  </div>
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">Proximity</label>
+                <select value={formData.proximity} onChange={(e) => handleInputChange("proximity", e.target.value)} 
+                className={inputClass}>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                  </select>
+                  </div>
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">Compass</label>
+                <select
+                 value={formData.compass} 
+                 onChange={(e) => handleInputChange("compass", e.target.value)} 
+                 className={inputClass}>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                  </select>
+                  </div>
+              <div>
+                <label className="block mb-2 text-[#1e1e1e]">Barometer</label>
+                <select 
+                value={formData.barometer} 
+                onChange={(e) => handleInputChange("barometer", e.target.value)} 
+                className={inputClass}>
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                  </select>
+                  </div>
+            </div>
+          </div>
+
           {/* Action Buttons */}
           <div className="flex gap-4 pt-4 border-t border-[#e5e5e5]">
             <button
               onClick={handleSaveSpecs}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-lg hover:shadow-lg transition-all"
+              disabled={isSaving}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50"
             >
               <Save size={20} />
-              Save Specifications
+              {isSaving ? "Saving..." : editingPhoneId ? "Update Specifications" : "Save Specifications"}
             </button>
             <button
-              onClick={() => setFormData(emptyForm)}
+              onClick={() => { setFormData(emptyForm); setEditingPhoneId(null); }}
               className="flex items-center gap-2 px-6 py-3 border border-[#d9d9d9] text-[#666] rounded-lg hover:bg-[#f7f7f7] transition-all"
             >
               <Trash2 size={20} />
