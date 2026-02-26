@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { getAllPhones, getPhoneById, createPhone, updatePhone, deletePhone } from "../controllers/phoneController";
+import { protect } from "../middleware/authMiddleware";
+import { requireAdmin } from "../middleware/adminMiddleware";
 
 const router = Router();
 
@@ -21,18 +23,18 @@ router.get("/:id", getPhoneById);
  * Create a new phone
  * @route POST /api/phones
  */
-router.post("/", createPhone);
+router.post("/", protect, requireAdmin, createPhone);
 
 /**
  * Update an existing phone by ID
  * @route PUT /api/phones/:id
  */
-router.put("/:id", updatePhone);
+router.put("/:id", protect, requireAdmin, updatePhone);
 
 /**
  * Delete a phone by ID
  * @route DELETE /api/phones/:id
  */
-router.delete("/:id", deletePhone);
+router.delete("/:id", protect, requireAdmin, deletePhone);
 
 export default router;
