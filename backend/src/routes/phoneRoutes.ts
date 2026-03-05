@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getAllPhones, getPhoneById, createPhone, updatePhone, deletePhone } from "../controllers/phoneController";
+import { getPhonePage, getPhoneById, createPhone, updatePhone, deletePhone } from "../controllers/phoneController";
 
 const router = Router();
 
@@ -8,7 +8,7 @@ const router = Router();
  * Get all phones
  * @route GET /api/phones
  */
-router.get("/", getAllPhones);
+router.get("/", getPhonePage);
 
 /**
  * Get a single phone by ID
