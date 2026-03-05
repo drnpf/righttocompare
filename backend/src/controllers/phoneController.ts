@@ -16,7 +16,7 @@ import * as phoneService from "../services/phoneService";
  * @param res The Express response object
  * @returns A JSON response containing list of phones and pagination metadata
  */
-export const getAllPhones = async (req: Request, res: Response) => {
+export const getPhonePage = async (req: Request, res: Response) => {
   try {
     // Setting default values and limits for pagination
     const MAX_LIMIT = 50; // Limiting number of phones per page to prevent DDoS or memory issues
@@ -26,12 +26,12 @@ export const getAllPhones = async (req: Request, res: Response) => {
     // Input sanitization for findAllPhones function
     const page = parseInt(req.query.page as string) || PAGE_DEFAULT;
     const limit = Math.min(parseInt(req.query.limit as string) || DEFAULT_LIMIT, MAX_LIMIT);
-    const { phones, total } = await phoneService.findAllPhones(page, limit);
+    const { phones, total } = await phoneService.findPhonePage(page, limit);
 
     // If no phones are found
     if (phones.length === 0 && total === 0) {
       return res.status(204).json({
-        // 204 - No content found but successful request
+        // 204 = No content found but successful request
         success: true,
         message: "No phones found",
         data: [],
@@ -51,10 +51,10 @@ export const getAllPhones = async (req: Request, res: Response) => {
       message: "Phones retrieved successfully",
       data: phones,
       pagination: {
-        totalPages: Math.ceil(total / limit), // calculates total # of pages
+        totalPages: Math.ceil(total / limit), // Calculates total # of pages
         currentPage: page,
         itemsPerPage: limit,
-        hasNextPage: page * limit < total,
+        hasNextPage: page * limit < total, // Checks if theoretical # of phones exceeds actual # of phones
         hasPrevPage: page > 1,
       },
     });
