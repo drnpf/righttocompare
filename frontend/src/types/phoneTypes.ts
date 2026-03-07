@@ -12,7 +12,12 @@ export interface CarrierCompatibility {
   notes?: string;
 }
 
-export interface PhoneData {
+/**
+ * Contains only necessary data on a phone and the most
+ * important specs that users might want to see. This class
+ * is used for the catalog page since it is lightweight.
+ */
+export interface PhoneCard {
   id: string;
   name: string;
   manufacturer: string;
@@ -22,6 +27,14 @@ export interface PhoneData {
     main: string;
   };
   quickSpecs: QuickSpec[];
+}
+
+/**
+ * The complete phone data class that contains all information
+ * about a phone. This class is used for the phone spec sheet
+ * and phone comparison page.
+ */
+export interface PhoneData extends PhoneCard {
   categories: Record<string, Record<string, string | number>>;
   carrierCompatibility: CarrierCompatibility[];
   reviews: ReviewData[];
