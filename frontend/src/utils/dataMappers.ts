@@ -1,7 +1,7 @@
 import { Smartphone, Camera, Cpu, Battery, Ruler, Weight } from "lucide-react";
-import { PhoneData } from "../types/phoneTypes";
+import { PhoneData, PhoneCard } from "../types/phoneTypes";
 
-export const mapBackendToFrontendPhoneData = (dbPhone: any): PhoneData => {
+export const mapJsonToPhoneCard = (dbPhone: any): PhoneCard => {
   const { specs } = dbPhone;
 
   return {
@@ -24,7 +24,14 @@ export const mapBackendToFrontendPhoneData = (dbPhone: any): PhoneData => {
       { icon: Ruler, label: "Dimensions", value: specs.design.dimensionsMm },
       { icon: Weight, label: "Weight", value: `${specs.design.weightGrams}g` },
     ],
+  };
+};
 
+export const mapJsonToPhoneData = (dbPhone: any): PhoneData => {
+  const { specs } = dbPhone;
+
+  return {
+    ...mapJsonToPhoneCard(dbPhone), // Mapping the base line specs of phone to phone data
     // Section for the detailed specs table. ADD MORE SPECS AS NEEDED
     categories: {
       display: {

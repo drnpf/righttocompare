@@ -1,5 +1,5 @@
-import { PhoneData } from "../types/phoneTypes";
-import { mapBackendToFrontend } from "../utils/dataMappers";
+import { PhoneData, PhoneCard } from "../types/phoneTypes";
+import { mapJsonToPhoneData, mapJsonToPhoneCard } from "../utils/dataMappers";
 
 const API_URL = "http://localhost:5001/api/phones"; // CHANGE LATER ON PRODUCTION
 
@@ -10,7 +10,7 @@ const API_URL = "http://localhost:5001/api/phones"; // CHANGE LATER ON PRODUCTIO
 export const getPhonePage = async (
   page: number = 1,
   limit: number = 5,
-): Promise<{ phones: PhoneData[]; total: number }> => {
+): Promise<{ phones: PhoneCard[]; total: number }> => {
   try {
     // Fetching phones from a certain page
     const response = await fetch(`${API_URL}?page=${page}&limit=${limit}`);
@@ -20,7 +20,7 @@ export const getPhonePage = async (
 
     // Mapping raw JSON data to frontend PhoneData type
     const rawJson = await response.json();
-    const mappedPhones = rawJson.data.map((dbPhone: any) => mapBackendToFrontend(dbPhone)); // Maps each JSON to a phone object
+    const mappedPhones = rawJson.data.map((dbPhone: any) => mapJsonToPhoneCard(dbPhone)); // Maps each JSON to a phone card object
     return { phones: mappedPhones, total: rawJson.total };
   } catch (error) {
     console.error("Error fetching phones from backend:", error);
@@ -43,7 +43,7 @@ export const getPhoneById = async (id: string): Promise<PhoneData | null> => {
 
     // Mapping the single phone object
     const rawPhone = await response.json();
-    return mapBackendToFrontend(rawPhone);
+    return mapJsonToPhoneData(rawPhone);
   } catch (error) {
     console.error(`Error in getPhoneById (${id}):`, error);
     return null;

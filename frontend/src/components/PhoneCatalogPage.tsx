@@ -1,7 +1,7 @@
 import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 //import { phonesData } from "../data/phoneData"; // need to remove later. this is static phone data for development purposes
-import { PhoneData } from "../types/phoneTypes";
+import { PhoneCard } from "../types/phoneTypes";
 import { getPhonePage } from "../api/phoneApi";
 import ComparisonCart from "./ComparisonCart";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
@@ -24,7 +24,7 @@ export default function PhoneCatalogPage({
   recentlyViewedPhones = [],
 }: PhoneCatalogPageProps) {
   // State for phones, loading, error, search, filters, view mode, etc.
-  const [allPhones, setAllPhones] = useState<PhoneData[]>([]);
+  const [allPhones, setAllPhones] = useState<PhoneCard[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
