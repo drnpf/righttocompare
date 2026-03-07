@@ -7,7 +7,7 @@ const API_URL = "http://localhost:5001/api/phones"; // CHANGE LATER ON PRODUCTIO
  * Fetches the full catalog of phones from the backend.
  * @returns A list of PhoneData objects containing the phone data
  */
-export const getAllPhones = async (
+export const getPhonePage = async (
   page: number = 1,
   limit: number = 5,
 ): Promise<{ phones: PhoneData[]; total: number }> => {

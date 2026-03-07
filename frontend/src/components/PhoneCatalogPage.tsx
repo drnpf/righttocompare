@@ -2,7 +2,7 @@ import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2 } from "lucide
 import { useEffect, useState } from "react";
 //import { phonesData } from "../data/phoneData"; // need to remove later. this is static phone data for development purposes
 import { PhoneData } from "../types/phoneTypes";
-import { getAllPhones } from "../api/phoneApi";
+import { getPhonePage } from "../api/phoneApi";
 import ComparisonCart from "./ComparisonCart";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
 import { toast } from "sonner@2.0.3";
@@ -39,7 +39,7 @@ export default function PhoneCatalogPage({
     const fetchPhones = async () => {
       try {
         setLoading(true);
-        const { phones, total } = await getAllPhones();
+        const { phones, total } = await getPhonePage(1, 12);
         setAllPhones(phones);
         setError(null);
       } catch (error) {

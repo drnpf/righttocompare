@@ -1,7 +1,7 @@
 import { Smartphone, Camera, Cpu, Battery, Ruler, Weight } from "lucide-react";
 import { PhoneData } from "../types/phoneTypes";
 
-export const mapBackendToFrontend = (dbPhone: any): PhoneData => {
+export const mapBackendToFrontendPhoneData = (dbPhone: any): PhoneData => {
   const { specs } = dbPhone;
 
   return {
