@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/t
 import SpecTableOfContents from "./SpecTableOfContents";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
 import { toast } from "sonner@2.0.3";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 // Category icons mapping
 const categoryConfig: Record<string, { icon: any }> = {
@@ -90,20 +90,25 @@ export default function PhoneComparisonPage({
 
   // Handle share comparison
   const handleShareComparison = () => {
-    if (phones.length === 0) {
+    if (phoneIds.length === 0) {
       toast.error("Add phones to share a comparison");
       return;
     }
 
+    // Build query string with the correct parameter
     const params = new URLSearchParams();
-    params.set('compare', phoneIds.join(','));
-    const shareUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+    params.set('phones', phoneIds.join(',')); // <-- use 'phones', not 'compare'
 
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      toast.success("Comparison link copied to clipboard!");
-    }).catch(() => {
-      toast.error("Failed to copy link");
-    });
+    // Always point to /compare
+    const shareUrl = `${window.location.origin}/compare?${params.toString()}`;
+
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => {
+        toast.success("Comparison link copied to clipboard!");
+      })
+      .catch(() => {
+        toast.error("Failed to copy link");
+      });
   };
 
   // Get phone data for all selected phones
