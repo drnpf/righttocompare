@@ -255,7 +255,7 @@ function AppContent() {
               </div>
             )
           ) : pageType === "profile" ? (
-            <UserProfilePage />
+            <UserProfilePage onViewDiscussion={handleViewDiscussion} />
           ) : pageType === "signIn" ? (
             <SignInPage onSignInSuccess={handleSignInSuccess} onNavigateToSignUp={handleSignUpClick} />
           ) : pageType === "signUp" ? (

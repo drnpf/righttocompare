@@ -3,6 +3,7 @@ import {
   createDiscussion,
   getDiscussions,
   getDiscussion,
+  getUserDiscussions,
   voteOnDiscussion,
   deleteDiscussion,
   getReplies,
@@ -20,6 +21,12 @@ const router = Router();
  * @query page, limit, filter (recent|trending|popular), search, categories (comma-separated)
  */
 router.get("/", getDiscussions);
+
+/**
+ * Get all discussions by a specific user
+ * @route GET /api/discussions/user/:userId
+ */
+router.get("/user/:userId", getUserDiscussions);
 
 /**
  * Get a single discussion by ID (increments view count)

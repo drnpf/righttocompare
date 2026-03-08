@@ -72,6 +72,21 @@ export const getDiscussions = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * Gets all discussions created by a specific user.
+ * @route GET /api/discussions/user/:userId
+ */
+export const getUserDiscussions = async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const discussions = await discussionService.getDiscussionsByUser(userId);
+    res.status(200).json(discussions);
+  } catch (err) {
+    console.error("Error fetching user discussions:", err);
+    res.status(500).json({ message: "Server error fetching user discussions" });
+  }
+};
+
+/**
  * Gets a single discussion by ID.
  * @route GET /api/discussions/:id
  */

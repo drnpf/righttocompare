@@ -7,6 +7,7 @@ import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { toast } from "sonner@2.0.3";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -24,6 +25,16 @@ import {
 import * as discussionApi from "../api/discussionApi";
 
 type FilterType = "recent" | "trending" | "popular";
+
+const DISCUSSION_CATEGORIES = [
+  "Discussion",
+  "Question",
+  "Review",
+  "Comparison",
+  "Help",
+  "News",
+  "Other",
+] as const;
 
 interface DiscussionsPageProps {
   onNavigate?: (phoneId: string) => void;
@@ -414,7 +425,13 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
               <p className="text-white/80 text-lg">Share your thoughts, ask questions, and connect with the community</p>
             </div>
 
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+              if (!open) {
+                setNewPost({ title: "", content: "", category: "Discussion", tags: "" });
+                setNewPostImages([]);
+              }
+              setIsCreateDialogOpen(open);
+            }}>
               <DialogTrigger asChild>
                 <Button className="bg-white text-[#2c3968] hover:bg-white/90 shadow-lg self-start md:self-auto">
                   <Plus className="w-5 h-5 mr-2" />
@@ -433,34 +450,52 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                 ) : (
                   <div className="space-y-4 mt-4">
                     <div>
-                      <Label htmlFor="title">Title</Label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Label htmlFor="title">Title</Label>
+                        <span className={`text-xs ${newPost.title.length > 100 ? 'text-red-500' : newPost.title.length < 5 && newPost.title.length > 0 ? 'text-amber-500' : 'text-[#999]'}`}>
+                          {newPost.title.length}/100
+                        </span>
+                      </div>
                       <Input
                         id="title"
                         placeholder="What's on your mind?"
                         value={newPost.title}
-                        onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-                        className="mt-1.5"
+                        onChange={(e) => setNewPost({ ...newPost, title: e.target.value.slice(0, 100) })}
                       />
+                      {newPost.title.length > 0 && newPost.title.length < 5 && (
+                        <p className="text-xs text-amber-500 mt-1">Title must be at least 5 characters</p>
+                      )}
                     </div>
                     <div>
-                      <Label htmlFor="content">Content</Label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Label htmlFor="content">Content</Label>
+                        <span className={`text-xs ${newPost.content.length > 5000 ? 'text-red-500' : 'text-[#999]'}`}>
+                          {newPost.content.length}/5000
+                        </span>
+                      </div>
                       <Textarea
                         id="content"
                         placeholder="Share your thoughts, questions, or insights..."
                         value={newPost.content}
-                        onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-                        className="mt-1.5 min-h-[150px]"
+                        onChange={(e) => setNewPost({ ...newPost, content: e.target.value.slice(0, 5000) })}
+                        className="min-h-[150px]"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="category">Category</Label>
-                      <Input
-                        id="category"
-                        placeholder="e.g., Reviews, Comparisons, Help"
+                      <Label htmlFor="category" className="mb-1.5 block">Category</Label>
+                      <Select
                         value={newPost.category}
-                        onChange={(e) => setNewPost({ ...newPost, category: e.target.value })}
-                        className="mt-1.5"
-                      />
+                        onValueChange={(value) => setNewPost({ ...newPost, category: value })}
+                      >
+                        <SelectTrigger id="category">
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DISCUSSION_CATEGORIES.map((cat) => (
+                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label htmlFor="tags">Tags (comma separated)</Label>
@@ -517,15 +552,12 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                       </div>
                     </div>
                     <div className="flex justify-end gap-3 pt-4">
-                      <Button variant="outline" onClick={() => {
-                        setIsCreateDialogOpen(false);
-                        setNewPostImages([]);
-                      }}>
+                      <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                         Cancel
                       </Button>
                       <Button
                         onClick={handleCreatePost}
-                        disabled={!newPost.title.trim() || !newPost.content.trim() || isCreating}
+                        disabled={!newPost.title.trim() || newPost.title.length < 5 || !newPost.content.trim() || isCreating}
                         className="bg-[#2c3968] hover:bg-[#1e2547]"
                       >
                         {isCreating ? (

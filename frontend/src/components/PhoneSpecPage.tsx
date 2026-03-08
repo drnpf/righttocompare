@@ -5,7 +5,7 @@ import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
 import { Checkbox } from "./ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
-import { Star, Smartphone, Camera, Cpu, Battery, Ruler, Weight, Droplet, ChevronDown, ThumbsUp, ThumbsDown, X, Monitor, Wifi, Mic, HardDrive, Zap, Radio, BarChart3, Palette, Heart, Bell, Plus, Check, HelpCircle, DollarSign, PenSquare, TrendingDown, TrendingUp } from "lucide-react";
+import { Star, Smartphone, Camera, Cpu, Battery, Ruler, Weight, Droplet, ChevronDown, ThumbsUp, ThumbsDown, X, Monitor, Wifi, Mic, HardDrive, Zap, Radio, BarChart3, Palette, Heart, Bell, Plus, Check, HelpCircle, DollarSign, PenSquare, TrendingDown, TrendingUp, Search, BookOpen, Lightbulb } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Button } from "./ui/button";
@@ -22,6 +22,7 @@ import RecentlyViewedPhones from "./RecentlyViewedPhones";
 import SpecTableOfContents from "./SpecTableOfContents";
 import ComparisonCart from "./ComparisonCart";
 import { PhoneData, phonesData } from "../data/phoneData";
+import { specTooltips, specGlossary } from "../data/specGlossary";
 import { ReviewForm } from "./ReviewForm";
 import { ReviewCard, ReviewData } from "./ReviewCard";
 import { CategoryRatings } from "./MultiRatingInput";
@@ -40,99 +41,6 @@ const categoryConfig: Record<string, { icon: any }> = {
   sensors: { icon: Radio },
 };
 
-// Tooltips for all specifications
-const specTooltips: Record<string, string> = {
-  // Display
-  "Screen Size": "The diagonal measurement of the display. Larger screens (6.5\"+ are better for media and gaming, while smaller screens are more portable.",
-  "Resolution": "The number of pixels on the screen. Higher resolution means sharper text and images. QHD+ (1440p) is sharper than FHD+ (1080p).",
-  "Technology": "The display panel type. AMOLED/OLED offer perfect blacks and vibrant colors, while LCD is more affordable but less contrast-rich.",
-  "Refresh Rate": "How many times per second the screen updates. Higher rates (120Hz) make scrolling and animations smoother than standard 60Hz displays.",
-  "Peak Brightness": "The maximum brightness level the screen can reach, measured in nits. Higher values (1500+ nits) mean better visibility in direct sunlight.",
-  "Protection": "The type of protective glass covering the screen. Gorilla Glass and Ceramic Shield protect against scratches and drops.",
-  "Pixel Density": "Pixels per inch (ppi). Higher values mean sharper displays. Anything above 400 ppi is very sharp and difficult to distinguish individual pixels.",
-  "Screen-to-Body Ratio": "The percentage of the front that's actually screen. Higher percentages (85%+) mean smaller bezels and more immersive viewing.",
-  
-  // Performance
-  "Processor": "The main chip that powers the phone. Think of it as the 'brain' that handles all computing tasks and determines overall performance.",
-  "Chipset": "The main processor that powers the phone. Think of it as the 'brain' that handles all computing tasks and determines overall performance.",
-  "CPU": "Central Processing Unit - the main processor core architecture and clock speed. Determines how fast your phone can execute tasks and run applications.",
-  "GPU": "Graphics Processing Unit - handles graphics rendering for games and visual effects. Better GPUs mean smoother gaming and better visual performance.",
-  "RAM": "Random Access Memory - temporary storage for running apps. More RAM (8GB+) allows you to run more apps simultaneously without slowdown.",
-  "Storage": "Internal storage capacity for apps, photos, and files. More storage (256GB+) means you can store more content without running out of space.",
-  "Expandable Storage": "Whether you can add a microSD card for additional storage. Most flagship phones no longer support expandable storage.",
-  "Operating System": "The software platform that runs the phone. Android and iOS are the two main options, each with their own app ecosystems.",
-  "Upgradability": "How long the manufacturer promises to provide software updates. Longer support (4+ years) means your phone stays secure and gets new features longer.",
-  
-  // Benchmarks
-  "AnTuTu v10": "Overall performance benchmark measuring CPU, GPU, memory, and UX. Scores above 1 million are flagship-level performance.",
-  "AnTuTu Score": "Overall performance benchmark. Higher scores indicate faster, more powerful devices. Scores above 1 million are considered flagship-level.",
-  "GeekBench 6 Single-Core": "Measures single-threaded CPU performance for everyday tasks like browsing and scrolling. Higher is better.",
-  "GeekBench 6 Multi-Core": "Measures multi-threaded CPU performance for demanding tasks like video editing. Higher scores mean better multitasking.",
-  "Geekbench Score": "Measures CPU performance in real-world tasks. Single-core shows performance for everyday tasks, multi-core shows performance under heavy load.",
-  "3DMark Wild Life Extreme": "Graphics benchmark for gaming performance. Higher scores indicate better gaming capabilities with smoother framerates.",
-  "3DMark Solar Bay": "Ray tracing graphics benchmark. Tests advanced graphics capabilities for the most demanding mobile games.",
-  "GFXBench Manhattan 3.1": "GPU benchmark measuring graphics performance. Higher fps means smoother gaming and better 3D performance.",
-  "GFXBench Car Chase": "Advanced GPU benchmark. Tests sustained graphics performance under heavy load. Higher fps is better for gaming.",
-  "PCMark Work 3.0": "Measures real-world productivity performance including web browsing, video editing, and photo editing.",
-  
-  // Camera
-  "Main Camera": "The primary rear camera. MP = megapixels (resolution), f-number = aperture (lower is better for low light), OIS = optical stabilization.",
-  "Periscope Telephoto": "A telephoto camera using periscope lens technology for high-quality optical zoom, typically 5x or more.",
-  "Telephoto": "A zoom camera that uses optical lenses to magnify subjects without quality loss. Higher MP and optical zoom values are better.",
-  "Ultra Wide": "A camera with a wide field of view (usually 120°) for landscape and group photos. Good for fitting more into the frame.",
-  "Front Camera": "The selfie camera. Higher MP means more detail, but good low-light performance and wider angles also matter.",
-  "Video Recording": "Maximum video resolution and framerate. 4K@60fps is ideal for high-quality videos, 8K for future-proofing.",
-  "Camera Features": "Additional camera capabilities like HDR (better dynamic range), night mode, and stabilization features.",
-  "Aperture": "The opening that lets light into the camera. Lower f-numbers (like f/1.7) mean wider openings, allowing more light for better low-light photos.",
-  "Optical Zoom": "True zoom using physical lenses, maintaining image quality. Digital zoom just crops and enlarges, reducing quality.",
-  "OIS": "Optical Image Stabilization - physically stabilizes the camera to reduce blur from hand shake, crucial for sharp photos and stable videos.",
-  
-  // Battery
-  "Capacity": "Battery size in milliampere-hours (mAh). Larger capacity (4500+ mAh) generally means longer battery life, though efficiency also matters.",
-  "Charging": "Fast charging wattage for wired charging. Higher wattage (45W+) means faster charging times from 0-100%.",
-  "Wireless Charging": "Charges your phone by placing it on a charging pad without cables. Typically 15W or less, slower than wired but convenient.",
-  "Reverse Wireless": "Allows your phone to wirelessly charge other devices (like earbuds) by placing them on the back of the phone.",
-  "Charging Time": "How long it takes to charge the battery to a certain percentage. Faster is better for convenience.",
-  "Battery Type": "The chemistry of the battery. Li-Ion and Li-Po are standard. Non-removable means you can't easily replace it yourself.",
-  
-  // Design
-  "Dimensions": "Physical size of the phone in millimeters (height x width x thickness). Larger phones have bigger screens but are less pocketable.",
-  "Weight": "How heavy the phone is in grams. Lighter phones (under 200g) are more comfortable to hold for extended periods.",
-  "Materials": "What the phone is made of. Premium materials like titanium, aluminum, and glass feel better but may be more fragile than plastic.",
-  "Colors": "Available color options for the phone body. Choice is purely aesthetic preference.",
-  "Water Resistance": "IP rating for water protection. IP68 means safe in up to 1.5m of water for 30 minutes. Higher numbers are better.",
-  "Dust Resistance": "IP rating for dust protection. IP6X means completely dust-tight, protecting internal components from particles.",
-  "IP68 Rating": "Water and dust resistance rating. IP68 means dust-tight and can survive submersion in water up to 1.5 meters for 30 minutes.",
-  "S Pen": "Samsung's stylus for Galaxy Note and Ultra series. Enables precise input for drawing, note-taking, and navigation.",
-  
-  // Connectivity
-  "5G": "Fifth-generation cellular network. Offers faster speeds and lower latency than 4G. Sub6 has better coverage, mmWave has faster speeds.",
-  "4G LTE": "Fourth-generation cellular network. Still widely used and offers good speeds in most areas.",
-  "Wi-Fi": "Wireless internet connectivity standard. Wi-Fi 6/6E/7 offer faster speeds and better performance in crowded areas than older standards.",
-  "Wi-Fi 6E": "Latest Wi-Fi standard offering faster speeds and less interference than older versions. Requires a compatible router to take full advantage.",
-  "Bluetooth": "Wireless technology for connecting accessories like headphones and speakers. Version 5.0+ offers better range and stability.",
-  "NFC": "Near Field Communication - enables contactless payments (like Apple/Google Pay) and quick pairing with compatible devices by tapping.",
-  "USB": "Physical charging and data port. Type-C is the modern standard, with version 3.x offering faster data transfer than 2.0.",
-  "GPS": "Global Positioning System for navigation and location services. Multiple systems (GPS, GLONASS, Galileo) improve accuracy.",
-  "UWB": "Ultra Wideband - enables precise spatial awareness for features like AirTag-like tracking and directional AirDrop.",
-  "5G Bands": "The specific 5G frequencies your phone supports. More bands mean better 5G connectivity in more locations worldwide.",
-  
-  // Audio
-  "Speakers": "Built-in speakers for calls, media, and alerts. Stereo (two speakers) provides better sound than mono (one speaker).",
-  "3.5mm Jack": "Traditional headphone port. Most modern phones have removed this in favor of wireless or USB-C audio.",
-  "Audio Features": "Additional audio capabilities like spatial audio, hi-res codec support, and audio tuning by premium brands.",
-  "Hi-Res Audio": "Support for high-resolution audio formats that preserve more detail than standard MP3. Requires compatible headphones to benefit.",
-  
-  // Sensors
-  "Fingerprint": "Biometric sensor for unlocking. Ultrasonic is more secure and works when wet, optical is faster, side-mounted is very convenient.",
-  "Face Unlock": "Uses front camera to recognize your face for unlocking. 3D systems (like Face ID) are more secure than 2D camera-based systems.",
-  "Accelerometer": "Detects phone orientation and movement. Enables auto-rotate and fitness tracking features.",
-  "Gyroscope": "Measures rotational movement. Essential for augmented reality apps and advanced gaming controls.",
-  "Proximity": "Detects when the phone is near your face during calls to turn off the screen and prevent accidental touches.",
-  "Compass": "Digital compass for navigation and orientation. Uses magnetometer to detect magnetic north.",
-  "Barometer": "Measures air pressure. Can improve GPS altitude accuracy and provide weather information.",
-  "SAR Value": "Specific Absorption Rate - measures radio frequency energy absorbed by the body. Lower values mean less radiation exposure.",
-};
 
 interface PhoneSpecPageProps {
   phoneData: PhoneData;
@@ -152,6 +60,7 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
   // Review state - API connected
   const [reviews, setReviews] = useState<ReviewData[]>([]);
   const [totalReviews, setTotalReviews] = useState(0);
+  const [aggregateRating, setAggregateRating] = useState(0);
   const [isLoadingReviews, setIsLoadingReviews] = useState(true);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isVoting, setIsVoting] = useState(false);
@@ -165,16 +74,19 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
       if (response) {
         setReviews(response.reviews);
         setTotalReviews(response.totalReviews);
+        setAggregateRating(response.aggregateRating);
       } else {
         // Fallback to mock data if API fails
         setReviews(phoneData.reviews as unknown as ReviewData[]);
         setTotalReviews(phoneData.reviews.length);
+        setAggregateRating(0);
       }
     } catch (error) {
       console.error("Failed to fetch reviews:", error);
       // Fallback to mock data
       setReviews(phoneData.reviews as unknown as ReviewData[]);
       setTotalReviews(phoneData.reviews.length);
+      setAggregateRating(0);
     } finally {
       setIsLoadingReviews(false);
     }
@@ -186,23 +98,7 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
     setCurrentPage(1);
   }, [phoneData.id, fetchReviews]);
 
-  // Calculate overall rating from reviews
-  const calculateOverallRating = () => {
-    if (reviews.length === 0) return 0;
-
-    const totalRating = reviews.reduce((sum, review) => {
-      const reviewAvg = review.categoryRatings
-        ? (review.categoryRatings.camera + review.categoryRatings.battery +
-           review.categoryRatings.design + review.categoryRatings.performance +
-           review.categoryRatings.value) / 5
-        : review.rating;
-      return sum + reviewAvg;
-    }, 0);
-
-    return Number((totalRating / reviews.length).toFixed(1));
-  };
-
-  const overallRating = calculateOverallRating();
+  const overallRating = aggregateRating;
   const ratingsCount = totalReviews;
 
   // Initialize with all specs selected
@@ -216,6 +112,9 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   const [isKeySpecsOpen, setIsKeySpecsOpen] = useState(true);
   const [isFullSpecsOpen, setIsFullSpecsOpen] = useState(true);
+  const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
+  const [glossarySearch, setGlossarySearch] = useState("");
+  const [glossaryCategory, setGlossaryCategory] = useState<string>("all");
   const [isCarrierCompatOpen, setIsCarrierCompatOpen] = useState(true);
   const [isReviewsOpen, setIsReviewsOpen] = useState(true);
   const [isPriceTrackingOpen, setIsPriceTrackingOpen] = useState(true);
@@ -830,7 +729,33 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
                 <div key={idx} className="border border-[#e0e0e0] dark:border-[#2d3548] rounded-lg p-4 min-w-0 dark:bg-[#1a1f2e]">
                   <div className="flex items-center gap-2 mb-2">
                     <spec.icon className="w-4 h-4 text-[#2c3968] dark:text-[#4a7cf6] flex-shrink-0" />
-                    <p className="text-[#666] dark:text-[#a0a8b8] truncate">{spec.label}</p>
+                    <p className="text-[#666] dark:text-[#a0a8b8] truncate flex-1">{spec.label}</p>
+                    {specGlossary[spec.label] && (
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="w-4 h-4 rounded-full bg-[#f5f7fa] dark:bg-[#2d3548] hover:bg-[#2c3968]/10 flex items-center justify-center transition-colors flex-shrink-0"
+                            >
+                              <HelpCircle className="w-3 h-3 text-[#2c3968] dark:text-[#4a7cf6]" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="bottom"
+                            className="max-w-xs bg-white text-[#1e1e1e] border-2 border-[#2c3968]/20 shadow-xl px-4 py-3 rounded-xl"
+                            sideOffset={8}
+                          >
+                            <p className="text-sm font-medium text-[#2c3968] mb-1">{spec.label}</p>
+                            <p className="text-sm leading-relaxed mb-2">{specGlossary[spec.label].definition}</p>
+                            <div className="flex items-start gap-1.5 bg-[#fffbeb] border border-amber-200 rounded-lg px-2.5 py-1.5">
+                              <Lightbulb className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />
+                              <p className="text-xs text-amber-700 leading-relaxed">{specGlossary[spec.label].tip}</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </div>
                   <p className="text-[#1e1e1e] dark:text-white">{spec.value}</p>
                 </div>
@@ -1059,9 +984,31 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
                             />
                             <label
                               htmlFor={`${category}-${specName}`}
-                              className="text-[#1e1e1e] cursor-pointer flex-1"
+                              className="text-[#1e1e1e] cursor-pointer flex-1 flex items-center gap-1.5"
                             >
                               {specName}
+                              {specTooltips[specName] && (
+                                <TooltipProvider delayDuration={200}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="w-4 h-4 rounded-full bg-[#f5f7fa] hover:bg-[#2c3968]/10 flex items-center justify-center transition-colors flex-shrink-0"
+                                        onClick={(e) => e.preventDefault()}
+                                      >
+                                        <HelpCircle className="w-3 h-3 text-[#2c3968]" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="right"
+                                      className="max-w-sm bg-white text-[#1e1e1e] border-2 border-[#2c3968]/20 shadow-xl px-4 py-3 rounded-xl"
+                                      sideOffset={8}
+                                    >
+                                      <p className="text-sm leading-relaxed">{specTooltips[specName]}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
                             </label>
                           </div>
                         ))}
@@ -1082,18 +1029,122 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
         <Card id="full-specs" className="shadow-sm">
           <CardHeader>
             <div className="mb-6">
-              <div className="flex items-center gap-3">
-                <div>
-                  <h2 className="text-[#2c3968] mb-2">Full Specifications</h2>
-                  <div className="h-1 w-20 bg-[#2c3968] rounded-full"></div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div>
+                    <h2 className="text-[#2c3968] mb-2">Full Specifications</h2>
+                    <div className="h-1 w-20 bg-[#2c3968] rounded-full"></div>
+                  </div>
+                  <CollapsibleTrigger className="ml-2">
+                    <ChevronDown
+                      className={`w-6 h-6 text-[#2c3968] transition-transform ${
+                        isFullSpecsOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </CollapsibleTrigger>
                 </div>
-                <CollapsibleTrigger className="ml-2">
-                  <ChevronDown
-                    className={`w-6 h-6 text-[#2c3968] transition-transform ${
-                      isFullSpecsOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </CollapsibleTrigger>
+                {/* Glossary Modal Trigger */}
+                <Dialog open={isGlossaryOpen} onOpenChange={(open) => { setIsGlossaryOpen(open); if (!open) { setGlossarySearch(""); setGlossaryCategory("all"); } }}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex items-center gap-2 border-[#2c3968]/30 text-[#2c3968] hover:bg-[#2c3968] hover:text-white transition-colors">
+                      <BookOpen className="w-4 h-4" />
+                      <span className="hidden sm:inline">Spec Glossary</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0">
+                    <DialogHeader className="p-6 pb-4 border-b border-[#e0e0e0] flex-shrink-0">
+                      <DialogTitle className="text-[#2c3968] text-xl flex items-center gap-2">
+                        <BookOpen className="w-5 h-5" />
+                        Specification Glossary
+                      </DialogTitle>
+                      <DialogDescription className="text-[#666]">
+                        Hover over any <HelpCircle className="w-3 h-3 inline text-[#2c3968]" /> icon on the page for quick definitions. Use this glossary to browse all {Object.keys(specGlossary).length} terms with buying tips.
+                      </DialogDescription>
+                      {/* Search + Category Filter */}
+                      <div className="flex flex-col sm:flex-row gap-3 mt-3">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#999]" />
+                          <input
+                            type="text"
+                            placeholder="Search specifications..."
+                            value={glossarySearch}
+                            onChange={(e) => setGlossarySearch(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 border border-[#e0e0e0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2c3968]/30 focus:border-[#2c3968]"
+                          />
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {["all", ...Array.from(new Set(Object.values(specGlossary).map(e => e.category)))].map((cat) => (
+                            <button
+                              key={cat}
+                              onClick={() => setGlossaryCategory(cat)}
+                              className={`px-3 py-1.5 rounded-lg text-xs capitalize font-medium transition-colors ${
+                                glossaryCategory === cat
+                                  ? "bg-[#2c3968] text-white"
+                                  : "bg-[#f5f7fa] text-[#666] hover:bg-[#2c3968]/10 hover:text-[#2c3968]"
+                              }`}
+                            >
+                              {cat === "all" ? "All" : cat}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </DialogHeader>
+                    {/* Scrollable entries */}
+                    <div className="overflow-y-auto flex-1 p-6">
+                      {(() => {
+                        const filtered = Object.entries(specGlossary).filter(([name, entry]) => {
+                          const matchesSearch = !glossarySearch.trim() ||
+                            name.toLowerCase().includes(glossarySearch.toLowerCase()) ||
+                            entry.definition.toLowerCase().includes(glossarySearch.toLowerCase());
+                          const matchesCategory = glossaryCategory === "all" || entry.category === glossaryCategory;
+                          return matchesSearch && matchesCategory;
+                        });
+
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="text-center py-12 text-[#666]">
+                              <Search className="w-8 h-8 mx-auto mb-3 text-[#ccc]" />
+                              <p>No matching terms found.</p>
+                            </div>
+                          );
+                        }
+
+                        // Group by category
+                        const grouped: Record<string, [string, typeof specGlossary[string]][]> = {};
+                        filtered.forEach(([name, entry]) => {
+                          if (!grouped[entry.category]) grouped[entry.category] = [];
+                          grouped[entry.category].push([name, entry]);
+                        });
+
+                        return (
+                          <div className="space-y-8">
+                            {Object.entries(grouped).map(([cat, entries]) => (
+                              <div key={cat}>
+                                <h3 className="text-sm font-semibold text-[#2c3968] capitalize mb-3 flex items-center gap-2">
+                                  <div className="w-1 h-4 bg-[#2c3968] rounded-full" />
+                                  {cat}
+                                  <span className="text-xs text-[#999] font-normal">({entries.length})</span>
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  {entries.map(([name, entry]) => (
+                                    <div key={name} className="border border-[#e0e0e0] rounded-xl p-4 hover:border-[#2c3968]/30 hover:bg-[#f7f9fc] transition-all">
+                                      <p className="font-medium text-[#1e1e1e] mb-1.5">{name}</p>
+                                      <p className="text-sm text-[#666] leading-relaxed mb-2">{entry.definition}</p>
+                                      <div className="flex items-start gap-1.5 bg-[#fffbeb] border border-amber-200 rounded-lg px-3 py-2">
+                                        <Lightbulb className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                                        <p className="text-xs text-amber-700 leading-relaxed">{entry.tip}</p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
           </CardHeader>
@@ -1133,23 +1184,27 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
                               <div className="md:col-span-1">
                                 <div className="flex items-center gap-2">
                                   <p className="text-[#666]">{key}</p>
-                                  {specTooltips[key] && (
+                                  {specGlossary[key] && (
                                     <TooltipProvider delayDuration={200}>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
-                                          <button 
+                                          <button
                                             className="w-4 h-4 rounded-full bg-[#f5f7fa] hover:bg-[#2c3968]/10 flex items-center justify-center transition-colors duration-200 flex-shrink-0"
                                             type="button"
                                           >
                                             <HelpCircle className="w-3 h-3 text-[#2c3968]" />
                                           </button>
                                         </TooltipTrigger>
-                                        <TooltipContent 
-                                          side="right" 
+                                        <TooltipContent
+                                          side="right"
                                           className="max-w-sm bg-white text-[#1e1e1e] border-2 border-[#2c3968]/20 shadow-xl px-4 py-3 rounded-xl"
                                           sideOffset={8}
                                         >
-                                          <p className="text-sm leading-relaxed">{specTooltips[key]}</p>
+                                          <p className="text-sm leading-relaxed mb-2">{specGlossary[key].definition}</p>
+                                          <div className="flex items-start gap-1.5 bg-[#fffbeb] border border-amber-200 rounded-lg px-2.5 py-1.5 mt-2">
+                                            <Lightbulb className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />
+                                            <p className="text-xs text-amber-700 leading-relaxed">{specGlossary[key].tip}</p>
+                                          </div>
                                         </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>

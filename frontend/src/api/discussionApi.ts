@@ -283,6 +283,26 @@ export const voteOnReply = async (
 };
 
 /**
+ * Fetches all discussions created by a specific user.
+ */
+export const getDiscussionsByUser = async (
+  userId: string
+): Promise<DiscussionResponse[]> => {
+  try {
+    const response = await fetch(`${API_URL}/user/${userId}`);
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch user discussions");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching user discussions:", error);
+    return [];
+  }
+};
+
+/**
  * Deletes a reply (author only).
  */
 export const deleteReply = async (

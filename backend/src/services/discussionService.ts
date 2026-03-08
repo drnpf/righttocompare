@@ -94,6 +94,15 @@ export const getDiscussions = async (
 };
 
 /**
+ * Retrieves all discussions created by a specific user, sorted newest first.
+ */
+export const getDiscussionsByUser = async (
+  authorId: string
+): Promise<IDiscussion[]> => {
+  return Discussion.find({ authorId }).sort({ createdAt: -1 });
+};
+
+/**
  * Retrieves a single discussion by ID and increments view count.
  */
 export const getDiscussionById = async (

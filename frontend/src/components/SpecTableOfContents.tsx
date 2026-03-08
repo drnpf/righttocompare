@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { Monitor, Zap, Filter, List, Star, History, Smartphone, ChevronLeft, ChevronRight, ChevronDown, GitCompare, Cpu, BarChart3, Camera, Battery, Palette, Wifi, Mic, Radio, Signal, DollarSign } from "lucide-react";
+import { Monitor, Zap, Filter, List, Star, History, Smartphone, ChevronLeft, ChevronRight, ChevronDown, GitCompare, Cpu, BarChart3, Camera, Battery, Palette, Wifi, Mic, Radio, Signal, DollarSign, TableOfContents, ArrowUp } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
 
 interface TOCSection {
   id: string;
@@ -42,6 +43,8 @@ export default function SpecTableOfContents({ specCategories = [], mode = "phone
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
   const [isFullSpecsPopoverOpen, setIsFullSpecsPopoverOpen] = useState<boolean>(false);
   const [isFullSpecsPopoverOpenCollapsed, setIsFullSpecsPopoverOpenCollapsed] = useState<boolean>(false);
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState<boolean>(false);
+  const [showBackToTop, setShowBackToTop] = useState<boolean>(false);
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -125,6 +128,9 @@ export default function SpecTableOfContents({ specCategories = [], mode = "phone
       if (!foundSection && sections.length > 0) {
         setActiveSection(sections[0].id);
       }
+
+      // Show back-to-top after scrolling past first section
+      setShowBackToTop(window.scrollY > 400);
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -132,6 +138,10 @@ export default function SpecTableOfContents({ specCategories = [], mode = "phone
 
     return () => window.removeEventListener("scroll", handleScroll);
   }, [sections, mode, phoneCount]);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -170,7 +180,8 @@ export default function SpecTableOfContents({ specCategories = [], mode = "phone
   };
 
   return (
-    <div className={`hidden 2xl:block fixed top-24 right-4 z-30 transition-all duration-300 ${
+    <>
+    <div className={`hidden xl:block fixed top-24 right-4 z-30 transition-all duration-300 ${
       isExpanded ? "w-60" : "w-14"
     }`}>
       <div className="bg-gradient-to-br from-white to-[#f7f9fc] dark:from-[#161b26] dark:to-[#1a1f2e] rounded-2xl border-2 border-[#2c3968]/10 dark:border-[#4a7cf6]/20 shadow-lg backdrop-blur-sm overflow-hidden">
@@ -301,7 +312,7 @@ export default function SpecTableOfContents({ specCategories = [], mode = "phone
             </div>
             
             {/* Progress indicator */}
-            <div className="pb-5 px-7">
+            <div className="pb-4 px-7">
               <div className="relative h-2 bg-gradient-to-r from-[#e0e0e0] to-[#f0f0f0] rounded-full overflow-hidden shadow-inner">
                 <div
                   className="h-full bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] transition-all duration-500 ease-out rounded-full shadow-sm"
@@ -311,12 +322,27 @@ export default function SpecTableOfContents({ specCategories = [], mode = "phone
                 />
               </div>
               <div className="flex justify-between mt-2 px-1">
-                <span className="text-xs text-[#999]">Start</span>
+                <span className="text-xs text-[#999]">
+                  {sections.findIndex(s => s.id === activeSection) + 1} / {sections.length}
+                </span>
                 <span className="text-xs text-[#999]">
                   {Math.round(((sections.findIndex(s => s.id === activeSection) + 1) / sections.length) * 100)}%
                 </span>
               </div>
             </div>
+
+            {/* Back to Top button */}
+            {showBackToTop && (
+              <div className="px-5 pb-5">
+                <button
+                  onClick={scrollToTop}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm text-[#2c3968] bg-[#2c3968]/5 hover:bg-[#2c3968]/10 transition-colors duration-200 border border-[#2c3968]/10"
+                >
+                  <ArrowUp className="w-3.5 h-3.5" />
+                  Back to Top
+                </button>
+              </div>
+            )}
           </>
         ) : (
           // Collapsed view - show icons only
@@ -430,9 +456,116 @@ export default function SpecTableOfContents({ specCategories = [], mode = "phone
                 );
               })}
             </div>
+
+            {/* Back to Top - collapsed */}
+            {showBackToTop && (
+              <div className="mt-2">
+                <button
+                  onClick={scrollToTop}
+                  className="w-10 h-10 flex items-center justify-center rounded-xl text-[#2c3968]/60 hover:bg-[#f5f7fa] hover:text-[#2c3968] transition-all duration-300 hover:scale-105"
+                  title="Back to Top"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
     </div>
+
+    {/* Mobile floating TOC button — visible only below xl */}
+    <div className="xl:hidden fixed bottom-6 right-4 z-40">
+      <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
+        <SheetTrigger asChild>
+          <button
+            className="w-12 h-12 bg-[#2c3968] text-white rounded-full shadow-xl hover:shadow-2xl hover:bg-[#3d4b7f] transition-all duration-300 hover:scale-110 flex items-center justify-center"
+            title="Table of Contents"
+          >
+            <TableOfContents className="w-5 h-5" />
+          </button>
+        </SheetTrigger>
+        <SheetContent side="right" className="w-72 p-0 flex flex-col">
+          <SheetHeader className="p-5 pb-3 border-b border-[#e0e0e0]">
+            <SheetTitle className="text-[#2c3968] flex items-center gap-2">
+              <div className="w-1 h-5 bg-gradient-to-b from-[#2c3968] to-[#3d4b7f] rounded-full" />
+              On This Page
+            </SheetTitle>
+          </SheetHeader>
+
+          {/* Progress bar */}
+          <div className="px-5 py-3 border-b border-[#e0e0e0]">
+            <div className="relative h-1.5 bg-[#e0e0e0] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] transition-all duration-500 rounded-full"
+                style={{ width: `${((sections.findIndex(s => s.id === activeSection) + 1) / sections.length) * 100}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-1.5">
+              <span className="text-xs text-[#999]">{sections.findIndex(s => s.id === activeSection) + 1} / {sections.length}</span>
+              <span className="text-xs text-[#999]">{Math.round(((sections.findIndex(s => s.id === activeSection) + 1) / sections.length) * 100)}%</span>
+            </div>
+          </div>
+
+          {/* Nav links */}
+          <nav className="flex-1 overflow-y-auto p-4 space-y-1.5">
+            {sections.map((section) => {
+              const Icon = section.icon;
+              const isActive = activeSection === section.id;
+              const hasSubSections = section.subSections && section.subSections.length > 0;
+              return (
+                <div key={section.id}>
+                  <button
+                    onClick={() => { scrollToSection(section.id); setIsMobileSheetOpen(false); }}
+                    className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 ${
+                      isActive
+                        ? "bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] text-white shadow-md"
+                        : "text-[#666] hover:bg-[#f5f7fa] hover:text-[#2c3968]"
+                    }`}
+                  >
+                    <div className={`p-1.5 rounded-lg ${isActive ? "bg-white/20" : "bg-[#2c3968]/5 group-hover:bg-[#2c3968]/10"}`}>
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-white" : "text-[#2c3968]/60 group-hover:text-[#2c3968]"}`} />
+                    </div>
+                    <span className="text-sm flex-1">{section.label}</span>
+                  </button>
+                  {hasSubSections && (
+                    <div className="ml-9 mt-1 space-y-0.5">
+                      {section.subSections?.map((sub) => (
+                        <button
+                          key={sub.id}
+                          onClick={() => { scrollToSection(sub.id); setIsMobileSheetOpen(false); }}
+                          className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-left text-xs transition-colors ${
+                            activeSection === sub.id
+                              ? "text-[#2c3968] bg-[#2c3968]/10"
+                              : "text-[#999] hover:text-[#2c3968] hover:bg-[#f5f7fa]"
+                          }`}
+                        >
+                          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeSection === sub.id ? "bg-[#2c3968]" : "bg-[#ccc]"}`} />
+                          <span className="capitalize">{sub.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+
+          {/* Back to top */}
+          {showBackToTop && (
+            <div className="p-4 border-t border-[#e0e0e0]">
+              <button
+                onClick={() => { scrollToTop(); setIsMobileSheetOpen(false); }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm text-[#2c3968] bg-[#2c3968]/5 hover:bg-[#2c3968]/10 transition-colors border border-[#2c3968]/10"
+              >
+                <ArrowUp className="w-3.5 h-3.5" />
+                Back to Top
+              </button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+    </div>
+  </>
   );
 }

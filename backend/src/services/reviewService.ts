@@ -60,11 +60,11 @@ export const addReviewToPhone = async (
 };
 
 /**
- * Retrieves all reviews for a phone with pagination.
+ * Retrieves all reviews for a phone with pagination and aggregate ratings.
  * @param phoneId The unique string ID of the phone
  * @param page Page number (1-indexed)
  * @param limit Number of reviews per page
- * @returns Object with reviews array and pagination info
+ * @returns Object with reviews array, pagination info, and aggregate ratings
  */
 export const getReviewsForPhone = async (
   phoneId: string,
@@ -75,20 +75,54 @@ export const getReviewsForPhone = async (
   totalReviews: number;
   totalPages: number;
   currentPage: number;
+  aggregateRating: number;
+  categoryAverages: ICategoryRatings;
 } | null> => {
   const phone = await Phone.findOne({ id: phoneId });
   if (!phone) return null;
 
-  const totalReviews = phone.reviews.length;
+  const allReviews = phone.reviews;
+  const totalReviews = allReviews.length;
   const totalPages = Math.ceil(totalReviews / limit);
   const startIndex = (page - 1) * limit;
-  const reviews = phone.reviews.slice(startIndex, startIndex + limit);
+  const reviews = allReviews.slice(startIndex, startIndex + limit);
+
+  // Compute aggregate rating and per-category averages from ALL reviews
+  let aggregateRating = 0;
+  let categoryAverages: ICategoryRatings = { camera: 0, battery: 0, design: 0, performance: 0, value: 0 };
+
+  if (totalReviews > 0) {
+    const totals = allReviews.reduce(
+      (acc, r) => ({
+        camera: acc.camera + r.categoryRatings.camera,
+        battery: acc.battery + r.categoryRatings.battery,
+        design: acc.design + r.categoryRatings.design,
+        performance: acc.performance + r.categoryRatings.performance,
+        value: acc.value + r.categoryRatings.value,
+      }),
+      { camera: 0, battery: 0, design: 0, performance: 0, value: 0 }
+    );
+
+    categoryAverages = {
+      camera: Number((totals.camera / totalReviews).toFixed(1)),
+      battery: Number((totals.battery / totalReviews).toFixed(1)),
+      design: Number((totals.design / totalReviews).toFixed(1)),
+      performance: Number((totals.performance / totalReviews).toFixed(1)),
+      value: Number((totals.value / totalReviews).toFixed(1)),
+    };
+
+    aggregateRating = Number(
+      ((categoryAverages.camera + categoryAverages.battery + categoryAverages.design + categoryAverages.performance + categoryAverages.value) / 5).toFixed(1)
+    );
+  }
 
   return {
     reviews,
     totalReviews,
     totalPages,
     currentPage: page,
+    aggregateRating,
+    categoryAverages,
   };
 };
 
