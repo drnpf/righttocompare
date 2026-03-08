@@ -3,7 +3,7 @@ import Phone, { IPhone } from "../models/Phone";
 /**
  * Retrieves phones from a specific page with a given limit per page and total
  * number of phones in the database. This function returns a list of phone
- * JSON objects (NOT Mongoose Documents). This is for read-only purposes.
+ * JSON objects (NOT Mongoose Documents). FOR READ-ONLY PURPOSES.
  * @param page The page number to retrieve (PAGE INDEX STARTS AT 1)
  * @param limit The number of phones to retrieve per page
  * @returns An object containing the list of phone JSON objects and the total
@@ -21,7 +21,26 @@ export const findPhonePage = async (page: number, limit: number): Promise<{ phon
 
   // Fetching list of phone JSON objects on a certain page and # of phones in list
   const [phones, total] = await Promise.all([
-    Phone.find().skip(skip).limit(safeLimit).select("-_id -__v").lean(), // RETURNS PLAIN JSON OBJECTS
+    Phone.find()
+      .skip(skip)
+      .limit(safeLimit)
+      .select({
+        _id: 0,
+        id: 1,
+        name: 1,
+        manufacturer: 1,
+        releaseDate: 1,
+        price: 1,
+        "images.main": 1,
+        "specs.display.screenSizeInches": 1,
+        "specs.display.technology": 1,
+        "specs.camera.mainMegapixels": 1,
+        "specs.performance.processor": 1,
+        "specs.battery.capacitymAh": 1,
+        "specs.design.dimensionsMm": 1,
+        "specs.design.weightGrams": 1,
+      })
+      .lean(), // RETURNS PLAIN JSON OBJECTS
     Phone.countDocuments(),
   ]);
   return { phones, total };

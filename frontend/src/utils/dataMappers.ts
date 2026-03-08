@@ -7,7 +7,7 @@ export const mapJsonToPhoneCard = (dbPhone: any): PhoneCard => {
   return {
     id: dbPhone.id,
     name: dbPhone.name,
-    manufacturer: dbPhone.manufacturer, // Mapping backend 'manufacturer' to frontend 'brand'
+    manufacturer: dbPhone.manufacturer,
     releaseDate: new Date(dbPhone.releaseDate).toLocaleDateString("en-US", {
       month: "long",
       year: "numeric",
@@ -84,7 +84,6 @@ export const mapJsonToPhoneData = (dbPhone: any): PhoneData => {
         Biometrics: specs.sensors.fingerprint,
         "Face Recognition": specs.sensors.faceRecognition ? "Yes" : "No",
         Barometer: specs.sensors.barometer ? "Yes" : "No",
-        // Add others as needed for the comparison table
       },
     },
     carrierCompatibility: dbPhone.carrierCompatibility || [],

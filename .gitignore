@@ -1,3 +1,6 @@
+# Shell scripts
+*.sh
+
 # Dependencies
 .venv
 node_modules/
