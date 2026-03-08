@@ -142,7 +142,9 @@ function AppContent() {
 
   const handleAddToComparison = (phoneId: string) => {
     if (!comparisonPhoneIds.includes(phoneId) && comparisonPhoneIds.length < 3) {
-      setComparisonPhoneIds([...comparisonPhoneIds, phoneId]);
+      const updatedIds = [...comparisonPhoneIds, phoneId].slice().sort((a, b) => a.localeCompare(b));
+      setComparisonPhoneIds(updatedIds);
+
       // Also add to recently viewed
       addPhoneToRecentlyViewed(phoneId);
     }

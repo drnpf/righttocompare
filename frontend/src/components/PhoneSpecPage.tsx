@@ -514,8 +514,10 @@ export default function PhoneSpecPage({ onNavigateToComparison, comparisonPhoneI
       });
       return;
     }
-
-    setComparisonPhones([...comparisonPhones, currentPhone]);
+    
+    setComparisonPhones(
+      [...comparisonPhones, currentPhone].slice().sort((a, b) => a.id.localeCompare(b.id))
+    );
     setShowComparisonCart(true);
     
     // Add to recently viewed

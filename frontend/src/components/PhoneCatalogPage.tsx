@@ -120,7 +120,7 @@ export default function PhoneCatalogPage({
       return;
     }
 
-    const newComparisonIds = [...comparisonPhoneIds, phoneId];
+    const newComparisonIds = [...comparisonPhoneIds, phoneId].slice().sort((a, b) => a.localeCompare(b));
     onComparisonChange?.(newComparisonIds);
 
     toast.success("Added to comparison", {
