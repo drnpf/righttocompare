@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/t
 import SpecTableOfContents from "./SpecTableOfContents";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
 import { toast } from "sonner@2.0.3";
+import { useNavigate } from "react-router-dom";
 
 // Category icons mapping
 const categoryConfig: Record<string, { icon: any }> = {
@@ -51,7 +52,6 @@ const specTooltips: Record<string, string> = {
 interface PhoneComparisonPageProps {
   phoneIds: string[];
   onRemovePhone: (phoneId: string) => void;
-  onBackToSpecs: () => void;
   onAddPhone?: (phoneId: string) => void;
   onNavigate?: (phoneId: string) => void;
   recentlyViewedPhones?: string[];
@@ -60,11 +60,13 @@ interface PhoneComparisonPageProps {
 export default function PhoneComparisonPage({
   phoneIds,
   onRemovePhone,
-  onBackToSpecs,
   onAddPhone,
   onNavigate,
   recentlyViewedPhones,
 }: PhoneComparisonPageProps) {
+  // Routing
+  const navigate = useNavigate();
+
   const [stickyHeader, setStickyHeader] = useState(false);
   const [searchOpenIndex, setSearchOpenIndex] = useState<number | null>(null);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
@@ -88,20 +90,25 @@ export default function PhoneComparisonPage({
 
   // Handle share comparison
   const handleShareComparison = () => {
-    if (phones.length === 0) {
+    if (phoneIds.length === 0) {
       toast.error("Add phones to share a comparison");
       return;
     }
 
+    // Build query string with the correct parameter
     const params = new URLSearchParams();
-    params.set('compare', phoneIds.join(','));
-    const shareUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+    params.set('phones', phoneIds.join(',')); // <-- use 'phones', not 'compare'
 
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      toast.success("Comparison link copied to clipboard!");
-    }).catch(() => {
-      toast.error("Failed to copy link");
-    });
+    // Always point to /compare
+    const shareUrl = `${window.location.origin}/compare?${params.toString()}`;
+
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => {
+        toast.success("Comparison link copied to clipboard!");
+      })
+      .catch(() => {
+        toast.error("Failed to copy link");
+      });
   };
 
   // Get phone data for all selected phones
@@ -888,7 +895,7 @@ export default function PhoneComparisonPage({
         <div id="recently-viewed">
           <RecentlyViewedPhones 
             currentPhone="" 
-            onNavigate={onNavigate}
+            onNavigate={(phoneId) => navigate(`/phones/${phoneId}`)}
             recentlyViewedPhones={recentlyViewedPhones}
           />
         </div>
