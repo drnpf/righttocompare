@@ -54,7 +54,9 @@ export const phonesData: Record<string, PhoneData> = {
     id: "galaxy-s24-ultra",
     name: "Galaxy S24 Ultra",
     manufacturer: "Samsung",
-    releaseDate: "January 2024",
+    //test
+    // releaseDate: "January 2024",
+    releaseDate: "April 2025",
     price: "$1,199",
     images: {
       main: galaxyS24Image
@@ -294,7 +296,9 @@ export const phonesData: Record<string, PhoneData> = {
     id: "galaxy-s25",
     name: "Galaxy S25",
     manufacturer: "Samsung",
-    releaseDate: "February 2025",
+    // releaseDate: "February 2025",
+    //test
+    releaseDate: "April 2026",
     price: "$899",
     images: {
       main: galaxyS25Image

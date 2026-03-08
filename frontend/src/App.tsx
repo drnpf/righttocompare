@@ -18,7 +18,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import FirebaseConnectionTest from "./components/FirebaseConnectionTest";
 import PasswordResetPage from "./components/PasswordResetPage";
 import { Shield } from "lucide-react";
-import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import BackToTopButton from "./components/BackToTopButton";
 
 // Helper functions for localStorage
@@ -43,6 +43,7 @@ function AppContent() {
   const { currentUser, signOut } = useAuth();
   // React Router hook
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [comparisonPhoneIds, setComparisonPhoneIds] = useState<string[]>([]);
   const [recentlyViewedPhones, setRecentlyViewedPhones] = useState<string[]>([]);
@@ -147,6 +148,28 @@ function AppContent() {
     }
   };
 
+  // Update compare page URL whenever user adds/removes phones to compare cart
+  useEffect(() => {
+    if (location.pathname !== "/compare") return;
+
+    if (comparisonPhoneIds.length === 0) {
+      navigate("/compare", { replace: true });
+    } else {
+      const phoneQuery = comparisonPhoneIds.join(",");
+      navigate(`/compare?phones=${phoneQuery}`, { replace: true });
+    }
+  }, [comparisonPhoneIds, location.pathname]);
+
+  // Update compare page URL on page refresh
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const phones = params.get("phones");
+
+    if (phones) {
+      setComparisonPhoneIds(phones.split(","));
+    }
+  }, []);
+
   return (
     <DarkModeProvider>
       <div className="min-h-screen bg-[#f7f7f7] dark:bg-[#0d1117] flex flex-col transition-colors duration-300">
@@ -241,7 +264,7 @@ function AppContent() {
         <BackToTopButton />
 
         {/* Firebase Connection Test - Remove this after testing */}
-        {/* <FirebaseConnectionTest /> */}
+        <FirebaseConnectionTest />
       </div>
     </DarkModeProvider>
   );
