@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 // Importing routes
 import userRoutes from "./routes/userRoutes";
 import phoneRoutes from "./routes/phoneRoutes";
+import reviewRoutes from "./routes/reviewRoutes";
+import discussionRoutes from "./routes/discussionRoutes";
 
 // Loading environment variables
 dotenv.config(); // THIS IS FOR DEVELOPMENT maybe we can use system environment variables on production
@@ -27,6 +29,8 @@ app.use(
     // Allows request from the following server URLs
     origin: "http://localhost:3000", // Frontend URL (CHANGE URL HERE ON PRODUCTION)
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 app.use(express.json());
@@ -41,8 +45,8 @@ connectDB();
  */
 app.use("/api/users", userRoutes);
 app.use("/api/phones", phoneRoutes);
-
-// ADD MORE ROUTES HERE
+app.use("/api/phones", reviewRoutes); // Review routes nested under phones
+app.use("/api/discussions", discussionRoutes); // Discussion thread routes
 
 // Health Check Route
 app.get("/", (req: Request, res: Response) => {

@@ -31,8 +31,20 @@ export const syncUser = async (req: AuthRequest, res: Response): Promise<void> =
 
     // Asking UserService to check if user exists
     let user = await UserService.findUserByUid(uid);
+    console.log(`Looking for user with UID: ${uid}`);
     if (user) {
       console.log(`User found: ${email}`);
+      user = await UserService.updateUser(user, name);
+      res.status(200).json(user);
+      return;
+    }
+
+    // Check if user exists by email (in case UID changed)
+    user = await UserService.findUserByEmail(email);
+    if (user) {
+      console.log(`User found by email, but UID mismatch. DB UID: ${user.firebaseUid}, Token UID: ${uid}`);
+      // Update the UID to match Firebase
+      user.firebaseUid = uid;
       user = await UserService.updateUser(user, name);
       res.status(200).json(user);
       return;
