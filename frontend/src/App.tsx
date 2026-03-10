@@ -11,7 +11,7 @@ import SignUpPage from "./components/SignUpPage";
 import UserProfilePage from "./components/UserProfilePage";
 import AdminDashboardPage from "./components/AdminDashboardPage";
 import AIChatWidget from "./components/AIChatWidget";
-import { phonesData } from "./data/phoneData";
+import { phonesData } from "./data/phoneData"; // REMOVE LATER THIS IS MOCK DATA
 import { Toaster } from "sonner@2.0.3";
 import { DarkModeProvider } from "./components/DarkModeContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -51,7 +51,7 @@ const saveRecentlyViewedToStorage = (phoneIds: string[]) => {
 
 function AppContent() {
   const { currentUser, signOut } = useAuth();
-  const [currentPage, setCurrentPage] = useState<string>("galaxy-s24-ultra");
+  const [selectedPhoneId, setSelectedPhoneId] = useState<string | null>(null);
   const [pageType, setPageType] = useState<PageType>("catalog");
   const [comparisonPhoneIds, setComparisonPhoneIds] = useState<string[]>([]);
   const [recentlyViewedPhones, setRecentlyViewedPhones] = useState<string[]>([]);
@@ -75,20 +75,20 @@ function AppContent() {
 
   // Add current page to recently viewed when it changes
   useEffect(() => {
-    if (pageType === "spec" && currentPage) {
+    if (pageType === "spec" && selectedPhoneId) {
       setRecentlyViewedPhones((prev) => {
         // Remove the current phone if it already exists
-        const filtered = prev.filter((id) => id !== currentPage);
+        const filtered = prev.filter((id) => id !== selectedPhoneId);
         // Add current phone to the beginning
-        const updated = [currentPage, ...filtered].slice(0, 8); // Keep max 8 phones
+        const updated = [selectedPhoneId, ...filtered].slice(0, 8); // Keep max 8 phones
         saveRecentlyViewedToStorage(updated);
         return updated;
       });
     }
-  }, [currentPage, pageType]);
+  }, [selectedPhoneId, pageType]);
 
   const navigateToPhone = (phoneId: string) => {
-    setCurrentPage(phoneId);
+    setSelectedPhoneId(phoneId);
     setPageType("spec");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -200,9 +200,6 @@ function AppContent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Get the current phone data
-  const currentPhoneData = phonesData[currentPage];
-
   return (
     <DarkModeProvider>
       <div className="min-h-screen bg-[#f7f7f7] dark:bg-[#0d1117] flex flex-col transition-colors duration-300">
@@ -281,9 +278,9 @@ function AppContent() {
               onNavigateToComparison={navigateToComparison}
               recentlyViewedPhones={recentlyViewedPhones}
             />
-          ) : currentPhoneData ? (
+          ) : selectedPhoneId ? (
             <PhoneSpecPage
-              phoneData={currentPhoneData}
+              phoneId={selectedPhoneId}
               onNavigate={navigateToPhone}
               onNavigateToComparison={navigateToComparison}
               comparisonPhoneIds={comparisonPhoneIds}
@@ -308,9 +305,6 @@ function AppContent() {
 
         {/* AI Chat Widget */}
         <AIChatWidget onNavigate={navigateToPhone} />
-
-        {/* Firebase Connection Test - Remove this after testing */}
-        {/* <FirebaseConnectionTest /> */}
       </div>
     </DarkModeProvider>
   );
