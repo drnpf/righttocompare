@@ -40,7 +40,7 @@ export default function PhoneCatalogPage({
       try {
         // Used to control page and number of phones to retrieve (DEV CONTROL PAGE AND LIMIT HERE)
         let page = 1; // Page #
-        const limit = 12; // Number of phones per page
+        const limit = 12; // Number of phones per page (backend will only send 50 phones maximum for security reasons)
 
         // Fetching phones from DB
         setLoading(true);
@@ -315,8 +315,9 @@ export default function PhoneCatalogPage({
         {/* Phone Grid/List */}
         {filteredPhones.length > 0 ? (
           viewMode === "grid" ? (
+            // GRID VIEW
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredPhones.map((phone) => (
+              {filteredPhones.map((phone, index) => (
                 <button
                   key={phone.id}
                   onClick={() => onNavigate(phone.id)}
@@ -327,8 +328,10 @@ export default function PhoneCatalogPage({
                     <img
                       src={phone.images.main}
                       alt={phone.name}
+                      loading={index < 4 ? "eager" : "lazy"} // Lazy loads the images for phones after first row, or not in view
+                      decoding={index < 4 ? "sync" : "async"} // Images on first row nneed to download on main thread; other rows are loaded async on some background thread
+                      fetchPriority={index < 4 ? "high" : "low"} // Images on first row have high priority to be downloaded first
                       className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
-                      loading="lazy"
                     />
                   </div>
 
@@ -378,8 +381,9 @@ export default function PhoneCatalogPage({
               ))}
             </div>
           ) : (
+            // LIST VIEW
             <div className="space-y-4">
-              {filteredPhones.map((phone) => (
+              {filteredPhones.map((phone, index) => (
                 <button
                   key={phone.id}
                   onClick={() => onNavigate(phone.id)}
@@ -391,6 +395,9 @@ export default function PhoneCatalogPage({
                       <img
                         src={phone.images.main}
                         alt={phone.name}
+                        loading={index < 4 ? "eager" : "lazy"} // Lazy loads the images for phones after first row, or not in view
+                        decoding={index < 4 ? "sync" : "async"} // Images on first row nneed to download on main thread; other rows are loaded async on some background thread
+                        fetchPriority={index < 4 ? "high" : "low"} // Images on first row have high priority to be downloaded first
                         className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
                       />
                     </div>
