@@ -38,8 +38,13 @@ export default function PhoneCatalogPage({
   useEffect(() => {
     const fetchPhones = async () => {
       try {
+        // Used to control page and number of phones to retrieve (DEV CONTROL PAGE AND LIMIT HERE)
+        let page = 1; // Page #
+        const limit = 12; // Number of phones per page
+
+        // Fetching phones from DB
         setLoading(true);
-        const { phones, total } = await getPhonePage(1, 12);
+        const { phones, total } = await getPhonePage(page, limit);
         setAllPhones(phones);
         setError(null);
       } catch (error) {
@@ -323,6 +328,7 @@ export default function PhoneCatalogPage({
                       src={phone.images.main}
                       alt={phone.name}
                       className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
+                      loading="lazy"
                     />
                   </div>
 
