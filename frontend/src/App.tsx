@@ -1,24 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
+
+// MUST LOAD
 import NavigationBar from "./imports/NavigationBar";
 import FooterBar from "./imports/FooterBar";
-import PhoneSpecPage from "./components/PhoneSpecPage";
-import PhoneComparisonPage from "./components/PhoneComparisonPage";
-import PhoneCatalogPage from "./components/PhoneCatalogPage";
-import DiscussionsPage from "./components/DiscussionsPage";
-import DiscussionDetailPage from "./components/DiscussionDetailPage";
-import SignInPage from "./components/SignInPage";
-import SignUpPage from "./components/SignUpPage";
-import UserProfilePage from "./components/UserProfilePage";
-import AdminDashboardPage from "./components/AdminDashboardPage";
-import AIChatWidget from "./components/AIChatWidget";
-import { phonesData } from "./data/phoneData"; // REMOVE LATER THIS IS MOCK DATA
-import { Toaster } from "sonner@2.0.3";
 import { DarkModeProvider } from "./components/DarkModeContext";
+import { Toaster } from "sonner@2.0.3";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import FirebaseConnectionTest from "./components/FirebaseConnectionTest";
-import PasswordResetPage from "./components/PasswordResetPage";
-import { Shield } from "lucide-react";
+import ProtectedRoute from "./components/ProtectedRoute";
 
+// LAZY LOADED WHENEVER NEEDED
+const PhoneSpecPage = lazy(() => import("./components/PhoneSpecPage"));
+const PhoneComparisonPage = lazy(() => import("./components/PhoneComparisonPage"));
+const PhoneCatalogPage = lazy(() => import("./components/PhoneCatalogPage"));
+const DiscussionsPage = lazy(() => import("./components/DiscussionsPage"));
+const DiscussionDetailPage = lazy(() => import("./components/DiscussionDetailPage"));
+const SignInPage = lazy(() => import("./components/SignInPage"));
+const SignUpPage = lazy(() => import("./components/SignUpPage"));
+const UserProfilePage = lazy(() => import("./components/UserProfilePage"));
+const AdminDashboardPage = lazy(() => import("./components/AdminDashboardPage"));
+const AIChatWidget = lazy(() => import("./components/AIChatWidget"));
+const PasswordResetPage = lazy(() => import("./components/PasswordResetPage"));
+
+// All Application pages
 type PageType =
   | "spec"
   | "comparison"
@@ -220,83 +223,66 @@ function AppContent() {
         </div>
 
         <main className="flex-1">
-          {pageType === "passwordReset" ? (
-            <PasswordResetPage onNavigateToSignIn={handleSignInClick} />
-          ) : pageType === "admin" ? (
-            currentUser?.role === "admin" ? (
-              <AdminDashboardPage />
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center min-h-[50vh]">
+                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#2c3968] dark:border-[#4a7cf6]"></div>
+              </div>
+            }
+          >
+            {pageType === "passwordReset" ? (
+              <PasswordResetPage onNavigateToSignIn={handleSignInClick} />
+            ) : pageType === "admin" ? (
+              <ProtectedRoute adminOnly onNavigateToCatalog={handleCatalogClick}>
+                <AdminDashboardPage />
+              </ProtectedRoute>
+            ) : pageType === "profile" ? (
+              <UserProfilePage />
+            ) : pageType === "signIn" ? (
+              <SignInPage onSignInSuccess={handleSignInSuccess} onNavigateToSignUp={handleSignUpClick} />
+            ) : pageType === "signUp" ? (
+              <SignUpPage onSignUpSuccess={handleSignUpSuccess} onNavigateToSignIn={handleSignInClick} />
+            ) : pageType === "discussionDetail" ? (
+              <DiscussionDetailPage discussionId={currentDiscussionId} onBack={handleBackToDiscussions} />
+            ) : pageType === "discussions" ? (
+              <DiscussionsPage onNavigate={navigateToPhone} onViewDiscussion={handleViewDiscussion} />
+            ) : pageType === "comparison" ? (
+              <PhoneComparisonPage
+                phoneIds={comparisonPhoneIds}
+                onRemovePhone={handleRemoveFromComparison}
+                onBackToSpecs={handleBackToSpecs}
+                onAddPhone={handleAddToComparison}
+                onNavigate={navigateToPhone}
+                recentlyViewedPhones={recentlyViewedPhones}
+              />
+            ) : pageType === "catalog" ? (
+              <PhoneCatalogPage
+                onNavigate={navigateToPhone}
+                comparisonPhoneIds={comparisonPhoneIds}
+                onComparisonChange={setComparisonPhoneIds}
+                onNavigateToComparison={navigateToComparison}
+                recentlyViewedPhones={recentlyViewedPhones}
+              />
+            ) : selectedPhoneId ? (
+              <PhoneSpecPage
+                phoneId={selectedPhoneId}
+                onNavigate={navigateToPhone}
+                onNavigateToComparison={navigateToComparison}
+                comparisonPhoneIds={comparisonPhoneIds}
+                onComparisonChange={setComparisonPhoneIds}
+                recentlyViewedPhones={recentlyViewedPhones}
+                onAddToRecentlyViewed={addPhoneToRecentlyViewed}
+                onNavigateToCatalog={handleCatalogClick}
+              />
             ) : (
-              // Handles invalid access to admin page
               <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 pt-8">
-                <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-16 text-center flex flex-col items-center border border-[#e5e5e5] dark:border-[#2d3548]">
-                  <div className="h-16 w-full" />
-                  <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-full mb-6">
-                    <Shield size={48} className="text-red-600 dark:text-red-500" />
-                  </div>
-
-                  <h2 className="text-[#2c3968] dark:text-white text-3xl font-bold mb-4">Access Denied</h2>
-
-                  <p className="text-[#666] dark:text-[#a0a8b8] max-w-md mx-auto mb-8 text-lg">
-                    You don't have the administrative privileges required to view the
-                    <strong> RightToCompare</strong> dashboard.
-                  </p>
-
-                  <button
-                    onClick={handleCatalogClick}
-                    className="bg-[#2c3968] hover:bg-[#3d4a7a] text-white px-8 py-3 rounded-full font-bold transition-all shadow-md hover:shadow-lg active:scale-95"
-                  >
-                    Return to Catalog
-                  </button>
-                  <div className="h-16 w-full" />
+                <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-12 text-center">
+                  <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-3">Phone Not Found</h2>
+                  <p className="text-[#666] dark:text-[#a0a8b8]">The phone you're looking for doesn't exist.</p>
                 </div>
               </div>
-            )
-          ) : pageType === "profile" ? (
-            <UserProfilePage />
-          ) : pageType === "signIn" ? (
-            <SignInPage onSignInSuccess={handleSignInSuccess} onNavigateToSignUp={handleSignUpClick} />
-          ) : pageType === "signUp" ? (
-            <SignUpPage onSignUpSuccess={handleSignUpSuccess} onNavigateToSignIn={handleSignInClick} />
-          ) : pageType === "discussionDetail" ? (
-            <DiscussionDetailPage discussionId={currentDiscussionId} onBack={handleBackToDiscussions} />
-          ) : pageType === "discussions" ? (
-            <DiscussionsPage onNavigate={navigateToPhone} onViewDiscussion={handleViewDiscussion} />
-          ) : pageType === "comparison" ? (
-            <PhoneComparisonPage
-              phoneIds={comparisonPhoneIds}
-              onRemovePhone={handleRemoveFromComparison}
-              onBackToSpecs={handleBackToSpecs}
-              onAddPhone={handleAddToComparison}
-              onNavigate={navigateToPhone}
-              recentlyViewedPhones={recentlyViewedPhones}
-            />
-          ) : pageType === "catalog" ? (
-            <PhoneCatalogPage
-              onNavigate={navigateToPhone}
-              comparisonPhoneIds={comparisonPhoneIds}
-              onComparisonChange={setComparisonPhoneIds}
-              onNavigateToComparison={navigateToComparison}
-              recentlyViewedPhones={recentlyViewedPhones}
-            />
-          ) : selectedPhoneId ? (
-            <PhoneSpecPage
-              phoneId={selectedPhoneId}
-              onNavigate={navigateToPhone}
-              onNavigateToComparison={navigateToComparison}
-              comparisonPhoneIds={comparisonPhoneIds}
-              onComparisonChange={setComparisonPhoneIds}
-              recentlyViewedPhones={recentlyViewedPhones}
-              onAddToRecentlyViewed={addPhoneToRecentlyViewed}
-              onNavigateToCatalog={handleCatalogClick}
-            />
-          ) : (
-            <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 pt-8">
-              <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-12 text-center">
-                <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-3">Phone Not Found</h2>
-                <p className="text-[#666] dark:text-[#a0a8b8]">The phone you're looking for doesn't exist.</p>
-              </div>
-            </div>
-          )}
+            )}
+          </Suspense>
         </main>
 
         <div className="relative h-[60px] shrink-0 mt-12">

@@ -292,7 +292,7 @@ export default function UserProfilePage() {
                           onClick={() =>
                             handleFeaturePriorityChange(
                               key as keyof UserProfile["preferences"]["priorityFeatures"],
-                              value
+                              value,
                             )
                           }
                           className={`flex-1 py-2 rounded-lg border-2 transition-all duration-300 ${
