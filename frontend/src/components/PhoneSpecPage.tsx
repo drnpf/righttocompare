@@ -270,16 +270,67 @@ export default function PhoneSpecPage({
   onNavigateToCatalog,
 }: PhoneSpecPageProps) {
   // DEV: NEEDS FIXING -- START --
-  // Initial states/variables to contain the phone data for spec sheet
+
+  // ------------------------------------------------------------
+  // | HOOKS
+  // ------------------------------------------------------------
+
+  // -- Main Data and Authentication States --
+  const { currentUser } = useAuth();
   const [phoneData, setPhoneData] = useState<PhoneData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetching phone data with passed phone ID on the mount of the spec page
+  // -- Phone Specification States --
+  const [selectedSpecs, setSelectedSpecs] = useState<Record<string, string[]>>({});
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+  const [isFilterOpen, setIsFilterOpen] = useState(true);
+  const [isKeySpecsOpen, setIsKeySpecsOpen] = useState(true);
+  const [isFullSpecsOpen, setIsFullSpecsOpen] = useState(true);
+  const [isCarrierCompatOpen, setIsCarrierCompatOpen] = useState(true);
+  const [isReviewsOpen, setIsReviewsOpen] = useState(true);
+  const [isPriceTrackingOpen, setIsPriceTrackingOpen] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const reviewsSectionRef = useRef<HTMLDivElement>(null);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isPriceAlertOpen, setIsPriceAlertOpen] = useState(false);
+  const [priceAlertEmail, setPriceAlertEmail] = useState("");
+  const [targetPrice, setTargetPrice] = useState("");
+  const [localComparisonPhones, setLocalComparisonPhones] = useState<
+    Array<{
+      id: string;
+      name: string;
+      manufacturer: string;
+      image: string;
+      price: string;
+    }>
+  >([]);
+
+  // -- Review States --
+  const [reviews, setReviews] = useState<ReviewData[]>([]);
+  const [totalReviews, setTotalReviews] = useState(0);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(true);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isVoting, setIsVoting] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+
+  // -- Comparison Cart States --
+  const [showComparisonCart, setShowComparisonCart] = useState(false);
+  const [isCartMinimized, setIsCartMinimized] = useState(false);
+
+  // ------------------------------------------------------------
+  // | DATA SYNCHRONIZATION
+  // ------------------------------------------------------------
+
+  /**
+   * SYNC: Phone Specifications
+   * Signal: phoneId change (or on component mount)
+   * Action: Fetches full phone specification data from the backend.
+   */
   useEffect(() => {
     const loadPhone = async () => {
       setLoading(true);
 
-      // Attempting to fetch phone
+      // Attempting to fetch phone from backend
       try {
         setPhoneData(await getPhoneById(phoneId));
       } catch (err) {
@@ -288,57 +339,45 @@ export default function PhoneSpecPage({
         setLoading(false);
       }
     };
-
-    // Getting the phone data from backend to load onto frontend
     if (phoneId) loadPhone();
   }, [phoneId]);
 
-  // Handle loading for phone data
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="animate-spin text-[#2c3968] dark:text-[#4a7cf6]" size={48} />
-        <p className="text-[#666] dark:text-[#a0a8b8]">Fetching phone details...</p>
-      </div>
-    );
-  }
+  /**
+   * SYNC: Phone Specification Labels
+   * Signal: phoneData change (after data is fetched)
+   * Action: Fills the full specification list with labels from phoneData
+   */
+  useEffect(() => {
+    // Handles case if no phone data exists (or failure in fetch)
+    if (!phoneData) {
+      setSelectedSpecs({});
+      return;
+    }
 
-  // Handles case of no phone data found
-  if (!phoneData) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-2xl mb-6">
-          <X size={48} className="text-red-600 dark:text-red-500 mx-auto" />
-        </div>
-        <h2 className="text-[#2c3968] dark:text-white text-2xl font-bold mb-2">Phone Not Found</h2>
-        <p className="text-[#666] dark:text-[#a0a8b8] mb-8 max-w-md">
-          We couldn't retrieve the specifications for this device.
-        </p>
-        <Button
-          onClick={onNavigateToCatalog}
-          className="bg-[#2c3968] hover:bg-[#3d4b7a] text-white px-8 py-2 rounded-full"
-        >
-          Return to Catalog
-        </Button>
-      </div>
-    );
-  }
-  // DEV: NEEDS FIXING -- END --
+    // Filling phone spec sheet labels with the fetched phoneData object
+    const specsLabels: Record<string, string[]> = {};
+    const categories = Object.keys(phoneData.categories);
 
-  const categories = Object.keys(phoneData.categories);
-  const { currentUser } = useAuth();
+    // Getting labels for each category into dictionary
+    categories.forEach((categoryName) => {
+      const categoryData = phoneData.categories[categoryName as keyof typeof phoneData.categories];
+      const specNames = Object.keys(categoryData);
+      specsLabels[categoryName] = specNames;
+    });
+    setSelectedSpecs(specsLabels);
+  }, [phoneData]);
 
-  // Review state - API connected
-  const [reviews, setReviews] = useState<ReviewData[]>([]);
-  const [totalReviews, setTotalReviews] = useState(0);
-  const [isLoadingReviews, setIsLoadingReviews] = useState(true);
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [isVoting, setIsVoting] = useState(false);
-  const [showReviewForm, setShowReviewForm] = useState(false);
-
-  // Fetch reviews from API
+  /**
+   * SYNC: Phone Reviews
+   * Signal: phoneData change (after data is fetched)
+   * Action: Fills the full specification list with labels from phoneData
+   */
   const fetchReviews = useCallback(
     async (page: number = 1) => {
+      // Handles case if no phone data exists (or failure in fetch)
+      if (!phoneData) return;
+
+      // Fetches reviews for phone data
       setIsLoadingReviews(true);
       try {
         const response = await getPhoneReviews(phoneData.id, page, 3);
@@ -359,159 +398,58 @@ export default function PhoneSpecPage({
         setIsLoadingReviews(false);
       }
     },
-    [phoneData.id, phoneData.reviews],
+    [phoneData?.id, phoneData?.reviews],
   );
 
-  // Fetch reviews on mount and when phone changes
+  // Fetches reviews on change/update of phone id
   useEffect(() => {
     fetchReviews(1);
     setCurrentPage(1);
-  }, [phoneData.id, fetchReviews]);
+  }, [phoneData?.id, fetchReviews]);
 
-  // Calculate overall rating from reviews
-  const calculateOverallRating = () => {
-    if (reviews.length === 0) return 0;
+  // ------------------------------------------------------------
+  // | RENDER GUARD PAGES
+  // ------------------------------------------------------------
 
-    const totalRating = reviews.reduce((sum, review) => {
-      const reviewAvg = review.categoryRatings
-        ? (review.categoryRatings.camera +
-            review.categoryRatings.battery +
-            review.categoryRatings.design +
-            review.categoryRatings.performance +
-            review.categoryRatings.value) /
-          5
-        : review.rating;
-      return sum + reviewAvg;
-    }, 0);
+  // Loading cases
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="animate-spin text-[#2c3968] dark:text-[#4a7cf6]" size={48} />
+        <p className="text-[#666] dark:text-[#a0a8b8]">Fetching phone details...</p>
+      </div>
+    );
+  }
 
-    return Number((totalRating / reviews.length).toFixed(1));
-  };
+  // Failed phone fetch phases
+  if (!phoneData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-2xl mb-6">
+          <X size={48} className="text-red-600 dark:text-red-500 mx-auto" />
+        </div>
+        <h2 className="text-[#2c3968] dark:text-white text-2xl font-bold mb-2">Phone Not Found</h2>
+        <p className="text-[#666] dark:text-[#a0a8b8] mb-8 max-w-md">
+          We couldn't retrieve the specifications for this device.
+        </p>
+        <Button
+          onClick={onNavigateToCatalog}
+          className="bg-[#2c3968] hover:bg-[#3d4b7a] text-white px-8 py-2 rounded-full"
+        >
+          Return to Catalog
+        </Button>
+      </div>
+    );
+  }
 
-  const overallRating = calculateOverallRating();
-  const ratingsCount = totalReviews;
+  // ------------------------------------------------------------
+  // | COMPONENT LOGIC
+  // ------------------------------------------------------------
 
-  // Initialize with all specs selected
-  const initialSelectedSpecs: Record<string, string[]> = {};
-  categories.forEach((category) => {
-    initialSelectedSpecs[category] = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
-  });
+  // -- SPECIFICATION LIST DATA --
+  const categories = Object.keys(phoneData.categories); // categories
 
-  const [selectedSpecs, setSelectedSpecs] = useState<Record<string, string[]>>(initialSelectedSpecs);
-  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
-  const [isFilterOpen, setIsFilterOpen] = useState(true);
-  const [isKeySpecsOpen, setIsKeySpecsOpen] = useState(true);
-  const [isFullSpecsOpen, setIsFullSpecsOpen] = useState(true);
-  const [isCarrierCompatOpen, setIsCarrierCompatOpen] = useState(true);
-  const [isReviewsOpen, setIsReviewsOpen] = useState(true);
-  const [isPriceTrackingOpen, setIsPriceTrackingOpen] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const reviewsSectionRef = useRef<HTMLDivElement>(null);
-  const [isWishlisted, setIsWishlisted] = useState(false);
-  const [isPriceAlertOpen, setIsPriceAlertOpen] = useState(false);
-  const [priceAlertEmail, setPriceAlertEmail] = useState("");
-  const [targetPrice, setTargetPrice] = useState("");
-  // Use external comparison state if provided, otherwise use local state
-  const [localComparisonPhones, setLocalComparisonPhones] = useState<
-    Array<{
-      id: string;
-      name: string;
-      manufacturer: string;
-      image: string;
-      price: string;
-    }>
-  >([]);
-
-  // Derive comparison phones from external IDs if provided
-  const comparisonPhones = externalComparisonIds
-    ? (externalComparisonIds
-        .map((id) => {
-          const phoneData = (phonesData as any)[id];
-          return phoneData
-            ? {
-                id: phoneData.id,
-                name: phoneData.name,
-                manufacturer: phoneData.manufacturer,
-                image: phoneData.images.main,
-                price: phoneData.price,
-              }
-            : null;
-        })
-        .filter(Boolean) as Array<{
-        id: string;
-        name: string;
-        manufacturer: string;
-        image: string;
-        price: string;
-      }>)
-    : localComparisonPhones;
-
-  const setComparisonPhones = (
-    phones: Array<{
-      id: string;
-      name: string;
-      manufacturer: string;
-      image: string;
-      price: string;
-    }>,
-  ) => {
-    if (onComparisonChange) {
-      // Update external state with IDs only
-      onComparisonChange(phones.map((p) => p.id));
-    } else {
-      // Update local state
-      setLocalComparisonPhones(phones);
-    }
-  };
-
-  const [showComparisonCart, setShowComparisonCart] = useState(false);
-  const [isCartMinimized, setIsCartMinimized] = useState(false);
-
-  // Generate price history data (mock data for demonstration)
-  const generatePriceHistory = () => {
-    const currentPrice = parseFloat(phoneData.price.replace("$", "").replace(",", ""));
-    const history = [];
-    const monthsBack = 6;
-
-    for (let i = monthsBack; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const monthName = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-
-      // Generate price variation (random fluctuation around current price)
-      let price;
-      if (i === 0) {
-        price = currentPrice; // Current month uses actual price
-      } else {
-        // Earlier prices tend to be higher, with some random variation
-        const variation = (Math.random() - 0.3) * (currentPrice * 0.15);
-        const baseIncrease = (i / monthsBack) * (currentPrice * 0.1);
-        price = Math.round(currentPrice + baseIncrease + variation);
-      }
-
-      history.push({
-        month: monthName,
-        price: price,
-      });
-    }
-
-    return history;
-  };
-
-  const priceHistory = generatePriceHistory();
-  const currentPrice = parseFloat(phoneData.price.replace("$", "").replace(",", ""));
-  const oldestPrice = priceHistory[0].price;
-  const priceChange = currentPrice - oldestPrice;
-  const priceChangePercent = ((priceChange / oldestPrice) * 100).toFixed(1);
-
-  // Reset filters when phone changes
-  useEffect(() => {
-    const newSelectedSpecs: Record<string, string[]> = {};
-    categories.forEach((category) => {
-      newSelectedSpecs[category] = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
-    });
-    setSelectedSpecs(newSelectedSpecs);
-  }, [phoneData.id]);
-
+  // -- REVIEWS --
   // Calculate pagination values
   const reviewsPerPage = 3;
   const totalPages = Math.ceil(totalReviews / reviewsPerPage);
@@ -533,54 +471,23 @@ export default function PhoneSpecPage({
     }, 100);
   };
 
-  const toggleSpec = (category: string, specName: string) => {
-    setSelectedSpecs((prev) => {
-      const categorySpecs = prev[category] || [];
-      const newCategorySpecs = categorySpecs.includes(specName)
-        ? categorySpecs.filter((s) => s !== specName)
-        : [...categorySpecs, specName];
-      return { ...prev, [category]: newCategorySpecs };
-    });
-  };
+  // -- RATINGS --
+  // Calculate overall rating from reviews
+  const calculateOverallRating = () => {
+    if (reviews.length === 0) return 0;
 
-  const toggleCategoryOpen = (category: string) => {
-    setOpenCategories((prev) => ({ ...prev, [category]: !prev[category] }));
-  };
-
-  const selectAllSpecs = () => {
-    const allSpecs: Record<string, string[]> = {};
-    categories.forEach((category) => {
-      allSpecs[category] = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
-    });
-    setSelectedSpecs(allSpecs);
-  };
-
-  const clearAllSpecs = () => {
-    const emptySpecs: Record<string, string[]> = {};
-    categories.forEach((category) => {
-      emptySpecs[category] = [];
-    });
-    setSelectedSpecs(emptySpecs);
-  };
-
-  const isCategoryFullySelected = (category: string) => {
-    const allSpecs = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
-    const selected = selectedSpecs[category] || [];
-    return allSpecs.length === selected.length && allSpecs.length > 0;
-  };
-
-  const isCategoryPartiallySelected = (category: string) => {
-    const selected = selectedSpecs[category] || [];
-    return selected.length > 0 && !isCategoryFullySelected(category);
-  };
-
-  const toggleAllCategorySpecs = (category: string) => {
-    const allSpecs = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
-    const isFullySelected = isCategoryFullySelected(category);
-    setSelectedSpecs((prev) => ({
-      ...prev,
-      [category]: isFullySelected ? [] : allSpecs,
-    }));
+    const totalRating = reviews.reduce((sum, review) => {
+      const reviewAvg = review.categoryRatings
+        ? (review.categoryRatings.camera +
+            review.categoryRatings.battery +
+            review.categoryRatings.design +
+            review.categoryRatings.performance +
+            review.categoryRatings.value) /
+          5
+        : review.rating;
+      return sum + reviewAvg;
+    }, 0);
+    return Number((totalRating / reviews.length).toFixed(1));
   };
 
   // Handle voting on reviews via API
@@ -652,6 +559,142 @@ export default function PhoneSpecPage({
     setShowReviewForm(false);
   };
 
+  const overallRating = calculateOverallRating();
+  const ratingsCount = totalReviews;
+
+  // -- COMPARISON --
+  // Derive comparison phones from external IDs if provided
+  const comparisonPhones = externalComparisonIds
+    ? (externalComparisonIds
+        .map((id) => {
+          const phoneData = (phonesData as any)[id];
+          return phoneData
+            ? {
+                id: phoneData.id,
+                name: phoneData.name,
+                manufacturer: phoneData.manufacturer,
+                image: phoneData.images.main,
+                price: phoneData.price,
+              }
+            : null;
+        })
+        .filter(Boolean) as Array<{
+        id: string;
+        name: string;
+        manufacturer: string;
+        image: string;
+        price: string;
+      }>)
+    : localComparisonPhones;
+
+  const setComparisonPhones = (
+    phones: Array<{
+      id: string;
+      name: string;
+      manufacturer: string;
+      image: string;
+      price: string;
+    }>,
+  ) => {
+    if (onComparisonChange) {
+      // Update external state with IDs only
+      onComparisonChange(phones.map((p) => p.id));
+    } else {
+      // Update local state
+      setLocalComparisonPhones(phones);
+    }
+  };
+
+  // -- PRICE HISTORY --
+  // Generate price history data (mock data for demonstration)
+  const generatePriceHistory = () => {
+    const currentPrice = parseFloat(phoneData.price.replace("$", "").replace(",", ""));
+    const history = [];
+    const monthsBack = 6;
+
+    for (let i = monthsBack; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      const monthName = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+
+      // Generate price variation (random fluctuation around current price)
+      let price;
+      if (i === 0) {
+        price = currentPrice; // Current month uses actual price
+      } else {
+        // Earlier prices tend to be higher, with some random variation
+        const variation = (Math.random() - 0.3) * (currentPrice * 0.15);
+        const baseIncrease = (i / monthsBack) * (currentPrice * 0.1);
+        price = Math.round(currentPrice + baseIncrease + variation);
+      }
+
+      history.push({
+        month: monthName,
+        price: price,
+      });
+    }
+
+    return history;
+  };
+
+  const priceHistory = generatePriceHistory();
+  const currentPrice = parseFloat(phoneData.price.replace("$", "").replace(",", ""));
+  const oldestPrice = priceHistory[0].price;
+  const priceChange = currentPrice - oldestPrice;
+  const priceChangePercent = ((priceChange / oldestPrice) * 100).toFixed(1);
+
+  // -- SPECIFICATION CONTROLS --
+  const toggleSpec = (category: string, specName: string) => {
+    setSelectedSpecs((prev) => {
+      const categorySpecs = prev[category] || [];
+      const newCategorySpecs = categorySpecs.includes(specName)
+        ? categorySpecs.filter((s) => s !== specName)
+        : [...categorySpecs, specName];
+      return { ...prev, [category]: newCategorySpecs };
+    });
+  };
+
+  const toggleCategoryOpen = (category: string) => {
+    setOpenCategories((prev) => ({ ...prev, [category]: !prev[category] }));
+  };
+
+  const selectAllSpecs = () => {
+    const allSpecs: Record<string, string[]> = {};
+    categories.forEach((category) => {
+      allSpecs[category] = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
+    });
+    setSelectedSpecs(allSpecs);
+  };
+
+  const clearAllSpecs = () => {
+    const emptySpecs: Record<string, string[]> = {};
+    categories.forEach((category) => {
+      emptySpecs[category] = [];
+    });
+    setSelectedSpecs(emptySpecs);
+  };
+
+  const isCategoryFullySelected = (category: string) => {
+    const allSpecs = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
+    const selected = selectedSpecs[category] || [];
+    return allSpecs.length === selected.length && allSpecs.length > 0;
+  };
+
+  const isCategoryPartiallySelected = (category: string) => {
+    const selected = selectedSpecs[category] || [];
+    return selected.length > 0 && !isCategoryFullySelected(category);
+  };
+
+  const toggleAllCategorySpecs = (category: string) => {
+    const allSpecs = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
+    const isFullySelected = isCategoryFullySelected(category);
+    setSelectedSpecs((prev) => ({
+      ...prev,
+      [category]: isFullySelected ? [] : allSpecs,
+    }));
+  };
+
+  // -- WISHLIST --
   const handleWishlistToggle = () => {
     setIsWishlisted(!isWishlisted);
     if (!isWishlisted) {
@@ -661,6 +704,7 @@ export default function PhoneSpecPage({
     }
   };
 
+  // -- PRICE ALERT --
   const handleSetPriceAlert = () => {
     if (!priceAlertEmail || !targetPrice) {
       toast.error("Please fill in all fields");
@@ -687,6 +731,7 @@ export default function PhoneSpecPage({
     setTargetPrice("");
   };
 
+  // -- COMPARISON CART --
   const handleAddToComparison = () => {
     const currentPhone = {
       id: phoneData.id,
@@ -749,11 +794,13 @@ export default function PhoneSpecPage({
   };
 
   const handleCloseComparisonCart = () => {
-    // Don't actually close the cart, just minimize it
-    // The cart will automatically hide when there are no phones
+    // The cart will automatically hide when there are no phones/closing minimizes the cart
     setShowComparisonCart(true);
   };
 
+  // ------------------------------------------------------------
+  // | UI SECTION
+  // ------------------------------------------------------------
   return (
     <>
       <SpecTableOfContents specCategories={categories} />
@@ -990,7 +1037,7 @@ export default function PhoneSpecPage({
           </div>
         </div>
 
-        {/* 2. Key Specifications */}
+        {/* Key Specifications */}
         <Collapsible open={isKeySpecsOpen} onOpenChange={setIsKeySpecsOpen}>
           <div id="key-specs" className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-8 mb-8">
             <div className="mb-6">
