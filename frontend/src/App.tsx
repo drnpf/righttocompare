@@ -7,6 +7,7 @@ import { DarkModeProvider } from "./components/DarkModeContext";
 import { Toaster } from "sonner@2.0.3";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import LoadingSpinner from "./components/ui/LoadingSpinner";
 
 // LAZY LOADED WHENEVER NEEDED
 const PhoneSpecPage = lazy(() => import("./components/PhoneSpecPage"));
@@ -223,33 +224,7 @@ function AppContent() {
         </div>
 
         <main className="flex-1">
-          <Suspense
-            fallback={
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  height: "100vh",
-                  flexDirection: "column",
-                  gap: "16px",
-                }}
-              >
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    border: "4px solid #e5e5e5",
-                    borderTop: "4px solid #2c3968",
-                    borderRadius: "50%",
-                    animation: "spin 1s linear infinite",
-                  }}
-                />
-                <p style={{ color: "#666" }}>Loading...</p>
-                <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-              </div>
-            }
-          >
+          <Suspense fallback={<LoadingSpinner />}>
             {pageType === "passwordReset" ? (
               <PasswordResetPage onNavigateToSignIn={handleSignInClick} />
             ) : pageType === "admin" ? (
@@ -283,9 +258,9 @@ function AppContent() {
                 onNavigateToComparison={navigateToComparison}
                 recentlyViewedPhones={recentlyViewedPhones}
               />
-            ) : selectedPhoneId ? (
+            ) : (
               <PhoneSpecPage
-                phoneId={selectedPhoneId}
+                phoneId={selectedPhoneId || ""}
                 onNavigate={navigateToPhone}
                 onNavigateToComparison={navigateToComparison}
                 comparisonPhoneIds={comparisonPhoneIds}
@@ -294,13 +269,6 @@ function AppContent() {
                 onAddToRecentlyViewed={addPhoneToRecentlyViewed}
                 onNavigateToCatalog={handleCatalogClick}
               />
-            ) : (
-              <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 pt-8">
-                <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-12 text-center">
-                  <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-3">Phone Not Found</h2>
-                  <p className="text-[#666] dark:text-[#a0a8b8]">The phone you're looking for doesn't exist.</p>
-                </div>
-              </div>
             )}
           </Suspense>
         </main>
