@@ -1,6 +1,5 @@
 import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-//import { phonesData } from "../data/phoneData"; // need to remove later. this is static phone data for development purposes
 import { PhoneCard } from "../types/phoneTypes";
 import { getPhonePage } from "../api/phoneApi";
 import ComparisonCart from "./ComparisonCart";
