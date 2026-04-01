@@ -269,8 +269,6 @@ export default function PhoneSpecPage({
   onAddToRecentlyViewed,
   onNavigateToCatalog,
 }: PhoneSpecPageProps) {
-  // DEV: NEEDS FIXING -- START --
-
   // ------------------------------------------------------------
   // | HOOKS
   // ------------------------------------------------------------
@@ -1037,7 +1035,7 @@ export default function PhoneSpecPage({
           </div>
         </div>
 
-        {/* Key Specifications */}
+        {/* 2. Key Specifications */}
         <Collapsible open={isKeySpecsOpen} onOpenChange={setIsKeySpecsOpen}>
           <div id="key-specs" className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-8 mb-8">
             <div className="mb-6">
