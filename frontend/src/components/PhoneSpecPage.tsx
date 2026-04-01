@@ -822,7 +822,13 @@ export default function PhoneSpecPage({
               <div className="relative inline-block">
                 {/* Phone Image - Centered */}
                 <div className="w-[700px]">
-                  <img src={phoneData.images.main} alt={phoneData.name} className="w-full h-auto" />
+                  <img
+                    src={phoneData.images.main}
+                    alt={phoneData.name}
+                    className="w-full h-auto"
+                    lazy="eager"
+                    fetchpriority="high"
+                  />
                 </div>
 
                 {/* Browse Phone Catalog Section - Dashed Rectangle - Positioned to the right */}
