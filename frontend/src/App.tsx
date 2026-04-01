@@ -225,8 +225,28 @@ function AppContent() {
         <main className="flex-1">
           <Suspense
             fallback={
-              <div className="flex items-center justify-center min-h-[50vh]">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#2c3968] dark:border-[#4a7cf6]"></div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100vh",
+                  flexDirection: "column",
+                  gap: "16px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    border: "4px solid #e5e5e5",
+                    borderTop: "4px solid #2c3968",
+                    borderRadius: "50%",
+                    animation: "spin 1s linear infinite",
+                  }}
+                />
+                <p style={{ color: "#666" }}>Loading...</p>
+                <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
               </div>
             }
           >
