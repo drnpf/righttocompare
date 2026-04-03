@@ -7,6 +7,7 @@ import userRoutes from "./routes/userRoutes";
 import phoneRoutes from "./routes/phoneRoutes";
 import reviewRoutes from "./routes/reviewRoutes";
 import discussionRoutes from "./routes/discussionRoutes";
+import scraperRoutes from "./routes/scraperRoutes";
 
 // Loading environment variables
 dotenv.config(); // THIS IS FOR DEVELOPMENT maybe we can use system environment variables on production
@@ -47,6 +48,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/phones", phoneRoutes);
 app.use("/api/phones", reviewRoutes); // Review routes nested under phones
 app.use("/api/discussions", discussionRoutes); // Discussion thread routes
+app.use("/api/scraper", scraperRoutes);
 
 // Health Check Route
 app.get("/", (req: Request, res: Response) => {
