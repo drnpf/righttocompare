@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { LayoutDashboard, FileEdit, Globe, Upload, Plus, Trash2, Save, Play, Clock, CheckCircle, XCircle } from "lucide-react";
+import {
+  LayoutDashboard,
+  FileEdit,
+  Globe,
+  Trash2,
+  Save,
+  Play,
+  Clock,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner@2.0.3";
 
 type AdminView = "dashboard" | "manual" | "scraping";
@@ -11,6 +21,9 @@ interface ScrapingJob {
   phonesFound: number;
   timestamp: string;
   duration?: string;
+  brand?: string;
+  output?: string;
+  error?: string;
 }
 
 interface PhoneSpecForm {
@@ -19,24 +32,19 @@ interface PhoneSpecForm {
   image: string;
   releaseDate: string;
   price: string;
-  // Display
   screenSize: string;
   resolution: string;
   refreshRate: string;
   displayType: string;
-  // Performance
   processor: string;
   ram: string;
   storage: string;
-  // Camera
   mainCamera: string;
   frontCamera: string;
   videoRecording: string;
-  // Battery
   batteryCapacity: string;
   chargingSpeed: string;
   wirelessCharging: string;
-  // Design
   dimensions: string;
   weight: string;
   colors: string;
@@ -65,43 +73,23 @@ const emptyForm: PhoneSpecForm = {
   dimensions: "",
   weight: "",
   colors: "",
-  materials: ""
+  materials: "",
 };
+
+const API_BASE_URL = "http://localhost:5000/api";
 
 export default function AdminDashboardPage() {
   const [currentView, setCurrentView] = useState<AdminView>("dashboard");
   const [formData, setFormData] = useState<PhoneSpecForm>(emptyForm);
-  const [scrapingJobs, setScrapingJobs] = useState<ScrapingJob[]>([
-    {
-      id: "1",
-      source: "GSMArena",
-      status: "completed",
-      phonesFound: 12,
-      timestamp: "2025-11-02 14:23",
-      duration: "2m 34s"
-    },
-    {
-      id: "2",
-      source: "PhoneArena",
-      status: "completed",
-      phonesFound: 8,
-      timestamp: "2025-11-02 10:15",
-      duration: "1m 52s"
-    },
-    {
-      id: "3",
-      source: "TechRadar",
-      status: "failed",
-      phonesFound: 0,
-      timestamp: "2025-11-01 16:40",
-      duration: "0m 15s"
-    }
-  ]);
-  const [selectedSource, setSelectedSource] = useState("GSMArena");
+
+  const [scrapingJobs, setScrapingJobs] = useState<ScrapingJob[]>([]);
+  const [selectedSource] = useState("GSMArena");
+  const [scrapeBrand, setScrapeBrand] = useState("apple");
+  const [scrapeLimit, setScrapeLimit] = useState(5);
   const [isScrapingRunning, setIsScrapingRunning] = useState(false);
 
   const handleInputChange = (field: keyof PhoneSpecForm, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSaveSpecs = () => {
@@ -110,44 +98,118 @@ export default function AdminDashboardPage() {
       return;
     }
 
-    // In a real app, this would save to database
     toast.success(`Specifications for ${formData.name} saved successfully!`);
     setFormData(emptyForm);
   };
 
-  const handleStartScraping = () => {
+  const handleStartScraping = async () => {
+    const cleanedBrand = scrapeBrand.trim().toLowerCase();
+
+    if (!cleanedBrand) {
+      toast.error("Please enter a brand to scrape");
+      return;
+    }
+
+    if (!Number.isFinite(scrapeLimit) || scrapeLimit < 1) {
+      toast.error("Please enter a valid limit");
+      return;
+    }
+
     setIsScrapingRunning(true);
-    toast.info(`Starting web scraping from ${selectedSource}...`);
+    toast.info(`Starting GSMArena scrape for ${cleanedBrand}...`);
 
-    // Simulate scraping job
-    setTimeout(() => {
-      const newJob: ScrapingJob = {
-        id: Date.now().toString(),
-        source: selectedSource,
-        status: "running",
-        phonesFound: 0,
-        timestamp: new Date().toLocaleString('en-US', { 
-          year: 'numeric', 
-          month: '2-digit', 
-          day: '2-digit', 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        })
-      };
-      setScrapingJobs(prev => [newJob, ...prev]);
+    const newJob: ScrapingJob = {
+      id: Date.now().toString(),
+      source: selectedSource,
+      status: "running",
+      phonesFound: 0,
+      brand: cleanedBrand,
+      timestamp: new Date().toLocaleString("en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
 
-      // Simulate completion
-      setTimeout(() => {
-        const phonesFound = Math.floor(Math.random() * 15) + 5;
-        setScrapingJobs(prev => prev.map(job => 
-          job.id === newJob.id 
-            ? { ...job, status: "completed", phonesFound, duration: "2m 15s" }
+    setScrapingJobs((prev) => [newJob, ...prev]);
+
+    const startedAt = Date.now();
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/scraper/run`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          brand: cleanedBrand,
+          limit: scrapeLimit,
+          maxPages: 3,
+          poolMult: 5,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || data.message || "Scraper failed");
+      }
+
+      const elapsedMs = Date.now() - startedAt;
+      const totalSeconds = Math.max(1, Math.round(elapsedMs / 1000));
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      const duration =
+        minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+
+      const phonesFound =
+        typeof data.totalInserted === "number" ? data.totalInserted : 0;
+
+      setScrapingJobs((prev) =>
+        prev.map((job) =>
+          job.id === newJob.id
+            ? {
+              ...job,
+              status: "completed",
+              phonesFound,
+              duration,
+              output: data.output || "",
+            }
             : job
-        ));
-        setIsScrapingRunning(false);
-        toast.success(`Scraping completed! Found ${phonesFound} new phones.`);
-      }, 5000);
-    }, 500);
+        )
+      );
+
+      toast.success(
+        `Scraping completed! Inserted ${phonesFound} phone${phonesFound === 1 ? "" : "s"
+        }.`
+      );
+    } catch (error: any) {
+      const elapsedMs = Date.now() - startedAt;
+      const totalSeconds = Math.max(1, Math.round(elapsedMs / 1000));
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      const duration =
+        minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+
+      setScrapingJobs((prev) =>
+        prev.map((job) =>
+          job.id === newJob.id
+            ? {
+              ...job,
+              status: "failed",
+              duration,
+              error: error.message || "Scraper failed",
+            }
+            : job
+        )
+      );
+
+      toast.error(error.message || "Scraping failed");
+    } finally {
+      setIsScrapingRunning(false);
+    }
   };
 
   const renderSidebar = () => (
@@ -159,11 +221,10 @@ export default function AdminDashboardPage() {
       <nav className="p-4">
         <button
           onClick={() => setCurrentView("dashboard")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${
-            currentView === "dashboard"
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${currentView === "dashboard"
               ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white shadow-md"
               : "text-[#666] hover:bg-[#f7f7f7] hover:text-[#2c3968]"
-          }`}
+            }`}
         >
           <LayoutDashboard size={20} />
           <span>Dashboard</span>
@@ -171,11 +232,10 @@ export default function AdminDashboardPage() {
 
         <button
           onClick={() => setCurrentView("manual")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${
-            currentView === "manual"
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${currentView === "manual"
               ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white shadow-md"
               : "text-[#666] hover:bg-[#f7f7f7] hover:text-[#2c3968]"
-          }`}
+            }`}
         >
           <FileEdit size={20} />
           <span>Manual Specs</span>
@@ -183,11 +243,10 @@ export default function AdminDashboardPage() {
 
         <button
           onClick={() => setCurrentView("scraping")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-            currentView === "scraping"
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${currentView === "scraping"
               ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white shadow-md"
               : "text-[#666] hover:bg-[#f7f7f7] hover:text-[#2c3968]"
-          }`}
+            }`}
         >
           <Globe size={20} />
           <span>Web Scraping</span>
@@ -203,7 +262,6 @@ export default function AdminDashboardPage() {
         <p className="text-[#666]">Monitor and manage phone specifications</p>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-6">
           <div className="flex items-center justify-between mb-3">
@@ -246,23 +304,36 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Recent Activity */}
       <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-6">
         <h2 className="text-[#2c3968] mb-4">Recent Scraping Jobs</h2>
         <div className="space-y-3">
           {scrapingJobs.slice(0, 5).map((job) => (
-            <div key={job.id} className="flex items-center justify-between p-4 bg-[#f7f7f7] rounded-lg">
+            <div
+              key={job.id}
+              className="flex items-center justify-between p-4 bg-[#f7f7f7] rounded-lg"
+            >
               <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  job.status === "completed" ? "bg-green-100" :
-                  job.status === "running" ? "bg-blue-100" : "bg-red-100"
-                }`}>
-                  {job.status === "completed" ? <CheckCircle className="text-green-600" size={20} /> :
-                   job.status === "running" ? <Clock className="text-blue-600" size={20} /> :
-                   <XCircle className="text-red-600" size={20} />}
+                <div
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center ${job.status === "completed"
+                      ? "bg-green-100"
+                      : job.status === "running"
+                        ? "bg-blue-100"
+                        : "bg-red-100"
+                    }`}
+                >
+                  {job.status === "completed" ? (
+                    <CheckCircle className="text-green-600" size={20} />
+                  ) : job.status === "running" ? (
+                    <Clock className="text-blue-600" size={20} />
+                  ) : (
+                    <XCircle className="text-red-600" size={20} />
+                  )}
                 </div>
                 <div>
-                  <p className="text-[#1e1e1e]">{job.source}</p>
+                  <p className="text-[#1e1e1e]">
+                    {job.source}
+                    {job.brand ? ` • ${job.brand}` : ""}
+                  </p>
                   <p className="text-[#999]">{job.timestamp}</p>
                 </div>
               </div>
@@ -272,6 +343,9 @@ export default function AdminDashboardPage() {
               </div>
             </div>
           ))}
+          {scrapingJobs.length === 0 && (
+            <p className="text-[#999]">No scraping jobs yet.</p>
+          )}
         </div>
       </div>
     </div>
@@ -286,7 +360,6 @@ export default function AdminDashboardPage() {
 
       <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-8">
         <div className="space-y-6">
-          {/* Basic Information */}
           <div>
             <h3 className="text-[#2c3968] mb-4">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -343,7 +416,6 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Display Specifications */}
           <div>
             <h3 className="text-[#2c3968] mb-4">Display</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -390,7 +462,6 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Performance Specifications */}
           <div>
             <h3 className="text-[#2c3968] mb-4">Performance</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -427,7 +498,6 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Camera Specifications */}
           <div>
             <h3 className="text-[#2c3968] mb-4">Camera</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -464,7 +534,6 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Battery Specifications */}
           <div>
             <h3 className="text-[#2c3968] mb-4">Battery</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -501,7 +570,6 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Design Specifications */}
           <div>
             <h3 className="text-[#2c3968] mb-4">Design & Build</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -548,7 +616,6 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-4 pt-4 border-t border-[#e5e5e5]">
             <button
               onClick={handleSaveSpecs}
@@ -574,28 +641,52 @@ export default function AdminDashboardPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-[#2c3968] mb-2">Web Scraping</h1>
-        <p className="text-[#666]">Automate specification data collection from various sources</p>
+        <p className="text-[#666]">
+          Run the GSMArena scraper to update the staging collection with newer phones
+        </p>
       </div>
 
-      {/* Scraping Control Panel */}
       <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-6 mb-6">
         <h3 className="text-[#2c3968] mb-4">Start New Scraping Job</h3>
-        <div className="flex gap-4 items-end">
-          <div className="flex-1">
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div>
             <label className="block mb-2 text-[#1e1e1e]">Source Website</label>
-            <select
+            <input
+              type="text"
               value={selectedSource}
-              onChange={(e) => setSelectedSource(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
-              disabled={isScrapingRunning}
-            >
-              <option value="GSMArena">GSMArena</option>
-              <option value="PhoneArena">PhoneArena</option>
-              <option value="TechRadar">TechRadar</option>
-              <option value="CNET">CNET</option>
-              <option value="The Verge">The Verge</option>
-            </select>
+              disabled
+              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] bg-[#f7f7f7] text-[#666]"
+            />
           </div>
+
+          <div>
+            <label className="block mb-2 text-[#1e1e1e]">Brand</label>
+            <input
+              type="text"
+              value={scrapeBrand}
+              onChange={(e) => setScrapeBrand(e.target.value)}
+              placeholder="e.g., apple"
+              disabled={isScrapingRunning}
+              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-[#1e1e1e]">Limit</label>
+            <input
+              type="number"
+              min={1}
+              max={50}
+              value={scrapeLimit}
+              onChange={(e) => setScrapeLimit(Number(e.target.value))}
+              disabled={isScrapingRunning}
+              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
           <button
             onClick={handleStartScraping}
             disabled={isScrapingRunning}
@@ -606,23 +697,21 @@ export default function AdminDashboardPage() {
           </button>
         </div>
 
-        {/* Scraping Info */}
         <div className="mt-6 p-4 bg-[#f7f7f7] rounded-lg">
           <p className="text-[#666] mb-2">
-            <strong className="text-[#1e1e1e]">Note:</strong> Scraping will automatically collect phone specifications from the selected source and add them to the database.
+            <strong className="text-[#1e1e1e]">Note:</strong> This runs your backend GSMArena scraper and upserts results into MongoDB staging.
           </p>
           <p className="text-[#999]">
-            • Average scraping time: 2-5 minutes<br />
-            • Phones found per job: 5-20 devices<br />
-            • Data includes: specs, images, pricing, and reviews
+            • Current destination: <code>test.scrape_output</code><br />
+            • Recommended use: scrape newest phones by brand<br />
+            • Current parameters sent: brand, limit, maxPages=3, poolMult=5
           </p>
         </div>
       </div>
 
-      {/* Scraping History */}
       <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-6">
         <h3 className="text-[#2c3968] mb-4">Recent Scraping Jobs</h3>
-        
+
         {scrapingJobs.length === 0 ? (
           <div className="text-center py-12 text-[#999]">
             <Globe size={48} className="mx-auto mb-4 opacity-30" />
@@ -631,41 +720,76 @@ export default function AdminDashboardPage() {
         ) : (
           <div className="space-y-3">
             {scrapingJobs.map((job) => (
-              <div key={job.id} className="flex items-center justify-between p-4 border border-[#e5e5e5] rounded-lg hover:bg-[#f7f7f7] transition-all">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                    job.status === "completed" ? "bg-green-100" :
-                    job.status === "running" ? "bg-blue-100" : "bg-red-100"
-                  }`}>
-                    {job.status === "completed" ? <CheckCircle className="text-green-600" size={24} /> :
-                     job.status === "running" ? <Clock className="text-blue-600 animate-spin" size={24} /> :
-                     <XCircle className="text-red-600" size={24} />}
-                  </div>
-                  <div>
-                    <p className="text-[#1e1e1e] mb-1">{job.source}</p>
-                    <div className="flex items-center gap-4 text-[#999]">
-                      <span className="flex items-center gap-1">
-                        <Clock size={14} />
-                        {job.timestamp}
-                      </span>
-                      {job.duration && (
-                        <span>Duration: {job.duration}</span>
+              <div
+                key={job.id}
+                className="p-4 border border-[#e5e5e5] rounded-lg hover:bg-[#f7f7f7] transition-all"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`w-12 h-12 rounded-lg flex items-center justify-center ${job.status === "completed"
+                          ? "bg-green-100"
+                          : job.status === "running"
+                            ? "bg-blue-100"
+                            : "bg-red-100"
+                        }`}
+                    >
+                      {job.status === "completed" ? (
+                        <CheckCircle className="text-green-600" size={24} />
+                      ) : job.status === "running" ? (
+                        <Clock className="text-blue-600 animate-spin" size={24} />
+                      ) : (
+                        <XCircle className="text-red-600" size={24} />
                       )}
                     </div>
+
+                    <div>
+                      <p className="text-[#1e1e1e] mb-1">
+                        {job.source}
+                        {job.brand ? ` • ${job.brand}` : ""}
+                      </p>
+                      <div className="flex items-center gap-4 text-[#999] flex-wrap">
+                        <span className="flex items-center gap-1">
+                          <Clock size={14} />
+                          {job.timestamp}
+                        </span>
+                        {job.duration && <span>Duration: {job.duration}</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <p
+                      className={`mb-1 ${job.status === "completed"
+                          ? "text-green-600"
+                          : job.status === "running"
+                            ? "text-blue-600"
+                            : "text-red-600"
+                        }`}
+                    >
+                      {job.status === "completed"
+                        ? "✓ Completed"
+                        : job.status === "running"
+                          ? "⟳ Running"
+                          : "✗ Failed"}
+                    </p>
+                    <p className="text-[#1e1e1e]">
+                      {job.phonesFound} {job.phonesFound === 1 ? "phone" : "phones"} found
+                    </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={`mb-1 ${
-                    job.status === "completed" ? "text-green-600" :
-                    job.status === "running" ? "text-blue-600" : "text-red-600"
-                  }`}>
-                    {job.status === "completed" ? "✓ Completed" :
-                     job.status === "running" ? "⟳ Running" : "✗ Failed"}
-                  </p>
-                  <p className="text-[#1e1e1e]">
-                    {job.phonesFound} {job.phonesFound === 1 ? "phone" : "phones"} found
-                  </p>
-                </div>
+
+                {job.output && (
+                  <pre className="mt-4 p-3 bg-[#f7f7f7] rounded-lg text-xs text-[#444] whitespace-pre-wrap overflow-x-auto">
+                    {job.output}
+                  </pre>
+                )}
+
+                {job.error && (
+                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                    {job.error}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -677,7 +801,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="flex min-h-[calc(100vh-140px)] bg-[#f7f7f7]">
       {renderSidebar()}
-      
+
       <div className="flex-1 p-8">
         <div className="max-w-[1400px] mx-auto">
           {currentView === "dashboard" && renderDashboard()}
