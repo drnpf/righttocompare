@@ -27,6 +27,7 @@ import { ReviewForm } from "./ReviewForm";
 import { ReviewCard, ReviewData } from "./ReviewCard";
 import { CategoryRatings } from "./MultiRatingInput";
 import { getPhoneReviews, submitReview, voteOnReview, deleteReview, ReviewsResponse } from "../api/reviewApi";
+import { updateUserProfile } from "../api/userApi";
 
 // Category icons mapping - minimalistic uniform color scheme
 const categoryConfig: Record<string, { icon: any }> = {
@@ -157,7 +158,7 @@ export default function PhoneSpecPage({ onNavigateToComparison, comparisonPhoneI
   }
 
   const categories = Object.keys(phoneData.categories);
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
 
   // Review state - API connected
   const [reviews, setReviews] = useState<ReviewData[]>([]);
@@ -475,14 +476,31 @@ export default function PhoneSpecPage({ onNavigateToComparison, comparisonPhoneI
     setShowReviewForm(false);
   };
 
-  const handleWishlistToggle = () => {
-    setIsWishlisted(!isWishlisted);
-    if (!isWishlisted) {
-      toast.success(`${phoneData.name} added to wishlist!`);
+  const handleWishlistToggle = async () => {
+  if (!currentUser?.uid || !currentUser?.firebaseUser) {
+    toast.error("Please sign in to update your wishlist");
+    return;
+  }
+
+  const newWishlist = isWishlisted
+    ? currentUser.wishlist.filter(id => id !== phoneData.id)
+    : [...currentUser.wishlist, phoneData.id];
+
+  try {
+    const token = await currentUser.firebaseUser.getIdToken();
+    const updatedUser = await updateUserProfile(currentUser.uid, token, { wishlist: newWishlist });
+
+    if (updatedUser) {
+      setIsWishlisted(!isWishlisted);
+      currentUser.wishlist = updatedUser.wishlist; // update local user data
+      toast.success(`${phoneData.name} ${isWishlisted ? "removed from" : "added to"} wishlist!`);
     } else {
-      toast.success(`${phoneData.name} removed from wishlist`);
+      toast.error("Failed to update wishlist");
     }
-  };
+  } catch (error: any) {
+    toast.error(error.message || "Failed to update wishlist");
+  }
+};
 
   const handleSetPriceAlert = () => {
     if (!priceAlertEmail || !targetPrice) {
@@ -692,6 +710,7 @@ export default function PhoneSpecPage({ onNavigateToComparison, comparisonPhoneI
                 variant="outline"
                 className={`border-2 ${isWishlisted ? 'bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] text-white border-[#2c3968] hover:from-[#243059] hover:to-[#354368] shadow-lg hover:shadow-xl' : 'border-[#2c3968] text-[#2c3968] bg-white hover:bg-gradient-to-r hover:from-[#2c3968]/5 hover:to-[#2c3968]/10 shadow-md hover:shadow-lg'} w-full sm:w-auto transition-all duration-300 hover:scale-105 group`}
                 onClick={handleWishlistToggle}
+                disabled={authLoading}
               >
                 <Heart className={`w-4 h-4 mr-2 transition-transform group-hover:scale-110 ${isWishlisted ? 'fill-current' : ''}`} />
                 <span className="hidden sm:inline">{isWishlisted ? 'In Wishlist' : 'Add to Wishlist'}</span>
