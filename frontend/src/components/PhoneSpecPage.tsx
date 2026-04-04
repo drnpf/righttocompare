@@ -819,21 +819,21 @@ export default function PhoneSpecPage({
           <div className="mb-8">
             {/* Wrapper for centered phone image with comparison button */}
             <div className="flex justify-center">
-              <div className="relative inline-block">
+              <div className="relative inline-block px-10">
                 {/* Phone Image - Centered */}
                 <div className="w-[700px]">
                   <img
                     src={phoneData.images.main}
                     alt={phoneData.name}
                     className="w-full h-auto"
-                    lazy="eager"
+                    loading="eager"
                     fetchpriority="high"
                   />
                 </div>
 
                 {/* Browse Phone Catalog Section - Dashed Rectangle - Positioned to the right */}
                 <div
-                  className="hidden xl:flex absolute top-1/2 -translate-y-1/2 left-[calc(100%-40px)] flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 dark:border-[#4a7cf6]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent dark:from-[#4a7cf6]/5 w-52 group/catalog hover:border-[#2c3968]/50 dark:hover:border-[#4a7cf6]/50 transition-all duration-300 min-h-[400px] z-10 cursor-pointer"
+                  className="hidden xl:flex absolute top-1/2 -translate-y-1/2 left-full translate-x-10 flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 dark:border-[#4a7cf6]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent dark:from-[#4a7cf6]/5 w-52 group/catalog hover:border-[#2c3968]/50 dark:hover:border-[#4a7cf6]/50 transition-all duration-300 min-h-[400px] z-10 cursor-pointer"
                   onClick={onNavigateToCatalog}
                 >
                   {/* Decorative Corner Accents */}
