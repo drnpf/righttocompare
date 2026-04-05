@@ -1,4 +1,4 @@
-import { Search, Grid3x3, List, ChevronDown, Plus, Check } from "lucide-react";
+import { Search, Grid3x3, List, ChevronDown, Plus, Check, ArrowUpWideNarrow, ArrowDownWideNarrow } from "lucide-react";
 import { useState } from "react";
 import { phonesData } from "../data/phoneData";
 import ComparisonCart from "./ComparisonCart";
@@ -24,6 +24,7 @@ export default function PhoneCatalogPage({
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"name" | "price" | "release">("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [manufacturerFilter, setManufacturerFilter] = useState<string>("all");
   const [isCartMinimized, setIsCartMinimized] = useState(false);
   const [activeTab, setActiveTab] = useState<"catalog" | "hot" | "popular">("catalog");
@@ -82,23 +83,29 @@ export default function PhoneCatalogPage({
       return matchesSearch && matchesManufacturer;
     })
     .sort((a, b) => {
+      let comparison = 0;
+
       switch (sortBy) {
         case "name":
-          return a.name.localeCompare(b.name);
+          comparison = a.name.localeCompare(b.name);
+          break;
         case "price":
           const priceA = parseInt(a.price.replace(/[^0-9]/g, ""));
           const priceB = parseInt(b.price.replace(/[^0-9]/g, ""));
-          return priceB - priceA;
+          comparison = priceA - priceB;
+          break;
         case "release":
           // Sort by release date (newest first)
           // Better long-term solution would be to store dates in ISO format in database
           const dateA = new Date(a.releaseDate).getTime();
           const dateB = new Date(b.releaseDate).getTime();
-
-          return dateB - dateA;
+          comparison = dateA - dateB;
+          break;
         default:
-          return 0;
+          comparison = 0;
       }
+
+      return sortDirection === "asc" ? comparison : comparison * -1;
     });
 
   const handleAddToComparison = (phoneId: string, e: React.MouseEvent) => {
@@ -215,20 +222,32 @@ export default function PhoneCatalogPage({
               </div>
 
               {/* Sort By */}
-              <div className="relative">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as "name" | "price" | "release")}
-                  className="appearance-none pl-4 pr-10 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all cursor-pointer"
+              <div className="flex items-center gap-3">
+                <label className="text-[#666] dark:text-[#a0a8b8] whitespace-nowrap">Sort by:</label>
+                <div className="relative">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as "name" | "price" | "release")}
+                    className="appearance-none pl-4 pr-10 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all cursor-pointer"
+                  >
+                    <option value="name">Name</option>
+                    <option value="price">Price</option>
+                    <option value="release">Release Date</option>
+                  </select>
+                  <ChevronDown
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] pointer-events-none"
+                    size={20}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSortDirection((current) => (current === "asc" ? "desc" : "asc"))}
+                  className="p-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] hover:border-[#2c3968] dark:hover:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
+                  aria-label={`Sort ${sortDirection === "asc" ? "ascending" : "descending"}`}
+                  title={`Sort ${sortDirection === "asc" ? "ascending" : "descending"}`}
                 >
-                  <option value="name">Sort: Name</option>
-                  <option value="price">Sort: Price</option>
-                  <option value="release">Sort: Newest</option>
-                </select>
-                <ChevronDown
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] pointer-events-none"
-                  size={20}
-                />
+                  {sortDirection === "asc" ? <ArrowUpWideNarrow size={20} /> : <ArrowDownWideNarrow size={20} />}
+                </button>
               </div>
 
               {/* View Mode Toggle */}

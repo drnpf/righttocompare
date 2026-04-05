@@ -961,7 +961,7 @@ export default function PhoneSpecPage({ onNavigateToComparison, comparisonPhoneI
                 </DialogContent>
               </Dialog>
             </div>
-            
+
             {/* Mobile Browse Phones Section - Shows below XL screens */}
             <div className="xl:hidden flex justify-center mt-6 px-4">
               <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 dark:border-[#4a7cf6]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent dark:from-[#4a7cf6]/5 w-full max-w-md py-6 px-4 group/catalog hover:border-[#2c3968]/50 dark:hover:border-[#4a7cf6]/50 transition-all duration-300 rounded-lg cursor-pointer" onClick={onNavigateToCatalog}>
