@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { X, ArrowLeft, Plus, ChevronDown, Monitor, Cpu, BarChart3, Camera, Battery, Palette, Wifi, Mic, Radio, Smartphone, HelpCircle, Signal, Share2, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ArrowLeft, Plus, ChevronDown, Monitor, Cpu, BarChart3, Camera, Battery, Palette, Wifi, Mic, Radio, Smartphone, HelpCircle, Signal, Share2, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { Button } from "./ui/button";
 import { phonesData, PhoneData } from "../data/phoneData";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { PartialStar } from "./PartialStar";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -277,6 +279,176 @@ export default function PhoneComparisonPage({
     }));
   };
 
+  const handleExportToPdf = () => {
+    if (phones.length === 0) {
+      toast.error("Add phones to export a comparison");
+      return;
+    }
+
+    const visibleCategories = allCategories
+      .map((category) => {
+        if (category === "carrier-compatibility") {
+          const carriers = Array.from(
+            new Set(
+              phones.flatMap((phone) => phone.carrierCompatibility?.map((carrier) => carrier.name) || []),
+            ),
+          ).filter((carrier) => (selectedSpecs["carrier-compatibility"] || []).includes(carrier));
+
+          return carriers.length > 0 ? { category, specs: carriers } : null;
+        }
+
+        const specKeys = Array.from(
+          new Set(
+            phones.flatMap((phone) => Object.keys(phone.categories[category] || {})),
+          ),
+        ).filter((specKey) => (selectedSpecs[category] || []).includes(specKey));
+
+        return specKeys.length > 0 ? { category, specs: specKeys } : null;
+      })
+      .filter((entry): entry is { category: string; specs: string[] } => Boolean(entry));
+
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "pt",
+      format: "letter",
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const headerColor: [number, number, number] = [44, 57, 104];
+    const bodyTextColor: [number, number, number] = [30, 30, 30];
+    const subtleTextColor: [number, number, number] = [95, 107, 133];
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(...headerColor);
+    doc.text("Phone Comparison", 40, 42);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(...subtleTextColor);
+    doc.text("Export generated from the currently visible comparison specs.", 40, 60);
+    doc.text(
+      phones.map((phone) => `${phone.manufacturer} ${phone.name}`).join("  |  "),
+      40,
+      76,
+      { maxWidth: pageWidth - 80 },
+    );
+
+    const getLastTableY = () =>
+      (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? 76;
+
+    const ensureSectionSpace = (requiredHeight = 80) => {
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const nextY = getLastTableY();
+
+      if (nextY + requiredHeight > pageHeight - 40) {
+        doc.addPage();
+      }
+    };
+
+    const tableHead = [["Specification", ...phones.map((phone) => `${phone.manufacturer} ${phone.name}`)]];
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(...headerColor);
+    doc.text("Quick Overview", 40, 88);
+
+    autoTable(doc, {
+      startY: 92,
+      head: tableHead,
+      body: (phones[0]?.quickSpecs || []).map((spec) => [
+        spec.label,
+        ...phones.map((phone) => phone.quickSpecs.find((item) => item.label === spec.label)?.value || "N/A"),
+      ]),
+      theme: "grid",
+      styles: {
+        font: "helvetica",
+        fontSize: 9,
+        cellPadding: 6,
+        textColor: bodyTextColor,
+        overflow: "linebreak",
+      },
+      headStyles: {
+        fillColor: [238, 242, 248],
+        textColor: headerColor,
+        fontStyle: "bold",
+      },
+      columnStyles: {
+        0: {
+          cellWidth: 140,
+          fillColor: [249, 251, 255],
+          textColor: [79, 91, 117],
+          fontStyle: "bold",
+        },
+      },
+      margin: { left: 40, right: 40 },
+    });
+
+    visibleCategories.forEach(({ category, specs }) => {
+      const heading = category === "carrier-compatibility"
+        ? "Carrier Compatibility"
+        : category.replace(/([A-Z])/g, " $1").trim().replace(/\b\w/g, (char) => char.toUpperCase());
+
+      ensureSectionSpace();
+      const sectionTitleY = getLastTableY() + 22;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.setTextColor(...headerColor);
+      doc.text(heading, 40, sectionTitleY);
+
+      autoTable(doc, {
+        startY: sectionTitleY + 8,
+        head: tableHead,
+        body: specs.map((specKey) => [
+          specKey,
+          ...phones.map((phone) => {
+            if (category === "carrier-compatibility") {
+              const carrierInfo = phone.carrierCompatibility?.find((carrier) => carrier.name === specKey);
+              if (!carrierInfo) return "N/A";
+              return carrierInfo.notes
+                ? `${carrierInfo.compatible ? "Compatible" : "Not Compatible"} - ${carrierInfo.notes}`
+                : carrierInfo.compatible
+                  ? "Compatible"
+                  : "Not Compatible";
+            }
+
+            return phone.categories[category]?.[specKey] || "N/A";
+          }),
+        ]),
+        theme: "grid",
+        styles: {
+          font: "helvetica",
+          fontSize: 9,
+          cellPadding: 6,
+          textColor: bodyTextColor,
+          overflow: "linebreak",
+        },
+        headStyles: {
+          fillColor: [238, 242, 248],
+          textColor: headerColor,
+          fontStyle: "bold",
+        },
+        columnStyles: {
+          0: {
+            cellWidth: 140,
+            fillColor: [249, 251, 255],
+            textColor: [79, 91, 117],
+            fontStyle: "bold",
+          },
+        },
+        margin: { left: 40, right: 40 },
+      });
+    });
+
+    const fileName = `comparison-${phones.map((phone) => phone.id).join("-")}.pdf`;
+    doc.save(fileName);
+
+    toast.success("PDF downloaded", {
+      description: "The comparison PDF has been saved to your browser's default downloads location.",
+    });
+  };
+
   return (
     <div className="max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-3 sm:px-6 py-4 sm:py-8">
       <div className="flex gap-3 lg:gap-6 relative">
@@ -492,13 +664,22 @@ export default function PhoneComparisonPage({
               }
             </p>
             {phones.length > 0 && (
-              <Button
-                onClick={handleShareComparison}
-                className="bg-[#2c3968] hover:bg-[#1f2747] text-white px-6 py-2 rounded-lg transition-colors duration-200 inline-flex items-center gap-2"
-              >
-                <Share2 className="w-4 h-4" />
-                Share Comparison
-              </Button>
+              <div className="flex flex-col items-center gap-3">
+                <Button
+                  onClick={handleShareComparison}
+                  className="w-[190px] bg-[#2c3968] hover:bg-[#1f2747] text-white px-6 py-2 rounded-lg transition-colors duration-200 inline-flex items-center justify-center gap-2"
+                >
+                  <Share2 className="w-4 h-4" />
+                  Share Comparison
+                </Button>
+                <Button
+                  onClick={handleExportToPdf}
+                  className="w-[190px] bg-[#2c3968] hover:bg-[#1f2747] text-white px-6 py-2 rounded-lg transition-colors duration-200 inline-flex items-center justify-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  Export to PDF
+                </Button>
+              </div>
             )}
           </div>
         </div>
