@@ -1,6 +1,26 @@
 import Phone, { IPhone } from "../models/Phone";
 
 /**
+ * Projection for the PhoneCard view. Only has essential fields for catalog grid and comparison cart
+ */
+const PHONE_CARD_PROJECTION = {
+  _id: 0,
+  id: 1,
+  name: 1,
+  manufacturer: 1,
+  releaseDate: 1,
+  price: 1,
+  "images.main": 1,
+  "specs.display.screenSizeInches": 1,
+  "specs.display.technology": 1,
+  "specs.camera.mainMegapixels": 1,
+  "specs.performance.processor": 1,
+  "specs.battery.capacitymAh": 1,
+  "specs.design.dimensionsMm": 1,
+  "specs.design.weightGrams": 1,
+};
+
+/**
  * Retrieves phones from a specific page with a given limit per page and total
  * number of phones in the database. This function returns a list of phone
  * JSON objects (NOT Mongoose Documents). FOR READ-ONLY PURPOSES.
@@ -21,38 +41,29 @@ export const findPhonePage = async (page: number, limit: number): Promise<{ phon
 
   // Fetching list of phone JSON objects on a certain page and # of phones in list
   const [phones, total] = await Promise.all([
-    Phone.find()
-      .skip(skip)
-      .limit(safeLimit)
-      .select({
-        _id: 0,
-        id: 1,
-        name: 1,
-        manufacturer: 1,
-        releaseDate: 1,
-        price: 1,
-        "images.main": 1,
-        "specs.display.screenSizeInches": 1,
-        "specs.display.technology": 1,
-        "specs.camera.mainMegapixels": 1,
-        "specs.performance.processor": 1,
-        "specs.battery.capacitymAh": 1,
-        "specs.design.dimensionsMm": 1,
-        "specs.design.weightGrams": 1,
-      })
-      .lean(), // RETURNS PLAIN JSON OBJECTS
+    Phone.find().skip(skip).limit(safeLimit).select(PHONE_CARD_PROJECTION).lean(), // RETURNS PLAIN JSON OBJECTS
     Phone.countDocuments(),
   ]);
   return { phones, total };
 };
 
 /**
- * Finds a single phone by its ID.
+ * Finds a single phone by its ID. Returns a JSON object.
  * @param id The unique string ID of the phone
- * @returns The resultant phone document
+ * @returns The resultant phone data JSON object containing full specs.
  */
 export const findPhoneById = async (id: string): Promise<IPhone | null> => {
-  const phone = await Phone.findOne({ id: id });
+  const phone = await Phone.findOne({ id: id }).lean();
+  return phone;
+};
+
+/**
+ * Finds a single phone card by its ID. Returns a JSON object.
+ * @param id The unique string ID of the phone
+ * @returns The resultant phone data JSON object representing a phone card.
+ */
+export const findPhoneCardById = async (id: string): Promise<IPhone | null> => {
+  const phone = await Phone.findOne({ id: id }).select(PHONE_CARD_PROJECTION).lean();
   return phone;
 };
 

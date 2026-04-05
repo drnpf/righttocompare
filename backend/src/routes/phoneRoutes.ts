@@ -1,5 +1,12 @@
 import { Router } from "express";
-import { getPhonePage, getPhoneById, createPhone, updatePhone, deletePhone } from "../controllers/phoneController";
+import {
+  getPhonePage,
+  getPhoneById,
+  getPhoneCardById,
+  createPhone,
+  updatePhone,
+  deletePhone,
+} from "../controllers/phoneController";
 
 const router = Router();
 
@@ -15,6 +22,12 @@ router.get("/", getPhonePage);
  * @route GET /api/phones/:id
  */
 router.get("/:id", getPhoneById);
+
+/**
+ * Get a single phone card by ID
+ * @route GET /api/phones/card/:id
+ */
+router.get("/card/:id", getPhoneCardById);
 
 // --- ADMIN ROUTES --- (maybe we can add some middleware to separate admin and public routes later)
 /**
