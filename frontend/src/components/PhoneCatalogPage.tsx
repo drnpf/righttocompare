@@ -85,29 +85,36 @@ export default function PhoneCatalogPage({
 
   /**
    * SYNC: Comparison Cart Refreshes
-   * Signal: Component mount or change in comparison IDs
+   * Signal: Component mount or change in number of phones in comparisonPhoneIds list
    * Action: Fetches phone details if IDs exist but local cache is empty
    */
   useEffect(() => {
     const syncComparisonCart = async () => {
       // Checks syncing is needed by comparing phone IDs passed by controller with cached comparison phone data
-      const needToSync = comparisonPhoneIds.length > 0 && comparisonData.length === 0;
+      const missingIds = comparisonPhoneIds.filter((id) => !comparisonData.find((phone) => phone.id === id));
 
-      // Handles case if syncing needed
-      if (needToSync) {
-        try {
-          // Handles re-fetching phone cards that should be in comparison cart into the comparison data
-          const promises = comparisonPhoneIds.map((id) => getPhoneCardById(id));
-          const results = await Promise.all(promises);
-          const validCards = results.filter((p): p is PhoneCard => p !== null);
-          setComparisonData(validCards);
-        } catch (error) {
-          console.error("Failed to sync comparison cart:", error);
-        }
+      // Handles case if no missing IDs in comparisonData cache
+      if (missingIds.length === 0) return;
+
+      // Handles case if syncing needed of missing phones from comparisonData cache
+      try {
+        // Handles re-fetching phone cards that should be in comparison cart into the comparison data
+        const promises = missingIds.map((id) => getPhoneCardById(id));
+        const results = await Promise.all(promises);
+        const newCards = results.filter((p): p is PhoneCard => p !== null);
+        setComparisonData((prev) => {
+          // Adding already existing cards in comparison data and the newly fetched cards into map
+          const cardsForCompare = new Map();
+          prev.forEach((phone) => cardsForCompare.set(phone.id, phone));
+          newCards.forEach((phone) => cardsForCompare.set(phone.id, phone));
+          return Array.from(cardsForCompare.values());
+        });
+      } catch (error) {
+        console.error("Failed to sync comparison cart:", error);
       }
     };
     syncComparisonCart();
-  });
+  }, [comparisonPhoneIds.length]);
 
   // ------------------------------------------------------------
   // | HOME PAGE LOGIC
@@ -208,7 +215,7 @@ export default function PhoneCatalogPage({
     const pageRange = 2;
 
     // Iterates through all possible page values
-    for (let i = 1; i < totalPages; i++) {
+    for (let i = 1; i <= totalPages; i++) {
       // Getting pages to show in pagination
       const isFirstPage = i === 1;
       const isLastPage = i === totalPages;
@@ -219,15 +226,11 @@ export default function PhoneCatalogPage({
       // Determining which page number to push into list
       if (isFirstPage || isLastPage || isWithinWindow) {
         pages.push(i);
-      } else if (i === currentPage - pageRange - 1 || i === currentPage + pageRange + 1) {
-        pages.push("..."); // For gaps between neighbor and first and last page does not push number but "..."
+      } else if (pages[pages.length - 1] !== "...") {
+        pages.push("..."); // Only pushes "..." if previous item is not "..." or the (first, last, current, or neighbors)
       }
     }
-
-    // Filter array to only have only numbers and 0-2 "..." that are never consecutive
-    return pages.filter((value, i, array) => {
-      return value !== "..." || array[i - 1] !== "...";
-    });
+    return pages;
   };
 
   // ------------------------------------------------------------
