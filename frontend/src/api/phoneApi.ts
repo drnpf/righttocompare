@@ -7,16 +7,23 @@ const API_URL = "http://localhost:5001/api/phones"; // CHANGE LATER ON PRODUCTIO
 export const DEFAULT_PHONE_LIMIT = 12; // Default phones per page
 
 /**
- * Fetches the full catalog of phones from the backend.
+ * Fetches a phone page from MongoDB given the specified page and number of
+ * phones per page. If a search query is included, a page of phones, containing
+ * the searched queries, will be returned.
+ * @param page
+ * @param limit
+ * @param search
  * @returns A list of PhoneData objects containing the phone data
  */
 export const getPhonePage = async (
   page: number = 1,
   limit: number = DEFAULT_PHONE_LIMIT,
+  search: string = "",
 ): Promise<PaginatedPhoneResponse> => {
   try {
-    // Fetching phones from a certain page
-    const response = await fetch(`${API_URL}?page=${page}&limit=${limit}`);
+    // Fetching phones from a certain page and with search keyword (if any)
+    const url = `${API_URL}?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`;
+    const response = await fetch(url);
 
     // Handles failed sync with backend
     if (!response.ok) throw new Error(`Failed to fetch phone page: ${response.statusText}`);

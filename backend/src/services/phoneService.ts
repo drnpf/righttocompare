@@ -26,10 +26,15 @@ const PHONE_CARD_PROJECTION = {
  * JSON objects (NOT Mongoose Documents). FOR READ-ONLY PURPOSES.
  * @param page The page number to retrieve (PAGE INDEX STARTS AT 1)
  * @param limit The number of phones to retrieve per page
+ * @param search (optional) The string to search for in phones
  * @returns An object containing the list of phone JSON objects and the total
  * number of phones in the database.
  */
-export const findPhonePage = async (page: number, limit: number): Promise<{ phones: IPhone[]; total: number }> => {
+export const findPhonePage = async (
+  page: number,
+  limit: number,
+  search?: string,
+): Promise<{ phones: IPhone[]; total: number }> => {
   // Validating page and limit parameters
   const safePage = Math.max(1, page); // Ensures page is at least 1
   const safeLimit = Math.max(1, limit); // Ensures limit is at least 1
@@ -39,9 +44,18 @@ export const findPhonePage = async (page: number, limit: number): Promise<{ phon
 
   // DEV NOTE: NEED TO ADD FILTERING CAPABILITIES LATER
 
+  // Creating the search query object for searching in MongoDB
+  let query = {};
+  if (search) {
+    query = {
+      // Searches name and manufacturer for the phones containing search string (case-insensitive)
+      $or: [{ name: { $regex: search, $options: "i" } }, { manufacturer: { $regex: search, $options: "i" } }],
+    };
+  }
+
   // Fetching list of phone JSON objects on a certain page and # of phones in list
   const [phones, total] = await Promise.all([
-    Phone.find().skip(skip).limit(safeLimit).select(PHONE_CARD_PROJECTION).lean(), // RETURNS PLAIN JSON OBJECTS
+    Phone.find(query).skip(skip).limit(safeLimit).select(PHONE_CARD_PROJECTION).lean(), // RETURNS PLAIN JSON OBJECTS
     Phone.countDocuments(),
   ]);
   return { phones, total };
