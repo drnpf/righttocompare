@@ -1,7 +1,10 @@
-import { PhoneData, PhoneCard } from "../types/phoneTypes";
+import { PhoneData, PaginatedPhoneResponse } from "../types/phoneTypes";
 import { mapJsonToPhoneData, mapJsonToPhoneCard } from "../utils/dataMappers";
 
 const API_URL = "http://localhost:5001/api/phones"; // CHANGE LATER ON PRODUCTION
+
+// Constants
+export const DEFAULT_PHONE_LIMIT = 12; // Default phones per page
 
 /**
  * Fetches the full catalog of phones from the backend.
@@ -9,22 +12,31 @@ const API_URL = "http://localhost:5001/api/phones"; // CHANGE LATER ON PRODUCTIO
  */
 export const getPhonePage = async (
   page: number = 1,
-  limit: number = 5,
-): Promise<{ phones: PhoneCard[]; total: number }> => {
+  limit: number = DEFAULT_PHONE_LIMIT,
+): Promise<PaginatedPhoneResponse> => {
   try {
     // Fetching phones from a certain page
     const response = await fetch(`${API_URL}?page=${page}&limit=${limit}`);
 
     // Handles failed sync with backend
-    if (!response.ok) throw new Error(`Failed to fetch full phone catalog: ${response.statusText}`);
+    if (!response.ok) throw new Error(`Failed to fetch phone page: ${response.statusText}`);
 
     // Mapping raw JSON data to frontend PhoneData type
     const rawJson = await response.json();
     const mappedPhones = rawJson.data.map((dbPhone: any) => mapJsonToPhoneCard(dbPhone)); // Maps each JSON to a phone card object
-    return { phones: mappedPhones, total: rawJson.total };
+    return { phones: mappedPhones, pagination: rawJson.pagination };
   } catch (error) {
     console.error("Error fetching phones from backend:", error);
-    return { phones: [], total: 0 };
+    return {
+      phones: [],
+      pagination: {
+        totalPages: 0,
+        currentPage: 1,
+        itemsPerPage: DEFAULT_PHONE_LIMIT,
+        hasNextPage: false,
+        hasPrevPage: false,
+      },
+    };
   }
 };
 

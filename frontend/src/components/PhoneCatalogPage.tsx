@@ -1,4 +1,4 @@
-import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2 } from "lucide-react";
+import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PhoneCard } from "../types/phoneTypes";
 import { getPhonePage } from "../api/phoneApi";
@@ -22,30 +22,49 @@ export default function PhoneCatalogPage({
   onNavigateToComparison,
   recentlyViewedPhones = [],
 }: PhoneCatalogPageProps) {
-  // State for phones, loading, error, search, filters, view mode, etc.
+  // ------------------------------------------------------------
+  // | HOOKS
+  // ------------------------------------------------------------
+  // --- Phone Data States ---
   const [allPhones, setAllPhones] = useState<PhoneCard[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // --- Pagination States ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPrevPage, setHasPrevPage] = useState(false);
+  const itemsPerPage = 24;
+
+  // --- UI States ---
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"name" | "price" | "release">("name");
   const [manufacturerFilter, setManufacturerFilter] = useState<string>("all");
-  const [isCartMinimized, setIsCartMinimized] = useState(false);
   const [activeTab, setActiveTab] = useState<"catalog" | "hot" | "popular">("catalog");
+  const [isCartMinimized, setIsCartMinimized] = useState(false);
+  const [comparisonData, setComparisonData] = useState<PhoneCard[]>([]);
 
   // Fetch phones on mount of catalog page
   useEffect(() => {
     const fetchPhones = async () => {
       try {
-        // Used to control page and number of phones to retrieve (DEV CONTROL PAGE AND LIMIT HERE)
-        let page = 1; // Page #
-        const limit = 24; // Number of phones per page (backend will only send 50 phones maximum for security reasons)
-
         // Fetching phones from DB
         setLoading(true);
-        const { phones, total } = await getPhonePage(page, limit);
+        const { phones, pagination } = await getPhonePage(currentPage, itemsPerPage);
+
+        // Mounting phone card catalog page for use
         setAllPhones(phones);
+
+        // Setting all pagination metadata values
+        setTotalPages(pagination.totalPages);
+        setHasNextPage(pagination.hasNextPage);
+        setHasPrevPage(pagination.hasPrevPage);
         setError(null);
+
+        // Scrolls to top when fresh mount of catalog page/refresh
+        window.scrollTo({ top: 0, behavior: "smooth" });
       } catch (error) {
         setError("Failed to fetch phones");
       } finally {
@@ -53,7 +72,7 @@ export default function PhoneCatalogPage({
       }
     };
     fetchPhones();
-  }, []);
+  }, [currentPage]);
 
   const manufacturers = Array.from(new Set(allPhones.map((phone) => phone.manufacturer)));
 
@@ -114,10 +133,8 @@ export default function PhoneCatalogPage({
     const phone = allPhones.find((p) => p.id === phoneId);
     if (!phone) return;
 
-    if (comparisonPhoneIds.includes(phoneId)) {
-      // Already in comparison do nothing
-      return;
-    }
+    // Handles case if phone is already in comparison cart
+    if (comparisonPhoneIds.includes(phoneId)) return;
 
     // Check if comparison cart is full (max 3 phones)
     if (comparisonPhoneIds.length >= 3) {
@@ -128,6 +145,8 @@ export default function PhoneCatalogPage({
       return;
     }
 
+    // Locally caching the phone data in the comparison cart into React state
+    setComparisonData((prev) => [...prev, phone]);
     const newComparisonIds = [...comparisonPhoneIds, phoneId];
     onComparisonChange?.(newComparisonIds);
 
@@ -139,6 +158,38 @@ export default function PhoneCatalogPage({
 
   const isPhoneInComparison = (phoneId: string) => {
     return comparisonPhoneIds.includes(phoneId);
+  };
+
+  /**
+   * Generates an array of page numbers for pagination UI
+   *  The pattern is: [1, ..., current-1, current, current+1, ..., totalPages]
+   * @returns An array containing numbers (or string - the "...") for page buttons
+   */
+  const getPageNumbers = () => {
+    const pages = [];
+    const pageRange = 2;
+
+    // Iterates through
+    for (let i = 1; i < totalPages; i++) {
+      // Getting pages to show in pagination
+      const isFirstPage = i === 1;
+      const isLastPage = i === totalPages;
+
+      // Getting the pages within window length of current page
+      const isWithinWindow = i >= currentPage - pageRange && i <= currentPage + pageRange;
+
+      // Determining which page to push
+      if (isFirstPage || isLastPage || isWithinWindow) {
+        pages.push(i);
+      } else if (i === currentPage - pageRange - 1 || i === currentPage + pageRange + 1) {
+        pages.push("..."); // For gaps between neighbor and first and last page
+      }
+    }
+
+    // Filter array to only have only numbers and 0-2 "..." that are never consecutive
+    return pages.filter((value, i, array) => {
+      return value !== "..." || array[i - 1] !== "...";
+    });
   };
 
   // Handle loading and error views
@@ -473,20 +524,64 @@ export default function PhoneCatalogPage({
           </div>
         )}
 
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-2 pb-8">
+            {/* Previous Arrow */}
+            <button
+              disabled={!hasPrevPage}
+              onClick={() => setCurrentPage((prev) => prev - 1)}
+              className="p-2 rounded-lg border border-[#e5e5e5] dark:border-[#2d3548] text-[#2c3968] dark:text-[#4a7cf6] disabled:opacity-30 hover:bg-[#f7f9fc] transition-all"
+            >
+              <ChevronLeft size={20} />
+            </button>
+
+            {/* Numeric Pages */}
+            <div className="flex items-center gap-2">
+              {getPageNumbers().map((pageNum, idx) => (
+                <button
+                  key={idx}
+                  disabled={pageNum === "..."}
+                  onClick={() => typeof pageNum === "number" && setCurrentPage(pageNum)}
+                  className={`min-w-[40px] h-[40px] rounded-lg border transition-all text-sm font-medium ${
+                    pageNum === currentPage
+                      ? "bg-[#2c3968] text-white border-[#2c3968] shadow-md"
+                      : pageNum === "..."
+                        ? "border-transparent cursor-default text-[#999]"
+                        : "border-[#e5e5e5] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] hover:border-[#2c3968] dark:hover:border-[#4a7cf6] hover:text-[#2c3968]"
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              ))}
+            </div>
+
+            {/* Next Arrow */}
+            <button
+              disabled={!hasNextPage}
+              onClick={() => setCurrentPage((prev) => prev + 1)}
+              className="p-2 rounded-lg border border-[#e5e5e5] dark:border-[#2d3548] text-[#2c3968] dark:text-[#4a7cf6] disabled:opacity-30 hover:bg-[#f7f9fc] transition-all"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        )}
+
         {/* Comparison Cart - Only show if there are phones in cart */}
         {comparisonPhoneIds.length > 0 && (
           <ComparisonCart
             phones={comparisonPhoneIds.map((id) => {
-              const phone = allPhones.find((p) => p.id === id);
+              const cachedPhone = comparisonData.find((p) => p.id === id);
               return {
                 id: id,
-                name: phone?.name || "Unknown",
-                manufacturer: phone?.manufacturer || "Unknown",
-                image: phone?.images?.main || "",
-                price: phone?.price || "N/A",
+                name: cachedPhone?.name || "Unknown",
+                manufacturer: cachedPhone?.manufacturer || "Unknown",
+                image: cachedPhone?.images?.main || "",
+                price: cachedPhone?.price || "N/A",
               };
             })}
             onRemovePhone={(phoneId) => {
+              setComparisonData((prev) => prev.filter((p) => p.id !== phoneId));
               onComparisonChange?.(comparisonPhoneIds.filter((id) => id !== phoneId));
             }}
             onCompare={() => onNavigateToComparison?.(comparisonPhoneIds)}

@@ -39,3 +39,26 @@ export interface PhoneData extends PhoneCard {
   carrierCompatibility: CarrierCompatibility[];
   reviews: ReviewData[];
 }
+
+/**
+ * Pagination class to contain pagination metadata from backend on
+ * all metadata involving phones including total number of pages,
+ * what the current page is, how many items per page is being sent,
+ * is there a next page, and is there a previous page.
+ */
+export interface PaginationMetaData {
+  totalPages: number;
+  currentPage: number;
+  itemsPerPage: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+/**
+ * Interface to handle response from backend with phone card data
+ * and pagination metadata
+ */
+export interface PaginatedPhoneResponse {
+  phones: PhoneCard[];
+  pagination: PaginationMetaData;
+}
