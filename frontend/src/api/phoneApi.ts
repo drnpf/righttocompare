@@ -1,4 +1,4 @@
-import { PhoneData, PaginatedPhoneResponse } from "../types/phoneTypes";
+import { PhoneData, PhoneCard, PaginatedPhoneResponse } from "../types/phoneTypes";
 import { mapJsonToPhoneData, mapJsonToPhoneCard } from "../utils/dataMappers";
 
 const API_URL = "http://localhost:5001/api/phones"; // CHANGE LATER ON PRODUCTION
@@ -56,6 +56,29 @@ export const getPhoneById = async (id: string): Promise<PhoneData | null> => {
     // Mapping the single phone object
     const rawPhone = await response.json();
     return mapJsonToPhoneData(rawPhone);
+  } catch (error) {
+    console.error(`Error in getPhoneById (${id}):`, error);
+    return null;
+  }
+};
+
+/**
+ * Fetches the phone card of a single phone by its ID from the backend.
+ * @param id The ID of the phone to fetch
+ * @returns A PhoneCard object containing few/important details on a phone,
+ * or null if not found
+ */
+export const getPhoneCardById = async (id: string): Promise<PhoneCard | null> => {
+  try {
+    const response = await fetch(`${API_URL}/card/${id}`);
+
+    // Handles failed syncs with backend
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error("Phone details fetch failed");
+
+    // Mapping the single phone object
+    const rawPhone = await response.json();
+    return mapJsonToPhoneCard(rawPhone);
   } catch (error) {
     console.error(`Error in getPhoneById (${id}):`, error);
     return null;
