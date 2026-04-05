@@ -1,7 +1,7 @@
 import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PhoneCard } from "../types/phoneTypes";
-import { getPhonePage } from "../api/phoneApi";
+import { getPhoneCardById, getPhonePage } from "../api/phoneApi";
 import ComparisonCart from "./ComparisonCart";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
 import { toast } from "sonner@2.0.3";
@@ -82,6 +82,32 @@ export default function PhoneCatalogPage({
     };
     fetchPhones();
   }, [currentPage]);
+
+  /**
+   * SYNC: Comparison Cart Refreshes
+   * Signal: Component mount or change in comparison IDs
+   * Action: Fetches phone details if IDs exist but local cache is empty
+   */
+  useEffect(() => {
+    const syncComparisonCart = async () => {
+      // Checks syncing is needed by comparing phone IDs passed by controller with cached comparison phone data
+      const needToSync = comparisonPhoneIds.length > 0 && comparisonData.length === 0;
+
+      // Handles case if syncing needed
+      if (needToSync) {
+        try {
+          // Handles re-fetching phone cards that should be in comparison cart into the comparison data
+          const promises = comparisonPhoneIds.map((id) => getPhoneCardById(id));
+          const results = await Promise.all(promises);
+          const validCards = results.filter((p): p is PhoneCard => p !== null);
+          setComparisonData(validCards);
+        } catch (error) {
+          console.error("Failed to sync comparison cart:", error);
+        }
+      }
+    };
+    syncComparisonCart();
+  });
 
   // ------------------------------------------------------------
   // | HOME PAGE LOGIC
@@ -178,10 +204,10 @@ export default function PhoneCatalogPage({
    * @returns An array containing numbers (or string - the "...") for page buttons
    */
   const getPageNumbers = () => {
-    const pages = [];
+    const pages: (number | string)[] = [];
     const pageRange = 2;
 
-    // Iterates through
+    // Iterates through all possible page values
     for (let i = 1; i < totalPages; i++) {
       // Getting pages to show in pagination
       const isFirstPage = i === 1;
@@ -190,11 +216,11 @@ export default function PhoneCatalogPage({
       // Getting the pages within window length of current page
       const isWithinWindow = i >= currentPage - pageRange && i <= currentPage + pageRange;
 
-      // Determining which page to push
+      // Determining which page number to push into list
       if (isFirstPage || isLastPage || isWithinWindow) {
         pages.push(i);
       } else if (i === currentPage - pageRange - 1 || i === currentPage + pageRange + 1) {
-        pages.push("..."); // For gaps between neighbor and first and last page
+        pages.push("..."); // For gaps between neighbor and first and last page does not push number but "..."
       }
     }
 
