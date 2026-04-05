@@ -9,10 +9,12 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner@2.0.3";
+import AdminChatbotLogsView from "./AdminChatbotLogsView";
 
-type AdminView = "dashboard" | "manual" | "scraping";
+type AdminView = "dashboard" | "manual" | "scraping" | "chatbot";
 
 interface ScrapingJob {
   id: string;
@@ -243,13 +245,24 @@ export default function AdminDashboardPage() {
 
         <button
           onClick={() => setCurrentView("scraping")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${currentView === "scraping"
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${currentView === "scraping"
               ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white shadow-md"
               : "text-[#666] hover:bg-[#f7f7f7] hover:text-[#2c3968]"
             }`}
         >
           <Globe size={20} />
           <span>Web Scraping</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentView("chatbot")}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${currentView === "chatbot"
+              ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white shadow-md"
+              : "text-[#666] hover:bg-[#f7f7f7] hover:text-[#2c3968]"
+            }`}
+        >
+          <MessageSquare size={20} />
+          <span>Chatbot Logs</span>
         </button>
       </nav>
     </div>
@@ -807,6 +820,7 @@ export default function AdminDashboardPage() {
           {currentView === "dashboard" && renderDashboard()}
           {currentView === "manual" && renderManualSpecs()}
           {currentView === "scraping" && renderWebScraping()}
+          {currentView === "chatbot" && <AdminChatbotLogsView />}
         </div>
       </div>
     </div>
