@@ -46,7 +46,16 @@ export default function PhoneCatalogPage({
   const [isCartMinimized, setIsCartMinimized] = useState(false);
   const [comparisonData, setComparisonData] = useState<PhoneCard[]>([]);
 
-  // Fetch phones on mount of catalog page
+  // ------------------------------------------------------------
+  // | DATA SYNCHRONIZATION
+  // ------------------------------------------------------------
+
+  /**
+   * PHONE CATALOG PAGE SYNCHRONIZATION:
+   * Signal: Catalog page mount or when currentPage value changes
+   * Action: Fetches the phone catalog of the current page and
+   * pagination metadata for pagination system on home page
+   */
   useEffect(() => {
     const fetchPhones = async () => {
       try {
@@ -74,6 +83,9 @@ export default function PhoneCatalogPage({
     fetchPhones();
   }, [currentPage]);
 
+  // ------------------------------------------------------------
+  // | HOME PAGE LOGIC
+  // ------------------------------------------------------------
   const manufacturers = Array.from(new Set(allPhones.map((phone) => phone.manufacturer)));
 
   // Helper function to check if a phone was released within the past year
@@ -192,6 +204,9 @@ export default function PhoneCatalogPage({
     });
   };
 
+  // ------------------------------------------------------------
+  // | RENDER GUARDS
+  // ------------------------------------------------------------
   // Handle loading and error views
   if (loading) {
     return (
@@ -202,6 +217,9 @@ export default function PhoneCatalogPage({
     );
   }
 
+  // ------------------------------------------------------------
+  // | UI SECTION
+  // ------------------------------------------------------------
   return (
     <>
       <div className="max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 py-8">
