@@ -26,6 +26,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   verifyTheResetCode: (oobCode: string) => Promise<void>;
   confirmThePassword: (oobCode: string, newPassword: string) => Promise<void>;
+  updateCurrentUser: (updates: Partial<AppUser>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
