@@ -149,6 +149,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return unsubscribe;
   }, []);
 
+  // Updates the currentUser state with partial changes
+  const updateCurrentUser = (updates: Partial<AppUser>) => {
+    setCurrentUser((prev) => (prev ? { ...prev, ...updates } : prev));
+  };
+
   // Public interface for functions (PUT NEW FUNCTIONS NAMES FOR AuthContext HERE)
   const value = {
     currentUser,
@@ -160,6 +165,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     resetPassword,
     verifyTheResetCode,
     confirmThePassword,
+    updateCurrentUser,
   };
 
   return (

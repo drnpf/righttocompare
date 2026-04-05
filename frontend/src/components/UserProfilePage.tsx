@@ -50,7 +50,7 @@ const featureLabels = {
 };
 
 export default function UserProfilePage() {
-  const { currentUser, loading: authLoading } = useAuth();
+  const { currentUser, loading: authLoading, updateCurrentUser } = useAuth();
   const [profile, setProfile] = useState<AppUser | null>(null);
   const [activeSection, setActiveSection] = useState<string | null>("personal");
   const [hasChanges, setHasChanges] = useState(false);
@@ -154,6 +154,9 @@ export default function UserProfilePage() {
 
       // Updating the user profile
       const updateUser = await updateUserProfile(uid, token, profile);
+
+      // Update frontend immediately
+      updateCurrentUser({ wishlist: profile.wishlist });
 
       toast.success("Profile saved!");
       setHasChanges(false);

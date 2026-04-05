@@ -158,7 +158,7 @@ export default function PhoneSpecPage({ onNavigateToComparison, comparisonPhoneI
   }
 
   const categories = Object.keys(phoneData.categories);
-  const { currentUser, loading: authLoading } = useAuth();
+  const { currentUser, loading: authLoading, updateCurrentUser } = useAuth();
 
   // Review state - API connected
   const [reviews, setReviews] = useState<ReviewData[]>([]);
@@ -245,6 +245,13 @@ export default function PhoneSpecPage({ onNavigateToComparison, comparisonPhoneI
     price: string;
   }>>([]);
   
+  // Sync wishlist status on mount or when currentUser changes
+  useEffect(() => {
+    if (currentUser?.wishlist && phoneData?.id) {
+      setIsWishlisted(currentUser.wishlist.includes(phoneData.id));
+    }
+  }, [currentUser, phoneData?.id]);
+
   // Derive comparison phones from external IDs if provided
   const comparisonPhones = externalComparisonIds 
     ? externalComparisonIds.map(id => {
