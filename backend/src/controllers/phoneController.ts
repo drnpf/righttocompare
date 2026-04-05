@@ -10,6 +10,8 @@ import * as phoneService from "../services/phoneService";
  *    - itemsPerPage: The number of phones returned per page (the limit).
  *    - hasNextPage: A boolean indicating if there is a next page available.
  *    - hasPrevPage: A boolean indicating if there is a previous page available.
+ * This function also allows for searching of phone by a string query and returns
+ * a specified number of matching search results.
  * @route GET /api/phones
  * @param req The Express request object which may contain 'page' and 'limit'
  * query parameters for pagination
@@ -26,7 +28,8 @@ export const getPhonePage = async (req: Request, res: Response) => {
     // Input sanitization for findAllPhones function
     const page = parseInt(req.query.page as string) || PAGE_DEFAULT;
     const limit = Math.min(parseInt(req.query.limit as string) || DEFAULT_LIMIT, MAX_LIMIT);
-    const { phones, total } = await phoneService.findPhonePage(page, limit);
+    const search = (req.query.search as string) || "";
+    const { phones, total } = await phoneService.findPhonePage(page, limit, search);
 
     // If no phones are found
     if (phones.length === 0 && total === 0) {
