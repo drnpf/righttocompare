@@ -137,8 +137,8 @@ export default function PhoneComparisonPage({
 
       // Attempting to fetch all phones in compare
       try {
-        const fetchPromises = phoneIds.map((id) => getPhoneById(id));
-        const results = await Promise.all(fetchPromises);
+        const promises = phoneIds.map((id) => getPhoneById(id));
+        const results = await Promise.all(promises);
         const validPhones = results.filter((p): p is PhoneData => p !== null); // Handles cleaning null case since getPhoneById can return null
         setPhoneDataList(validPhones);
       } catch (error) {
