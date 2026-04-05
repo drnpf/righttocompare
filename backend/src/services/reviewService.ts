@@ -1,4 +1,5 @@
 import Phone, { IPhone, IReview, ICategoryRatings } from "../models/Phone";
+import { analyzeSentiment } from "../utils/sentimentAnalyzer";
 
 /**
  * Adds a new review to a phone document.
@@ -35,6 +36,10 @@ export const addReviewToPhone = async (
     : 0;
   const newReviewId = maxId + 1;
 
+  // Auto-detect sentiment tags from review title + text
+  const sentimentTags = analyzeSentiment(`${reviewData.title} ${reviewData.review}`)
+    .map((t) => t.label);
+
   const newReview: IReview = {
     id: newReviewId,
     userId: reviewData.userId,
@@ -48,6 +53,7 @@ export const addReviewToPhone = async (
     }),
     title: reviewData.title,
     review: reviewData.review,
+    sentimentTags,
     helpful: 0,
     notHelpful: 0,
     helpfulVoters: [],
@@ -228,4 +234,46 @@ export const getReviewById = async (
   if (!phone) return null;
 
   return phone.reviews.find((r) => r.id === reviewId) || null;
+};
+
+/**
+ * Gets a sentiment summary (pros/cons) for a phone based on all review sentiment tags.
+ * @param phoneId The unique string ID of the phone
+ * @returns Pros and cons with frequency counts, or null if phone not found
+ */
+export const getSentimentSummary = async (
+  phoneId: string
+): Promise<{
+  pros: { topic: string; count: number }[];
+  cons: { topic: string; count: number }[];
+  totalReviews: number;
+} | null> => {
+  const phone = await Phone.findOne({ id: phoneId });
+  if (!phone) return null;
+
+  const proCounts: Record<string, number> = {};
+  const conCounts: Record<string, number> = {};
+
+  for (const review of phone.reviews) {
+    const tags = review.sentimentTags || [];
+    for (const tag of tags) {
+      if (tag.startsWith("+")) {
+        const topic = tag.slice(1);
+        proCounts[topic] = (proCounts[topic] || 0) + 1;
+      } else if (tag.startsWith("-")) {
+        const topic = tag.slice(1);
+        conCounts[topic] = (conCounts[topic] || 0) + 1;
+      }
+    }
+  }
+
+  const pros = Object.entries(proCounts)
+    .map(([topic, count]) => ({ topic, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const cons = Object.entries(conCounts)
+    .map(([topic, count]) => ({ topic, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return { pros, cons, totalReviews: phone.reviews.length };
 };

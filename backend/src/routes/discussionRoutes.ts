@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createDiscussion,
   getDiscussions,
+  getCommunitySentiment,
   getDiscussion,
   getUserDiscussions,
   voteOnDiscussion,
@@ -21,6 +22,12 @@ const router = Router();
  * @query page, limit, filter (recent|trending|popular), search, categories (comma-separated)
  */
 router.get("/", getDiscussions);
+
+/**
+ * Get community-wide sentiment summary
+ * @route GET /api/discussions/sentiment
+ */
+router.get("/sentiment", getCommunitySentiment);
 
 /**
  * Get all discussions by a specific user

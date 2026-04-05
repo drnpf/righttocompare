@@ -148,6 +148,29 @@ export const voteOnReview = async (req: AuthRequest, res: Response) => {
  * @param req AuthRequest containing phoneId and reviewId params
  * @param res Express Response
  */
+/**
+ * Gets a sentiment summary (pros/cons) for a phone based on review text analysis.
+ * @route GET /api/phones/:phoneId/reviews/sentiment
+ * @param req Request containing phoneId param
+ * @param res Express Response
+ */
+export const getReviewSentiment = async (req: AuthRequest, res: Response) => {
+  try {
+    const { phoneId } = req.params;
+
+    const result = await reviewService.getSentimentSummary(phoneId);
+
+    if (!result) {
+      return res.status(404).json({ message: "Phone not found" });
+    }
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("Error fetching sentiment summary:", err);
+    res.status(500).json({ message: "Server error fetching sentiment summary" });
+  }
+};
+
 export const deleteReview = async (req: AuthRequest, res: Response) => {
   try {
     const { phoneId, reviewId } = req.params;

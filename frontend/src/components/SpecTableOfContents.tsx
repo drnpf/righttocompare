@@ -181,10 +181,8 @@ export default function SpecTableOfContents({ specCategories = [], mode = "phone
 
   return (
     <>
-    <div className={`hidden xl:block fixed top-24 right-4 z-30 transition-all duration-300 ${
-      isExpanded ? "w-60" : "w-14"
-    }`}>
-      <div className="bg-gradient-to-br from-white to-[#f7f9fc] dark:from-[#161b26] dark:to-[#1a1f2e] rounded-2xl border-2 border-[#2c3968]/10 dark:border-[#4a7cf6]/20 shadow-lg backdrop-blur-sm overflow-hidden">
+    <div style={{ position: 'fixed', top: '96px', left: '16px', zIndex: 9999, width: isExpanded ? '240px' : '56px' }} className="transition-all duration-300 hidden lg:block">
+      <div className="bg-white rounded-2xl border-2 border-[#2c3968]/20 shadow-lg overflow-hidden">
         {isExpanded ? (
           <>
             <div className="p-5">
@@ -475,7 +473,7 @@ export default function SpecTableOfContents({ specCategories = [], mode = "phone
     </div>
 
     {/* Mobile floating TOC button — visible only below xl */}
-    <div className="xl:hidden fixed bottom-6 right-4 z-40">
+    <div className="lg:hidden fixed bottom-6 left-4 z-40">
       <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
         <SheetTrigger asChild>
           <button

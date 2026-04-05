@@ -18,6 +18,7 @@ export interface IReview {
   date: string;
   title: string;
   review: string;
+  sentimentTags: string[]; // e.g. ["+camera", "-battery", "+performance"]
   helpful: number;
   notHelpful: number;
   helpfulVoters: string[]; // User IDs who voted helpful
@@ -219,6 +220,7 @@ const PhoneSchema: Schema = new Schema<IPhone>(
         date: { type: String, required: true },
         title: { type: String, required: true },
         review: { type: String, required: true },
+        sentimentTags: { type: [String], default: [] },
         helpful: { type: Number, default: 0 },
         notHelpful: { type: Number, default: 0 },
         helpfulVoters: { type: [String], default: [] },

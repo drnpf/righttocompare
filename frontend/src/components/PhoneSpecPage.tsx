@@ -497,7 +497,7 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
               </div>
               
               {/* Browse Phone Catalog Section - Dashed Rectangle - Positioned to the right */}
-              <div className="hidden xl:flex absolute top-1/2 -translate-y-1/2 left-[calc(100%-40px)] flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 dark:border-[#4a7cf6]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent dark:from-[#4a7cf6]/5 w-52 group/catalog hover:border-[#2c3968]/50 dark:hover:border-[#4a7cf6]/50 transition-all duration-300 min-h-[400px] z-10 cursor-pointer" onClick={onNavigateToCatalog}>
+              <div className="hidden xl:flex absolute top-1/2 -translate-y-1/2 left-[calc(100%+16px)] flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 dark:border-[#4a7cf6]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent dark:from-[#4a7cf6]/5 w-52 group/catalog hover:border-[#2c3968]/50 dark:hover:border-[#4a7cf6]/50 transition-all duration-300 min-h-[400px] z-10 cursor-pointer" onClick={onNavigateToCatalog}>
                 {/* Decorative Corner Accents */}
                 <div className="absolute top-0 left-0 w-3 h-3 border-t-4 border-l-4 border-[#2c3968] rounded-tl-sm"></div>
                 <div className="absolute top-0 right-0 w-3 h-3 border-t-4 border-r-4 border-[#2c3968] rounded-tr-sm"></div>

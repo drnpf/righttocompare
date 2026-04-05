@@ -44,6 +44,20 @@ export const createDiscussion = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * Gets community-wide sentiment summary from all discussions and replies.
+ * @route GET /api/discussions/sentiment
+ */
+export const getCommunitySentiment = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await discussionService.getCommunitySentiment();
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("Error fetching community sentiment:", err);
+    res.status(500).json({ message: "Server error fetching sentiment" });
+  }
+};
+
+/**
  * Gets paginated discussions with filtering and search.
  * @route GET /api/discussions
  */
