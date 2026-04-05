@@ -273,7 +273,7 @@ export default function PhoneSpecPage({
   // | HOOKS
   // ------------------------------------------------------------
 
-  // -- Main Data and Authentication States --
+  // -- Phone Data and Authentication States --
   const { currentUser } = useAuth();
   const [phoneData, setPhoneData] = useState<PhoneData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -318,7 +318,6 @@ export default function PhoneSpecPage({
   // ------------------------------------------------------------
   // | DATA SYNCHRONIZATION
   // ------------------------------------------------------------
-
   /**
    * SYNC: Phone Specifications
    * Signal: phoneId change (or on component mount)
@@ -331,8 +330,8 @@ export default function PhoneSpecPage({
       // Attempting to fetch phone from backend
       try {
         setPhoneData(await getPhoneById(phoneId));
-      } catch (err) {
-        console.error("Error fetching phone:", err);
+      } catch (error) {
+        console.error("Error fetching phone:", error);
       } finally {
         setLoading(false);
       }
