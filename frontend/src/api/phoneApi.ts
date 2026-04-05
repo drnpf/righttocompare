@@ -10,9 +10,9 @@ export const DEFAULT_PHONE_LIMIT = 12; // Default phones per page
  * Fetches a phone page from MongoDB given the specified page and number of
  * phones per page. If a search query is included, a page of phones, containing
  * the searched queries, will be returned.
- * @param page
- * @param limit
- * @param search
+ * @param page The page number to retrieve (PAGE INDEX STARTS AT 1)
+ * @param limit The number of phones to retrieve per page
+ * @param search (optional) The string to search for in phones
  * @returns A list of PhoneData objects containing the phone data
  */
 export const getPhonePage = async (
