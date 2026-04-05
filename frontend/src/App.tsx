@@ -266,7 +266,7 @@ function AppContent() {
         <BackToTopButton />
 
         {/* Firebase Connection Test - Remove this after testing */}
-        <FirebaseConnectionTest />
+        {/* <FirebaseConnectionTest /> */}
       </div>
     </DarkModeProvider>
   );
