@@ -90,6 +90,15 @@ interface PhoneComparisonPageProps {
   recentlyViewedPhones?: string[];
 }
 
+// ------------------------------------------------------------
+// | CONFIGURATION CONSTANTS
+// ------------------------------------------------------------
+const SEARCH_TIMEOUT_MS = 300; // Time to wait after typing stops before sending search query to server
+const SEARCH_RESULT_LIMIT = 10; // Number of phones to show in "Add Phone" dropdown
+
+// ------------------------------------------------------------
+// | PHONE COMPARISON PAGE DEFINITION
+// ------------------------------------------------------------
 export default function PhoneComparisonPage({
   phoneIds,
   onRemovePhone,
@@ -107,6 +116,10 @@ export default function PhoneComparisonPage({
   const [searchList, setSearchList] = useState<PhoneCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const phones = phoneDataList;
+
+  // --- Search States ---
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isSearching, setIsSearching] = useState<boolean>(false);
 
   // --- UI States ---
   const [stickyHeader, setStickyHeader] = useState(false);
@@ -154,16 +167,28 @@ export default function PhoneComparisonPage({
 
   /**
    * SEARCH LIST FETCH
-   * Signal: Initial Component Mount
-   * Action: Fetches a small catalog for the search dropdown to add phones to compare
+   * Signal: Initial component mount or when search query changes
+   * Action: Fetches list of phones matching search query in dropdown phone cards
    */
   useEffect(() => {
     const loadSearchData = async () => {
-      const data = await getPhonePage(1, 20);
-      setSearchList(data.phones);
+      setIsSearching(true);
+
+      // Attempting to search for phone with query
+      try {
+        const data = await getPhonePage(1, SEARCH_RESULT_LIMIT, searchQuery);
+        setSearchList(data.phones);
+      } catch (error) {
+        console.log("Search fetch failed", error);
+      } finally {
+        setIsSearching(false);
+      }
     };
-    loadSearchData();
-  }, []);
+
+    // Add timeout to loadSearchData function to delay the search until user finish typing
+    const timeout = setTimeout(loadSearchData, SEARCH_TIMEOUT_MS);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
 
   /**
    * AVAILABLE PHONE FILTERS:
@@ -724,9 +749,19 @@ export default function PhoneComparisonPage({
                                     align="center"
                                     onOpenAutoFocus={(e) => e.preventDefault()}
                                   >
-                                    <Command>
-                                      <CommandInput placeholder="Search phones..." />
+                                    <Command shouldFilter={false}>
+                                      <CommandInput
+                                        placeholder="Search phones..."
+                                        value={searchQuery}
+                                        onValueChange={setSearchQuery}
+                                      />
                                       <CommandList>
+                                        {/* Search loading indicator */}
+                                        {isSearching && (
+                                          <div className="py-6 text-center text-sm text-[#999] animate-pulse">
+                                            Searching database...
+                                          </div>
+                                        )}
                                         <CommandEmpty>No phones found.</CommandEmpty>
                                         <CommandGroup>
                                           {availablePhones.map((phone) => (
