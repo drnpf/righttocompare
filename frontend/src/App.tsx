@@ -53,7 +53,27 @@ const saveRecentlyViewedToStorage = (phoneIds: string[]) => {
   }
 };
 
+const getComparisonFromStorage = (): string[] => {
+  try {
+    const stored = localStorage.getItem("comparisonPhoneIds");
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveComparisonToStorage = (phoneIds: string[]) => {
+  try {
+    localStorage.setItem("comparisonPhoneIds", JSON.stringify(phoneIds));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
 function AppContent() {
+  // ------------------------------------------------------------
+  // | HOOKS
+  // -----------------------------------------------------------
   const { currentUser, signOut } = useAuth();
   const [selectedPhoneId, setSelectedPhoneId] = useState<string | null>(null);
   const [pageType, setPageType] = useState<PageType>("catalog");
@@ -61,11 +81,33 @@ function AppContent() {
   const [recentlyViewedPhones, setRecentlyViewedPhones] = useState<string[]>([]);
   const [currentDiscussionId, setCurrentDiscussionId] = useState<string>("");
 
-  // Load recently viewed phones and user from localStorage on mount
+  // ------------------------------------------------------------
+  // | DATA SYNCHRONIZATION (REFRESHES)
+  // ------------------------------------------------------------
+  /**
+   * APP INITIALIZATION: Runs once on mount to handle fetching from
+   * local storage and URL-based routing like password resetting
+   * Action: Fetching recently viewed phones and comparison from local
+   * storage and checking URL for OOB code for password resetting.
+   */
   useEffect(() => {
+    /**
+     * RECENTLY VIEWED
+     */
     const stored = getRecentlyViewedFromStorage();
     setRecentlyViewedPhones(stored);
 
+    /**
+     * COMPARISONS
+     */
+    const storedCompare = getComparisonFromStorage();
+    if (storedCompare.length > 0) {
+      setComparisonPhoneIds(storedCompare);
+    }
+
+    /**
+     * PASSWORD RESET
+     */
     // Check if URL contains password reset code
     const urlParams = new URLSearchParams(window.location.search);
     const oobCode = urlParams.get("oobCode");
@@ -77,7 +119,11 @@ function AppContent() {
     }
   }, []);
 
-  // Add current page to recently viewed when it changes
+  /**
+   * RECENTLY VIEWED SYNC:
+   * Signal: Navigating to specific phone's spec page
+   * Action: Prepends ID to recently viewed list of viewed phone
+   */
   useEffect(() => {
     if (pageType === "spec" && selectedPhoneId) {
       setRecentlyViewedPhones((prev) => {
@@ -90,6 +136,20 @@ function AppContent() {
       });
     }
   }, [selectedPhoneId, pageType]);
+
+  /**
+   * COMPARISON PERSISTENCE:
+   * Signal: Any changes to the comparisonPhoneIds array (i.e. adding new phone)
+   * Action: Syncs current comparison ID list to localStorage; keeps compares
+   * persistent on refresh
+   */
+  useEffect(() => {
+    saveComparisonToStorage(comparisonPhoneIds);
+  }, [comparisonPhoneIds]);
+
+  // ------------------------------------------------------------
+  // | APP CONTROLLER LOGIC
+  // -----------------------------------------------------------
 
   const navigateToPhone = (phoneId: string) => {
     setSelectedPhoneId(phoneId);
@@ -204,6 +264,9 @@ function AppContent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // ------------------------------------------------------------
+  // | UI SECTION
+  // -----------------------------------------------------------
   return (
     <DarkModeProvider>
       <div className="min-h-screen bg-[#f7f7f7] dark:bg-[#0d1117] flex flex-col transition-colors duration-300">
