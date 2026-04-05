@@ -93,7 +93,8 @@ interface PhoneComparisonPageProps {
 // ------------------------------------------------------------
 // | CONFIGURATION CONSTANTS
 // ------------------------------------------------------------
-const SEARCH_TIMEOUT_MS = 300; // Time to wait after typing stops before sending search query to server
+const SEARCH_DELAY_LOADING_MS = 150; // The time until loading UI displays on search
+const SEARCH_DEBOUNCE_MS = 300; // Time to wait after typing stops before sending search query to server
 const SEARCH_RESULT_LIMIT = 10; // Number of phones to show in "Add Phone" dropdown
 
 // ------------------------------------------------------------
@@ -171,8 +172,12 @@ export default function PhoneComparisonPage({
    * Action: Fetches list of phones matching search query in dropdown phone cards
    */
   useEffect(() => {
+    let loadingTimer: ReturnType<typeof setTimeout>;
+    let debounceTimer: ReturnType<typeof setTimeout>;
+
+    // Loads list containing search results
     const loadSearchData = async () => {
-      setIsSearching(true);
+      loadingTimer = setTimeout(() => setIsSearching(true), SEARCH_DELAY_LOADING_MS);
 
       // Attempting to search for phone with query
       try {
@@ -181,13 +186,19 @@ export default function PhoneComparisonPage({
       } catch (error) {
         console.log("Search fetch failed", error);
       } finally {
+        clearTimeout(loadingTimer);
         setIsSearching(false);
       }
     };
 
-    // Add timeout to loadSearchData function to delay the search until user finish typing
-    const timeout = setTimeout(loadSearchData, SEARCH_TIMEOUT_MS);
-    return () => clearTimeout(timeout);
+    // Add debounce time to delay the search until user finish typing
+    debounceTimer = setTimeout(loadSearchData, SEARCH_DEBOUNCE_MS);
+
+    // Clearing timers for next
+    return () => {
+      clearTimeout(debounceTimer);
+      clearTimeout(loadingTimer);
+    };
   }, [searchQuery]);
 
   /**
@@ -755,43 +766,49 @@ export default function PhoneComparisonPage({
                                         value={searchQuery}
                                         onValueChange={setSearchQuery}
                                       />
-                                      <CommandList>
+                                      <CommandList className="min-h-[300px] transition-opacity duration-200">
                                         {/* Search loading indicator */}
                                         {isSearching && (
-                                          <div className="py-6 text-center text-sm text-[#999] animate-pulse">
-                                            Searching database...
+                                          <div className="absolute top-0 left-0 right-0 h-1 bg-[#2c3968]/10 overflow-hidden z-20">
+                                            <div className="h-full bg-[#2c3968] animate-progress-loop w-1/3"></div>
                                           </div>
                                         )}
-                                        <CommandEmpty>No phones found.</CommandEmpty>
-                                        <CommandGroup>
-                                          {availablePhones.map((phone) => (
-                                            <CommandItem
-                                              key={phone.id}
-                                              onSelect={() => {
-                                                if (onAddPhone) {
-                                                  onAddPhone(phone.id);
-                                                }
-                                                setSearchOpenIndex(null);
-                                              }}
-                                              className="cursor-pointer"
-                                            >
-                                              <div className="flex items-center gap-3 w-full">
-                                                <img
-                                                  src={phone.images.main}
-                                                  alt={phone.name}
-                                                  className="w-10 h-10 object-contain shrink-0"
-                                                />
-                                                <div className="flex-1 min-w-0">
-                                                  <p className="text-sm text-[#2c3968] truncate">
-                                                    {phone.manufacturer} {phone.name}
-                                                  </p>
-                                                  <p className="text-xs text-[#666]">{phone.price}</p>
+
+                                        {/* Search query result display and UI controls*/}
+                                        <div className={isSearching ? "opacity-50 pointer-events-none" : "opacity-100"}>
+                                          <CommandEmpty>No phones found.</CommandEmpty>
+
+                                          {/* Search result phone card display */}
+                                          <CommandGroup>
+                                            {availablePhones.map((phone) => (
+                                              <CommandItem
+                                                key={phone.id}
+                                                onSelect={() => {
+                                                  if (onAddPhone) {
+                                                    onAddPhone(phone.id);
+                                                  }
+                                                  setSearchOpenIndex(null);
+                                                }}
+                                                className="cursor-pointer"
+                                              >
+                                                <div className="flex items-center gap-3 w-full">
+                                                  <img
+                                                    src={phone.images.main}
+                                                    alt={phone.name}
+                                                    className="w-10 h-10 object-contain shrink-0"
+                                                  />
+                                                  <div className="flex-1 min-w-0">
+                                                    <p className="text-sm text-[#2c3968] truncate">
+                                                      {phone.manufacturer} {phone.name}
+                                                    </p>
+                                                    <p className="text-xs text-[#666]">{phone.price}</p>
+                                                  </div>
+                                                  <Plus className="w-4 h-4 text-[#2c3968] shrink-0" />
                                                 </div>
-                                                <Plus className="w-4 h-4 text-[#2c3968] shrink-0" />
-                                              </div>
-                                            </CommandItem>
-                                          ))}
-                                        </CommandGroup>
+                                              </CommandItem>
+                                            ))}
+                                          </CommandGroup>
+                                        </div>
                                       </CommandList>
                                     </Command>
                                   </PopoverContent>
