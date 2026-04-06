@@ -40,7 +40,7 @@ export const findPhonePage = async (
   limit: number,
   options: {
     search?: string;
-    brand?: string[];
+    manufacturer?: string[];
     minPrice?: number;
     maxPrice?: number;
     sortBy?: string;
@@ -64,8 +64,8 @@ export const findPhonePage = async (
   }
 
   // Filtering query by brand
-  if (options.brand && options.brand.length > 0) {
-    query.manufacturer = { $in: options.brand };
+  if (options.manufacturer && options.manufacturer.length > 0) {
+    query.manufacturer = { $in: options.manufacturer };
   }
 
   // Filtering query by price range
@@ -113,6 +113,14 @@ export const findPhoneById = async (id: string): Promise<IPhone | null> => {
 export const findPhoneCardById = async (id: string): Promise<IPhone | null> => {
   const phone = await Phone.findOne({ id: id }).select(PHONE_CARD_PROJECTION).lean();
   return phone;
+};
+
+/**
+ * Returns a list of all unique manufacturers.
+ * @returns A list of strings with each string representing a manufacturer.
+ */
+export const getAllManufacturers = async (): Promise<string[]> => {
+  return await Phone.distinct("manufacturer");
 };
 
 /**

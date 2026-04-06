@@ -36,15 +36,17 @@ export const getPhonePage = async (req: Request, res: Response) => {
     const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined;
 
     // Sanitization of brands if multiple brands chosen
-    let brand: string[] = [];
-    if (req.query.brand) {
-      brand = Array.isArray(req.query.brand) ? (req.query.brand as string[]) : [req.query.brand as string];
+    let manufacturer: string[] = [];
+    if (req.query.manufacturer) {
+      manufacturer = Array.isArray(req.query.manufacturer)
+        ? (req.query.manufacturer as string[])
+        : [req.query.manufacturer as string];
     }
 
     // Searching for phones with options applied (if any)
     const { phones, total } = await phoneService.findPhonePage(page, limit, {
       search,
-      brand,
+      manufacturer,
       minPrice,
       maxPrice,
       sortBy,
@@ -84,14 +86,14 @@ export const getPhoneById = async (req: Request, res: Response) => {
       return res.status(404).json({ message: `Phone with ID '${id}' not found` });
     }
     res.status(200).json(phone);
-  } catch (err) {
-    console.error(`Error fetching phone ${req.params.id}:`, err);
+  } catch (error) {
+    console.error(`Error fetching phone ${req.params.id}:`, error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
 /**
- * Fetches a specific phone card using its ID,
+ * Fetches a specific phone card using its ID.
  * @route GET /api/phones/card/:id
  * @param req The Express request object containing the 'id' param
  * @param res The Express response object
@@ -105,9 +107,26 @@ export const getPhoneCardById = async (req: Request, res: Response) => {
       return res.status(404).json({ message: `Phone Card with ID '${id}' not found` });
     }
     res.status(200).json(phoneCard);
-  } catch (err) {
-    console.error(`Error fetching phone ${req.params.id}:`, err);
+  } catch (error) {
+    console.error(`Error fetching phone ${req.params.id}:`, error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Fetches a list of all unique manufacturers.
+ * @route GET /api/phones/manufacturers
+ * @param req The Express request object
+ * @param res The Express response object containing manufacturers
+ * @returns A list of unique manufacturers
+ */
+export const getManufacturers = async (req: Request, res: Response) => {
+  try {
+    const manufacturers = await phoneService.getAllManufacturers();
+    res.status(200).json(manufacturers.sort());
+  } catch (error) {
+    console.error("Error fetching manufacturers:", error);
+    res.status(500).json({ message: "Error fetching manufacturers" });
   }
 };
 
@@ -127,11 +146,11 @@ export const createPhone = async (req: Request, res: Response) => {
 
     const newPhone = await phoneService.createNewPhone(req.body);
     res.status(201).json(newPhone);
-  } catch (err: any) {
-    console.error("Error creating phone:", err);
+  } catch (error: any) {
+    console.error("Error creating phone:", error);
 
     // Handling duplicate key error
-    if (err.code === 11000) {
+    if (error.code === 11000) {
       return res.status(409).json({ message: "A phone with this ID already exists." });
     }
     res.status(500).json({ message: "Server error creating phone" });
@@ -155,8 +174,8 @@ export const updatePhone = async (req: Request, res: Response) => {
     }
 
     res.status(200).json(updatedPhone);
-  } catch (err) {
-    console.error("Error updating phone:", err);
+  } catch (error) {
+    console.error("Error updating phone:", error);
     res.status(500).json({ message: "Server error updating phone" });
   }
 };
@@ -178,8 +197,8 @@ export const deletePhone = async (req: Request, res: Response) => {
     }
 
     res.status(200).json({ message: "Phone deleted successfully" });
-  } catch (err) {
-    console.error("Error deleting phone:", err);
+  } catch (error) {
+    console.error("Error deleting phone:", error);
     res.status(500).json({ message: "Server error deleting phone" });
   }
 };

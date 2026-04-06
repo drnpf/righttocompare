@@ -3,6 +3,7 @@ import {
   getPhonePage,
   getPhoneById,
   getPhoneCardById,
+  getManufacturers,
   createPhone,
   updatePhone,
   deletePhone,
@@ -12,10 +13,16 @@ const router = Router();
 
 // --- PUBLIC ROUTES ---
 /**
- * Get all phones
- * @route GET /api/phones
+ * Get a list of all unique manufacturers
+ * @route GET /api/phones/manufacturers
  */
-router.get("/", getPhonePage);
+router.get("/manufacturers", getManufacturers);
+
+/**
+ * Get a single phone card by ID
+ * @route GET /api/phones/card/:id
+ */
+router.get("/card/:id", getPhoneCardById);
 
 /**
  * Get a single phone by ID
@@ -24,10 +31,10 @@ router.get("/", getPhonePage);
 router.get("/:id", getPhoneById);
 
 /**
- * Get a single phone card by ID
- * @route GET /api/phones/card/:id
+ * Get all phones
+ * @route GET /api/phones
  */
-router.get("/card/:id", getPhoneCardById);
+router.get("/", getPhonePage);
 
 // --- ADMIN ROUTES --- (maybe we can add some middleware to separate admin and public routes later)
 /**

@@ -14,7 +14,7 @@ export const DEFAULT_PHONE_LIMIT = 12; // Default phones per page
  * @param limit The number of phones to retrieve per page
  * @param options (optional) An array of options that can be used apply to search
  *  - search: string query to search phone by
- *  - brand: array of brands to filter phones by
+ *  - manufacturer: array of manufacturers to filter phones by
  *  - minPrice: minimum price to filter out phones by their price
  *  - maxPrice: maximum price to filter out phones by their price
  *  - sortBy: string indicating how to sort phone listing
@@ -25,7 +25,7 @@ export const getPhonePage = async (
   limit: number = DEFAULT_PHONE_LIMIT,
   options: {
     search?: string;
-    brand?: string[];
+    manufacturer?: string[];
     minPrice?: number;
     maxPrice?: number;
     sortBy?: string;
@@ -37,7 +37,7 @@ export const getPhonePage = async (
     params.append("page", page.toString());
     params.append("limit", limit.toString());
     if (options.search) params.append("search", options.search);
-    options.brand?.forEach((b) => params.append("brand", b));
+    options.manufacturer?.forEach((m) => params.append("manufacturer", m));
     if (options.minPrice != null) params.append("minPrice", options.minPrice.toString());
     if (options.maxPrice != null) params.append("maxPrice", options.maxPrice.toString());
     if (options.sortBy) params.append("sortBy", options.sortBy);
@@ -79,7 +79,7 @@ export const getPhoneById = async (id: string): Promise<PhoneData | null> => {
 
     // Handles failed syncs with backend
     if (response.status === 404) return null;
-    if (!response.ok) throw new Error("Phone details fetch failed");
+    if (!response.ok) throw new Error(`Phone details fetch failed: ${response.status}`);
 
     // Mapping the single phone object
     const rawPhone = await response.json();
@@ -102,7 +102,7 @@ export const getPhoneCardById = async (id: string): Promise<PhoneCard | null> =>
 
     // Handles failed syncs with backend
     if (response.status === 404) return null;
-    if (!response.ok) throw new Error("Phone details fetch failed");
+    if (!response.ok) throw new Error(`Phone card details fetch failed: ${response.status}`);
 
     // Mapping the single phone object
     const rawPhone = await response.json();
@@ -111,4 +111,14 @@ export const getPhoneCardById = async (id: string): Promise<PhoneCard | null> =>
     console.error(`Error in getPhoneById (${id}):`, error);
     return null;
   }
+};
+
+/**
+ * Fetches all unique manufacturers into a list from the backend.
+ * @returns A string list containing all unique manufacturers in the database.
+ */
+export const getManufacturers = async (): Promise<string[]> => {
+  const response = await fetch(`${API_URL}/manufacturers`);
+  if (!response.ok) throw new Error(`Manufacturer failed to fetch: ${response.status}`);
+  return await response.json();
 };
