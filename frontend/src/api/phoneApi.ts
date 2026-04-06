@@ -12,17 +12,38 @@ export const DEFAULT_PHONE_LIMIT = 12; // Default phones per page
  * the searched queries, will be returned.
  * @param page The page number to retrieve (PAGE INDEX STARTS AT 1)
  * @param limit The number of phones to retrieve per page
- * @param search (optional) The string to search for in phones
+ * @param options (optional) An array of options that can be used apply to search
+ *  - search: string query to search phone by
+ *  - brand: array of brands to filter phones by
+ *  - minPrice: minimum price to filter out phones by their price
+ *  - maxPrice: maximum price to filter out phones by their price
+ *  - sortBy: string indicating how to sort phone listing
  * @returns A list of PhoneData objects containing the phone data
  */
 export const getPhonePage = async (
   page: number = 1,
   limit: number = DEFAULT_PHONE_LIMIT,
-  search: string = "",
+  options: {
+    search?: string;
+    brand?: string[];
+    minPrice?: number;
+    maxPrice?: number;
+    sortBy?: string;
+  },
 ): Promise<PaginatedPhoneResponse> => {
   try {
-    // Fetching phones from a certain page and with search keyword (if any)
-    const url = `${API_URL}?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`;
+    // Creating backend API URL with parameters for phone API
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("limit", limit.toString());
+    if (options.search) params.append("search", options.search);
+    options.brand?.forEach((b) => params.append("brand", b));
+    if (options.minPrice != null) params.append("minPrice", options.minPrice.toString());
+    if (options.maxPrice != null) params.append("maxPrice", options.maxPrice.toString());
+    if (options.sortBy) params.append("sortBy", options.sortBy);
+
+    // Fetching phones from a page with options applied such as search query, filters, and sorts
+    const url = `${API_URL}?${params.toString()}`;
     const response = await fetch(url);
 
     // Handles failed sync with backend
