@@ -1,7 +1,7 @@
 import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PhoneCard } from "../types/phoneTypes";
-import { getPhoneCardById, getPhonePage } from "../api/phoneApi";
+import { getPhoneCardById, getPhonePage, getManufacturers } from "../api/phoneApi";
 import ComparisonCart from "./ComparisonCart";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
 import { toast } from "sonner@2.0.3";
@@ -64,10 +64,14 @@ export default function PhoneCatalogPage({
    *
    */
   useEffect(() => {
-    const loadBrands = async () => {
-      // For loading brand on mount
+    const loadManufacturers = async () => {
+      try {
+        setAvailableManufacturers(await getManufacturers());
+      } catch (error) {
+        console.error("Failed to load manufacturers");
+      }
     };
-    loadBrands();
+    loadManufacturers();
   }, []);
 
   /**
@@ -97,17 +101,10 @@ export default function PhoneCatalogPage({
         // Building options object to query DB for phones
         const options = {
           search: searchQuery,
-          brand: manufacturerFilter === "all" ? [] : [manufacturerFilter],
+          manufacturer: manufacturerFilter === "all" ? [] : [manufacturerFilter],
           sortBy: sortBy === "release" ? "newest" : sortBy === "price" ? "price_desc" : "name_asc",
         };
         const { phones, pagination } = await getPhonePage(currentPage, itemsPerPage, options);
-
-        // Getting all manufacturers/brands on
-        if (currentPage === 1 && searchQuery === "" && manufacturerFilter === "all") {
-          const brands = Array.from(new Set(phones.map((p: PhoneCard) => p.manufacturer)));
-          setAvailableManufacturers(brands);
-          console.log(brands);
-        }
 
         // Mounting phone card catalog page for use
         setAllPhones(phones);
