@@ -1,4 +1,15 @@
-import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search,
+  Grid3x3,
+  List,
+  ChevronDown,
+  Plus,
+  Check,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  ReceiptPoundSterling,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { PhoneCard } from "../types/phoneTypes";
 import { getPhoneCardById, getPhonePage, getManufacturers } from "../api/phoneApi";
@@ -97,6 +108,15 @@ export default function PhoneCatalogPage({
     let debounceTimer: ReturnType<typeof setTimeout>;
 
     const fetchPhones = async () => {
+      // --- HOT PAGE AND POPULAR PAGE SHORT CIRCUIT ---
+      if (activeTab !== "catalog") {
+        // Showing no phones on those pages for now until we figure out how we display things there
+        setAllPhones([]);
+        setTotalItems(0);
+        setLoading(false);
+        return;
+      }
+
       try {
         // Setting loading state only after certain duration has passed on backend fetching
         loadingTimer = setTimeout(() => setLoading(true), SEARCH_DELAY_LOADING_MS); // reduces UI flicker
@@ -108,6 +128,12 @@ export default function PhoneCatalogPage({
           sortBy: sortBy === "release" ? "newest" : sortBy === "price" ? "price_desc" : "name_asc",
         };
         const { phones, pagination } = await getPhonePage(currentPage, itemsPerPage, options);
+
+        // Hot page options handling
+        if (activeTab === "hot") {
+          options.sortBy = "newest";
+          // Handle hot
+        }
 
         // Mounting phone card catalog page for use
         setAllPhones(phones);
