@@ -29,24 +29,26 @@ export const getPhonePage = async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || PAGE_DEFAULT;
     const limit = Math.min(parseInt(req.query.limit as string) || DEFAULT_LIMIT, MAX_LIMIT);
     const search = (req.query.search as string) || "";
-    const { phones, total } = await phoneService.findPhonePage(page, limit, search);
+    const sortBy = (req.query.sortBy as string) || "newest";
 
-    // If no phones are found
-    if (phones.length === 0 && total === 0) {
-      return res.status(204).json({
-        // 204 = No content found but successful request
-        success: true,
-        message: "No phones found",
-        data: [],
-        pagination: {
-          totalPages: 0,
-          currentPage: page,
-          itemsPerPage: limit,
-          hasNextPage: false,
-          hasPrevPage: false,
-        },
-      });
+    // Sanitization of max and min price
+    const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined;
+    const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined;
+
+    // Sanitization of brands if multiple brands chosen
+    let brand: string[] = [];
+    if (req.query.brand) {
+      brand = Array.isArray(req.query.brand) ? (req.query.brand as string[]) : [req.query.brand as string];
     }
+
+    // Searching for phones with options applied (if any)
+    const { phones, total } = await phoneService.findPhonePage(page, limit, {
+      search,
+      brand,
+      minPrice,
+      maxPrice,
+      sortBy,
+    });
 
     // Returning a list of phones with pagination metadata
     res.status(200).json({
@@ -63,7 +65,7 @@ export const getPhonePage = async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error("Error fetching phones:", err);
-    res.status(500).json({ message: "Server error fetching phones" });
+    res.status(500).json({ success: false, message: "Server error fetching phones" });
   }
 };
 
