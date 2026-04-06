@@ -177,11 +177,12 @@ export default function PhoneComparisonPage({
 
     // Loads list containing search results
     const loadSearchData = async () => {
-      loadingTimer = setTimeout(() => setIsSearching(true), SEARCH_DELAY_LOADING_MS);
+      // Setting loading state only after certain duration has passed on backend fetching
+      loadingTimer = setTimeout(() => setIsSearching(true), SEARCH_DELAY_LOADING_MS); // reduces UI flicker
 
       // Attempting to search for phone with query
       try {
-        const data = await getPhonePage(1, SEARCH_RESULT_LIMIT, searchQuery);
+        const data = await getPhonePage(1, SEARCH_RESULT_LIMIT, { search: searchQuery });
         setSearchList(data.phones);
       } catch (error) {
         console.log("Search fetch failed", error);

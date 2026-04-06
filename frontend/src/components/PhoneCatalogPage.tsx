@@ -15,6 +15,15 @@ interface PhoneCatalogPageProps {
   recentlyViewedPhones?: string[];
 }
 
+// ------------------------------------------------------------
+// | CONFIGURATION CONSTANTS
+// ------------------------------------------------------------
+const SEARCH_DELAY_LOADING_MS = 150; // The time until loading UI displays on search
+const SEARCH_DEBOUNCE_MS = 300; // Time to wait after typing stops before sending search query to server
+
+// ------------------------------------------------------------
+// | PHONE CATALOG PAGE DEFINITION
+// ------------------------------------------------------------
 export default function PhoneCatalogPage({
   onNavigate,
   comparisonPhoneIds = [],
@@ -43,6 +52,7 @@ export default function PhoneCatalogPage({
   const [sortBy, setSortBy] = useState<"name" | "price" | "release">("name");
   const [manufacturerFilter, setManufacturerFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<"catalog" | "hot" | "popular">("catalog");
+  const [availableManufacturers, setAvailableManufacturers] = useState<string[]>([]);
   const [isCartMinimized, setIsCartMinimized] = useState(false);
   const [comparisonData, setComparisonData] = useState<PhoneCard[]>([]);
 
@@ -51,17 +61,53 @@ export default function PhoneCatalogPage({
   // ------------------------------------------------------------
 
   /**
-   * PHONE CATALOG PAGE SYNCHRONIZATION:
+   *
+   */
+  useEffect(() => {
+    const loadBrands = async () => {
+      // For loading brand on mount
+    };
+    loadBrands();
+  }, []);
+
+  /**
+   * ON FILTER CHANGE CATALOG PAGE SYNC:
+   * Signal: On search query, filter, sort, or active tab changes
+   * Action: Resets current page to 1
+   */
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, manufacturerFilter, sortBy, activeTab]);
+
+  /**
+   * PHONE CATALOG PAGE SYNC:
    * Signal: Catalog page mount or when currentPage value changes
    * Action: Fetches the phone catalog of the current page and
    * pagination metadata for pagination system on home page
    */
   useEffect(() => {
+    let loadingTimer: ReturnType<typeof setTimeout>;
+    let debounceTimer: ReturnType<typeof setTimeout>;
+
     const fetchPhones = async () => {
       try {
-        // Fetching phones from DB
-        setLoading(true);
-        const { phones, pagination } = await getPhonePage(currentPage, itemsPerPage);
+        // Setting loading state only after certain duration has passed on backend fetching
+        loadingTimer = setTimeout(() => setLoading(true), SEARCH_DELAY_LOADING_MS); // reduces UI flicker
+
+        // Building options object to query DB for phones
+        const options = {
+          search: searchQuery,
+          brand: manufacturerFilter === "all" ? [] : [manufacturerFilter],
+          sortBy: sortBy === "release" ? "newest" : sortBy === "price" ? "price_desc" : "name_asc",
+        };
+        const { phones, pagination } = await getPhonePage(currentPage, itemsPerPage, options);
+
+        // Getting all manufacturers/brands on
+        if (currentPage === 1 && searchQuery === "" && manufacturerFilter === "all") {
+          const brands = Array.from(new Set(phones.map((p: PhoneCard) => p.manufacturer)));
+          setAvailableManufacturers(brands);
+          console.log(brands);
+        }
 
         // Mounting phone card catalog page for use
         setAllPhones(phones);
@@ -77,11 +123,20 @@ export default function PhoneCatalogPage({
       } catch (error) {
         setError("Failed to fetch phones");
       } finally {
+        clearTimeout(loadingTimer);
         setLoading(false);
       }
     };
-    fetchPhones();
-  }, [currentPage]);
+
+    // Add debounce time to delay the search until user finish typing
+    debounceTimer = setTimeout(fetchPhones, SEARCH_DEBOUNCE_MS);
+
+    // Clearing timers for next
+    return () => {
+      clearTimeout(debounceTimer);
+      clearTimeout(loadingTimer);
+    };
+  }, [currentPage, searchQuery, manufacturerFilter, sortBy, activeTab]);
 
   /**
    * SYNC: Comparison Cart Refreshes
@@ -119,7 +174,6 @@ export default function PhoneCatalogPage({
   // ------------------------------------------------------------
   // | HOME PAGE LOGIC
   // ------------------------------------------------------------
-  const manufacturers = Array.from(new Set(allPhones.map((phone) => phone.manufacturer)));
 
   // Helper function to check if a phone was released within the past year
   const parsePhoneDate = (dateStr: string) => new Date(dateStr);
@@ -148,30 +202,6 @@ export default function PhoneCatalogPage({
         return allPhones;
     }
   };
-
-  // Filter and sort phones
-  const filteredPhones = getPhonesForTab()
-    .filter((phone) => {
-      const matchesSearch =
-        phone.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        phone.manufacturer.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesManufacturer = manufacturerFilter === "all" || phone.manufacturer === manufacturerFilter;
-      return matchesSearch && matchesManufacturer;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "name":
-          return a.name.localeCompare(b.name);
-        case "price":
-          const priceA = parseInt(a.price.replace(/[^0-9]/g, ""));
-          const priceB = parseInt(b.price.replace(/[^0-9]/g, ""));
-          return priceB - priceA;
-        case "release":
-          return b.releaseDate.localeCompare(a.releaseDate);
-        default:
-          return 0;
-      }
-    });
 
   const handleAddToComparison = (phoneId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -318,7 +348,7 @@ export default function PhoneCatalogPage({
                   className="appearance-none pl-4 pr-10 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all cursor-pointer"
                 >
                   <option value="all">All Brands</option>
-                  {manufacturers.map((manufacturer) => (
+                  {availableManufacturers.map((manufacturer) => (
                     <option key={manufacturer} value={manufacturer}>
                       {manufacturer}
                     </option>
@@ -405,16 +435,16 @@ export default function PhoneCatalogPage({
         {/* Results Count */}
         <div className="mb-4">
           <p className="text-[#666] dark:text-[#a0a8b8]">
-            Showing {filteredPhones.length} {filteredPhones.length === 1 ? "phone" : "phones"}
+            Showing {allPhones.length} {allPhones.length === 1 ? "phone" : "phones"}
           </p>
         </div>
 
         {/* Phone Grid/List */}
-        {filteredPhones.length > 0 ? (
+        {allPhones.length > 0 ? (
           viewMode === "grid" ? (
             // GRID VIEW
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredPhones.map((phone, index) => (
+              {allPhones.map((phone, index) => (
                 <button
                   key={phone.id}
                   onClick={() => onNavigate(phone.id)}
@@ -479,7 +509,7 @@ export default function PhoneCatalogPage({
           ) : (
             // LIST VIEW
             <div className="space-y-4">
-              {filteredPhones.map((phone, index) => (
+              {allPhones.map((phone, index) => (
                 <button
                   key={phone.id}
                   onClick={() => onNavigate(phone.id)}
