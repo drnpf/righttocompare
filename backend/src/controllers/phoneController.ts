@@ -58,6 +58,7 @@ export const getPhonePage = async (req: Request, res: Response) => {
       message: "Phones retrieved successfully",
       data: phones,
       pagination: {
+        totalItems: total,
         totalPages: Math.ceil(total / limit), // Calculates total # of pages
         currentPage: page,
         itemsPerPage: limit,

@@ -40,8 +40,9 @@ export default function PhoneCatalogPage({
   const [error, setError] = useState<string | null>(null);
 
   // --- Pagination States ---
-  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPrevPage, setHasPrevPage] = useState(false);
   const itemsPerPage = 24;
@@ -61,7 +62,9 @@ export default function PhoneCatalogPage({
   // ------------------------------------------------------------
 
   /**
-   *
+   * INITIAL COMPONENT MOUNT/REFRESH:
+   * Signal: On catalog page component mount or refresh
+   * Action: Fetches for all unique manufacturers in the database
    */
   useEffect(() => {
     const loadManufacturers = async () => {
@@ -110,6 +113,7 @@ export default function PhoneCatalogPage({
         setAllPhones(phones);
 
         // Setting all pagination metadata values
+        setTotalItems(pagination.totalItems);
         setTotalPages(pagination.totalPages);
         setHasNextPage(pagination.hasNextPage);
         setHasPrevPage(pagination.hasPrevPage);
@@ -282,9 +286,7 @@ export default function PhoneCatalogPage({
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-[#2c3968] dark:text-[#4a7cf6] mb-2">Phone Catalog</h1>
-          <p className="text-[#666] dark:text-[#a0a8b8] mb-6">
-            Browse our collection of {allPhones.length} smartphones
-          </p>
+          <p className="text-[#666] dark:text-[#a0a8b8] mb-6">Browse our collection of {totalItems} smartphones</p>
 
           {/* Tab Buttons */}
           <div className="flex gap-3 flex-wrap">

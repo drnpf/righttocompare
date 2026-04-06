@@ -1,3 +1,4 @@
+import { TouchEventHandler } from "react";
 import { ReviewData } from "../components/ReviewCard";
 
 export interface QuickSpec {
@@ -47,6 +48,7 @@ export interface PhoneData extends PhoneCard {
  * is there a next page, and is there a previous page.
  */
 export interface PaginationMetaData {
+  totalItems: number;
   totalPages: number;
   currentPage: number;
   itemsPerPage: number;
