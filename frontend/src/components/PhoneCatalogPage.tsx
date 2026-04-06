@@ -1,15 +1,4 @@
-import {
-  Search,
-  Grid3x3,
-  List,
-  ChevronDown,
-  Plus,
-  Check,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-  ReceiptPoundSterling,
-} from "lucide-react";
+import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PhoneCard } from "../types/phoneTypes";
 import { getPhoneCardById, getPhonePage, getManufacturers } from "../api/phoneApi";
@@ -128,12 +117,6 @@ export default function PhoneCatalogPage({
           sortBy: sortBy === "release" ? "newest" : sortBy === "price" ? "price_desc" : "name_asc",
         };
         const { phones, pagination } = await getPhonePage(currentPage, itemsPerPage, options);
-
-        // Hot page options handling
-        if (activeTab === "hot") {
-          options.sortBy = "newest";
-          // Handle hot
-        }
 
         // Mounting phone card catalog page for use
         setAllPhones(phones);
