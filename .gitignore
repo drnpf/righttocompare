@@ -2,7 +2,8 @@
 *.sh
 
 # Dependencies
-.venv
+.venv/
+venv/
 node_modules/
 /.pnp
 .pnp.js
@@ -11,9 +12,11 @@ node_modules/
 /coverage
 
 # Production builds
-/build
-/dist
-*.local
+build/
+dist/
+out/
+bin/
+obj/
 
 # Environment variables
 .env
