@@ -1,28 +1,49 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { toast } from "sonner@2.0.3";
+
+// UI Components
+import { Card, CardContent, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
 import { Checkbox } from "./ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import {
-  Star,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
+import { Toaster } from "./ui/sonner";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "./ui/pagination";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+
+// Icons & Charts
+import {
   Smartphone,
   Camera,
   Cpu,
   Battery,
-  Ruler,
-  Weight,
-  Droplet,
   ChevronDown,
-  ThumbsUp,
-  ThumbsDown,
   X,
   Monitor,
   Wifi,
   Mic,
-  HardDrive,
-  Zap,
   Radio,
   BarChart3,
   Palette,
@@ -38,6 +59,7 @@ import {
   Search,
   BookOpen,
   Lightbulb,
+  Loader2,
 } from "lucide-react";
 import {
   LineChart,
@@ -48,43 +70,20 @@ import {
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
 } from "recharts";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
-import { Label } from "./ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
-import { toast } from "sonner@2.0.3";
-import { Toaster } from "./ui/sonner";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "./ui/pagination";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+
+// Custom Component & APIs
 import { PartialStar } from "./PartialStar";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
 import SpecTableOfContents from "./SpecTableOfContents";
 import ComparisonCart from "./ComparisonCart";
-import { PhoneData, phonesData } from "../data/phoneData";
 import { specTooltips, specGlossary } from "../data/specGlossary";
-import { useParams, useNavigate } from "react-router-dom";
 import { ReviewForm } from "./ReviewForm";
 import { ReviewCard, ReviewData } from "./ReviewCard";
 import { CategoryRatings } from "./MultiRatingInput";
 import { getPhoneReviews, submitReview, voteOnReview, deleteReview, ReviewsResponse } from "../api/reviewApi";
+import { PhoneData } from "../types/phoneTypes";
+import { getPhoneById } from "../api/phoneApi";
+import { phonesData } from "../data/phoneData";
 
 // Category icons mapping - minimalistic uniform color scheme
 const categoryConfig: Record<string, { icon: any }> = {
@@ -99,108 +98,46 @@ const categoryConfig: Record<string, { icon: any }> = {
   sensors: { icon: Radio },
 };
 
+// Phone Spec Page interface
 interface PhoneSpecPageProps {
-  onNavigateToComparison?: (phoneIds: string[]) => void;
-  comparisonPhoneIds?: string[];
-  onComparisonChange?: (phoneIds: string[]) => void;
-  recentlyViewedPhones?: string[];
-  onAddToRecentlyViewed?: (phoneId: string) => void;
-  onNavigateToCatalog?: () => void;
+  comparisonPhoneIds: string[];
+  onComparisonChange: (phoneIds: string[]) => void;
+  recentlyViewedPhones: string[];
+  onAddToRecentlyViewed: (phoneId: string) => void;
+  onNavigateToComparison: (phoneIds: string[]) => void;
 }
 
 export default function PhoneSpecPage({
-  onNavigateToComparison,
-  comparisonPhoneIds: externalComparisonIds,
+  comparisonPhoneIds,
   onComparisonChange,
   recentlyViewedPhones,
   onAddToRecentlyViewed,
-  onNavigateToCatalog,
+  onNavigateToComparison,
 }: PhoneSpecPageProps) {
-  // Routing
+  // Routing & User Authentication
   const { phoneId } = useParams<{ phoneId: string }>();
   const navigate = useNavigate();
-
-  // Find the phone data based on the ID from the URL
-  const phoneData: PhoneData | undefined = phoneId ? phonesData[phoneId] : undefined;
-
-  if (!phoneData) {
-    return <div>Phone not found</div>;
-  }
-
-  const categories = Object.keys(phoneData.categories);
   const { currentUser } = useAuth();
+  const reviewsSectionRef = useRef<HTMLDivElement>(null);
+  const hasAddedToHistory = useRef<string | null>(null); // Tracking if a phone has already been added to recently viewed
 
-  // Review state - API connected
-  const [reviews, setReviews] = useState<ReviewData[]>([]);
-  const [totalReviews, setTotalReviews] = useState(0);
-  const [aggregateRating, setAggregateRating] = useState(0);
-  const [isLoadingReviews, setIsLoadingReviews] = useState(true);
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [isVoting, setIsVoting] = useState(false);
-  const [showReviewForm, setShowReviewForm] = useState(false);
-
-  // Fetch reviews from API
-  const fetchReviews = useCallback(
-    async (page: number = 1) => {
-      setIsLoadingReviews(true);
-      try {
-        const response = await getPhoneReviews(phoneData.id, page, 3);
-        if (response) {
-          setReviews(response.reviews);
-          setTotalReviews(response.totalReviews);
-          setAggregateRating(response.aggregateRating);
-        } else {
-          // Fallback to mock data if API fails
-          setReviews(phoneData.reviews as unknown as ReviewData[]);
-          setTotalReviews(phoneData.reviews.length);
-          setAggregateRating(0);
-        }
-      } catch (error) {
-        console.error("Failed to fetch reviews:", error);
-        // Fallback to mock data
-        setReviews(phoneData.reviews as unknown as ReviewData[]);
-        setTotalReviews(phoneData.reviews.length);
-        setAggregateRating(0);
-      } finally {
-        setIsLoadingReviews(false);
-      }
-    },
-    [phoneData.id, phoneData.reviews],
-  );
-
-  // Fetch reviews on mount and when phone changes
-  useEffect(() => {
-    fetchReviews(1);
-    setCurrentPage(1);
-  }, [phoneData.id, fetchReviews]);
-
-  const overallRating = aggregateRating;
-  const ratingsCount = totalReviews;
-
-  // Initialize with all specs selected
-  const initialSelectedSpecs: Record<string, string[]> = {};
-  categories.forEach((category) => {
-    initialSelectedSpecs[category] = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
-  });
-
-  const [selectedSpecs, setSelectedSpecs] = useState<Record<string, string[]>>(initialSelectedSpecs);
+  // -- Phone Specification States --
+  const [phoneData, setPhoneData] = useState<PhoneData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedSpecs, setSelectedSpecs] = useState<Record<string, string[]>>({});
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+
+  // -- UI Toggle States --
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   const [isKeySpecsOpen, setIsKeySpecsOpen] = useState(true);
   const [isFullSpecsOpen, setIsFullSpecsOpen] = useState(true);
-  const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
-  const [glossarySearch, setGlossarySearch] = useState("");
-  const [glossaryCategory, setGlossaryCategory] = useState<string>("all");
   const [isCarrierCompatOpen, setIsCarrierCompatOpen] = useState(true);
   const [isReviewsOpen, setIsReviewsOpen] = useState(true);
   const [isPriceTrackingOpen, setIsPriceTrackingOpen] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const reviewsSectionRef = useRef<HTMLDivElement>(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isPriceAlertOpen, setIsPriceAlertOpen] = useState(false);
   const [priceAlertEmail, setPriceAlertEmail] = useState("");
   const [targetPrice, setTargetPrice] = useState("");
-  // Use external comparison state if provided, otherwise use local state
   const [localComparisonPhones, setLocalComparisonPhones] = useState<
     Array<{
       id: string;
@@ -211,105 +148,184 @@ export default function PhoneSpecPage({
     }>
   >([]);
 
-  // Derive comparison phones from external IDs if provided
-  const comparisonPhones = externalComparisonIds
-    ? (externalComparisonIds
-        .map((id) => {
-          const phoneData = (phonesData as any)[id];
-          return phoneData
-            ? {
-                id: phoneData.id,
-                name: phoneData.name,
-                manufacturer: phoneData.manufacturer,
-                image: phoneData.images.main,
-                price: phoneData.price,
-              }
-            : null;
-        })
-        .filter(Boolean) as Array<{
-        id: string;
-        name: string;
-        manufacturer: string;
-        image: string;
-        price: string;
-      }>)
-    : localComparisonPhones;
+  // -- Spec Tooltip Glossary States --
+  const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
+  const [glossarySearch, setGlossarySearch] = useState("");
+  const [glossaryCategory, setGlossaryCategory] = useState<string>("all");
 
-  const setComparisonPhones = (
-    phones: Array<{
-      id: string;
-      name: string;
-      manufacturer: string;
-      image: string;
-      price: string;
-    }>,
-  ) => {
-    if (onComparisonChange) {
-      // Update external state with IDs only
-      onComparisonChange(phones.map((p) => p.id));
-    } else {
-      // Update local state
-      setLocalComparisonPhones(phones);
-    }
-  };
+  // -- Review States --
+  const [reviews, setReviews] = useState<ReviewData[]>([]);
+  const [totalReviews, setTotalReviews] = useState(0);
+  const [aggregateRating, setAggregateRating] = useState(0);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(true);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isVoting, setIsVoting] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
+  // -- Comparison Cart States --
   const [showComparisonCart, setShowComparisonCart] = useState(false);
   const [isCartMinimized, setIsCartMinimized] = useState(false);
 
-  // Generate price history data (mock data for demonstration)
-  const generatePriceHistory = () => {
-    const currentPrice = parseFloat(phoneData.price.replace("$", "").replace(",", ""));
-    const history = [];
-    const monthsBack = 6;
+  // -- Derived States --
+  const categories = useMemo(() => {
+    return phoneData ? Object.keys(phoneData.categories) : [];
+  }, [phoneData]);
 
-    for (let i = monthsBack; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const monthName = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  // ------------------------------------------------------------
+  // | DATA SYNCHRONIZATION
+  // ------------------------------------------------------------
 
-      // Generate price variation (random fluctuation around current price)
-      let price;
-      if (i === 0) {
-        price = currentPrice; // Current month uses actual price
+  /**
+   * SYNC: Phone Reviews
+   * Signal: phoneData change (after data is fetched)
+   * Action: Fills the full specification list with labels from phoneData
+   */
+  const fetchReviews = useCallback(async (targetPhoneId: string, page: number = 1) => {
+    setIsLoadingReviews(true);
+    try {
+      const response = await getPhoneReviews(targetPhoneId, page, 3);
+      if (response) {
+        setReviews(response.reviews);
+        setTotalReviews(response.totalReviews);
+        setAggregateRating(response.aggregateRating);
       } else {
-        // Earlier prices tend to be higher, with some random variation
-        const variation = (Math.random() - 0.3) * (currentPrice * 0.15);
-        const baseIncrease = (i / monthsBack) * (currentPrice * 0.1);
-        price = Math.round(currentPrice + baseIncrease + variation);
+        setReviews([]);
+        setTotalReviews(0);
+        setAggregateRating(0);
       }
-
-      history.push({
-        month: monthName,
-        price: price,
-      });
+    } catch (error) {
+      console.error("Failed to fetch reviews:", error);
+      setReviews([]);
+      setTotalReviews(0);
+      setAggregateRating(0);
+    } finally {
+      setIsLoadingReviews(false);
     }
+  }, []);
 
-    return history;
+  /**
+   * SYNC: Phone Specifications
+   * Signal: phoneId change
+   * Action: Fetches full phone specification data from the backend.
+   */
+  useEffect(() => {
+    const initPage = async () => {
+      if (!phoneId) return; // Short circuit to no phone found
+
+      setLoading(true);
+      try {
+        // Attempting to fetch phone from backend
+        const data = await getPhoneById(phoneId);
+        if (!data) throw new Error("Phone not found");
+        setPhoneData(data);
+
+        // Initializing labels for each category of phone spec
+        const specLabels: Record<string, string[]> = {};
+        Object.keys(data.categories).forEach((categoryName) => {
+          const categoryData = data.categories[categoryName as keyof typeof data.categories];
+          specLabels[categoryName] = Object.keys(categoryData);
+        });
+        setSelectedSpecs(specLabels);
+
+        // Adding fetched phone to recently viewed if it has not already been added
+        if (onAddToRecentlyViewed && hasAddedToHistory.current !== phoneId) {
+          onAddToRecentlyViewed(phoneId);
+          hasAddedToHistory.current = phoneId; // Tracks if phone as already been added
+        }
+
+        // Fetching initial reviews
+        await fetchReviews(phoneId, 1);
+        setCurrentPage(1);
+      } catch (error) {
+        console.error("Error fetching phone:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    initPage();
+
+    // Resets history on component unmount
+    return () => {
+      if (hasAddedToHistory.current !== phoneId) {
+        hasAddedToHistory.current = null;
+      }
+    };
+  }, [phoneId, fetchReviews, onAddToRecentlyViewed]);
+
+  // -- SPECIFICATION LIST DATA --
+  // ------------------------------------------------------------
+  // | RENDER GUARD PAGES
+  // ------------------------------------------------------------
+
+  // Loading cases
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="animate-spin text-[#2c3968] dark:text-[#4a7cf6]" size={48} />
+        <p className="text-[#666] dark:text-[#a0a8b8]">Fetching phone details...</p>
+      </div>
+    );
+  }
+
+  // Failed phone fetch phases
+  if (!phoneData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-2xl mb-6">
+          <X size={48} className="text-red-600 dark:text-red-500 mx-auto" />
+        </div>
+        <h2 className="text-[#2c3968] dark:text-white text-2xl font-bold mb-2">Phone Not Found</h2>
+        <p className="text-[#666] dark:text-[#a0a8b8] mb-8 max-w-md">
+          We couldn't retrieve the specifications for this device.
+        </p>
+        <Button
+          onClick={() => navigate("/")}
+          className="bg-[#2c3968] hover:bg-[#3d4b7a] text-white px-8 py-2 rounded-full"
+        >
+          Return to Catalog
+        </Button>
+      </div>
+    );
+  }
+
+  // ------------------------------------------------------------
+  // | COMPONENT LOGIC
+  // ------------------------------------------------------------
+
+  // -- RATINGS --
+  // Calculate overall rating from reviews
+  const calculateOverallRating = () => {
+    if (reviews.length === 0) return 0;
+
+    const totalRating = reviews.reduce((sum, review) => {
+      const reviewAvg = review.categoryRatings
+        ? (review.categoryRatings.camera +
+            review.categoryRatings.battery +
+            review.categoryRatings.design +
+            review.categoryRatings.performance +
+            review.categoryRatings.value) /
+          5
+        : review.rating;
+      return sum + reviewAvg;
+    }, 0);
+    return Number((totalRating / reviews.length).toFixed(1));
   };
 
-  const priceHistory = generatePriceHistory();
-  const currentPrice = parseFloat(phoneData.price.replace("$", "").replace(",", ""));
-  const oldestPrice = priceHistory[0].price;
-  const priceChange = currentPrice - oldestPrice;
-  const priceChangePercent = ((priceChange / oldestPrice) * 100).toFixed(1);
+  const overallRating = calculateOverallRating();
+  const ratingsCount = totalReviews;
 
-  // Reset filters when phone changes
-  useEffect(() => {
-    const newSelectedSpecs: Record<string, string[]> = {};
-    categories.forEach((category) => {
-      newSelectedSpecs[category] = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
-    });
-    setSelectedSpecs(newSelectedSpecs);
-  }, [phoneData.id]);
-
+  // -- REVIEWS --
   // Calculate pagination values
   const reviewsPerPage = 3;
   const totalPages = Math.ceil(totalReviews / reviewsPerPage);
 
   // Handle page change
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    fetchReviews(page);
+    if (phoneId) {
+      setCurrentPage(page);
+      fetchReviews(phoneId, page);
+    }
   };
 
   const handleLeaveReviewClick = () => {
@@ -321,56 +337,6 @@ export default function PhoneSpecPage({
     setTimeout(() => {
       reviewsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
-  };
-
-  const toggleSpec = (category: string, specName: string) => {
-    setSelectedSpecs((prev) => {
-      const categorySpecs = prev[category] || [];
-      const newCategorySpecs = categorySpecs.includes(specName)
-        ? categorySpecs.filter((s) => s !== specName)
-        : [...categorySpecs, specName];
-      return { ...prev, [category]: newCategorySpecs };
-    });
-  };
-
-  const toggleCategoryOpen = (category: string) => {
-    setOpenCategories((prev) => ({ ...prev, [category]: !prev[category] }));
-  };
-
-  const selectAllSpecs = () => {
-    const allSpecs: Record<string, string[]> = {};
-    categories.forEach((category) => {
-      allSpecs[category] = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
-    });
-    setSelectedSpecs(allSpecs);
-  };
-
-  const clearAllSpecs = () => {
-    const emptySpecs: Record<string, string[]> = {};
-    categories.forEach((category) => {
-      emptySpecs[category] = [];
-    });
-    setSelectedSpecs(emptySpecs);
-  };
-
-  const isCategoryFullySelected = (category: string) => {
-    const allSpecs = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
-    const selected = selectedSpecs[category] || [];
-    return allSpecs.length === selected.length && allSpecs.length > 0;
-  };
-
-  const isCategoryPartiallySelected = (category: string) => {
-    const selected = selectedSpecs[category] || [];
-    return selected.length > 0 && !isCategoryFullySelected(category);
-  };
-
-  const toggleAllCategorySpecs = (category: string) => {
-    const allSpecs = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
-    const isFullySelected = isCategoryFullySelected(category);
-    setSelectedSpecs((prev) => ({
-      ...prev,
-      [category]: isFullySelected ? [] : allSpecs,
-    }));
   };
 
   // Handle voting on reviews via API
@@ -442,6 +408,138 @@ export default function PhoneSpecPage({
     setShowReviewForm(false);
   };
 
+  // -- COMPARISON --
+  // Derive comparison phones from external IDs if provided
+  const comparisonPhones = comparisonPhoneIds
+    ? (comparisonPhoneIds
+        .map((id) => {
+          const phoneData = (phonesData as any)[id];
+          return phoneData
+            ? {
+                id: phoneData.id,
+                name: phoneData.name,
+                manufacturer: phoneData.manufacturer,
+                image: phoneData.images.main,
+                price: phoneData.price,
+              }
+            : null;
+        })
+        .filter(Boolean) as Array<{
+        id: string;
+        name: string;
+        manufacturer: string;
+        image: string;
+        price: string;
+      }>)
+    : localComparisonPhones;
+
+  const setComparisonPhones = (
+    phones: Array<{
+      id: string;
+      name: string;
+      manufacturer: string;
+      image: string;
+      price: string;
+    }>,
+  ) => {
+    if (onComparisonChange) {
+      // Update external state with IDs only
+      onComparisonChange(phones.map((p) => p.id));
+    } else {
+      // Update local state
+      setLocalComparisonPhones(phones);
+    }
+  };
+
+  // -- PRICE HISTORY --
+  // Generate price history data (mock data for demonstration)
+  const generatePriceHistory = () => {
+    const currentPrice = parseFloat(phoneData.price.replace("$", "").replace(",", ""));
+    const history = [];
+    const monthsBack = 6;
+
+    for (let i = monthsBack; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      const monthName = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+
+      // Generate price variation (random fluctuation around current price)
+      let price;
+      if (i === 0) {
+        price = currentPrice; // Current month uses actual price
+      } else {
+        // Earlier prices tend to be higher, with some random variation
+        const variation = (Math.random() - 0.3) * (currentPrice * 0.15);
+        const baseIncrease = (i / monthsBack) * (currentPrice * 0.1);
+        price = Math.round(currentPrice + baseIncrease + variation);
+      }
+
+      history.push({
+        month: monthName,
+        price: price,
+      });
+    }
+
+    return history;
+  };
+
+  const priceHistory = generatePriceHistory();
+  const currentPrice = parseFloat(phoneData.price.replace("$", "").replace(",", ""));
+  const oldestPrice = priceHistory[0].price;
+  const priceChange = currentPrice - oldestPrice;
+  const priceChangePercent = ((priceChange / oldestPrice) * 100).toFixed(1);
+
+  const toggleSpec = (category: string, specName: string) => {
+    setSelectedSpecs((prev) => {
+      const categorySpecs = prev[category] || [];
+      const newCategorySpecs = categorySpecs.includes(specName)
+        ? categorySpecs.filter((s) => s !== specName)
+        : [...categorySpecs, specName];
+      return { ...prev, [category]: newCategorySpecs };
+    });
+  };
+
+  const toggleCategoryOpen = (category: string) => {
+    setOpenCategories((prev) => ({ ...prev, [category]: !prev[category] }));
+  };
+
+  const selectAllSpecs = () => {
+    const allSpecs: Record<string, string[]> = {};
+    categories.forEach((category) => {
+      allSpecs[category] = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
+    });
+    setSelectedSpecs(allSpecs);
+  };
+
+  const clearAllSpecs = () => {
+    const emptySpecs: Record<string, string[]> = {};
+    categories.forEach((category) => {
+      emptySpecs[category] = [];
+    });
+    setSelectedSpecs(emptySpecs);
+  };
+
+  const isCategoryFullySelected = (category: string) => {
+    const allSpecs = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
+    const selected = selectedSpecs[category] || [];
+    return allSpecs.length === selected.length && allSpecs.length > 0;
+  };
+
+  const isCategoryPartiallySelected = (category: string) => {
+    const selected = selectedSpecs[category] || [];
+    return selected.length > 0 && !isCategoryFullySelected(category);
+  };
+
+  const toggleAllCategorySpecs = (category: string) => {
+    const allSpecs = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
+    const isFullySelected = isCategoryFullySelected(category);
+    setSelectedSpecs((prev) => ({
+      ...prev,
+      [category]: isFullySelected ? [] : allSpecs,
+    }));
+  };
+
+  // -- WISHLIST --
   const handleWishlistToggle = () => {
     setIsWishlisted(!isWishlisted);
     if (!isWishlisted) {
@@ -451,6 +549,7 @@ export default function PhoneSpecPage({
     }
   };
 
+  // -- PRICE ALERT --
   const handleSetPriceAlert = () => {
     if (!priceAlertEmail || !targetPrice) {
       toast.error("Please fill in all fields");
@@ -477,6 +576,7 @@ export default function PhoneSpecPage({
     setTargetPrice("");
   };
 
+  // -- COMPARISON CART --
   const handleAddToComparison = () => {
     const currentPhone = {
       id: phoneData.id,
@@ -539,11 +639,13 @@ export default function PhoneSpecPage({
   };
 
   const handleCloseComparisonCart = () => {
-    // Don't actually close the cart, just minimize it
-    // The cart will automatically hide when there are no phones
+    // The cart will automatically hide when there are no phones/closing minimizes the cart
     setShowComparisonCart(true);
   };
 
+  // ------------------------------------------------------------
+  // | UI SECTION
+  // ------------------------------------------------------------
   return (
     <>
       <SpecTableOfContents specCategories={categories} />
@@ -567,13 +669,20 @@ export default function PhoneSpecPage({
               <div className="relative inline-block">
                 {/* Phone Image - Centered */}
                 <div className="w-[700px]">
-                  <img src={phoneData.images.main} alt={phoneData.name} className="w-full h-auto" />
+                  <img
+                    src={phoneData.images.main}
+                    alt={phoneData.name}
+                    className="w-full h-auto"
+                    loading="eager"
+                    fetchpriority="high"
+                  />
                 </div>
 
                 {/* Browse Phone Catalog Section - Dashed Rectangle - Positioned to the right */}
                 <div
-                  className="hidden xl:flex absolute top-1/2 -translate-y-1/2 left-[calc(100%+16px)] flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 dark:border-[#4a7cf6]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent dark:from-[#4a7cf6]/5 w-52 group/catalog hover:border-[#2c3968]/50 dark:hover:border-[#4a7cf6]/50 transition-all duration-300 min-h-[400px] z-10 cursor-pointer"
-                  onClick={onNavigateToCatalog}
+                  className="hidden xl:flex absolute top-1/2 -translate-y-1/2 left-full flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 dark:border-[#4a7cf6]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent dark:from-[#4a7cf6]/5 w-52 group/catalog hover:border-[#2c3968]/50 dark:hover:border-[#4a7cf6]/50 transition-all duration-300 min-h-[400px] z-10 cursor-pointer"
+                  style={{ left: "calc(100% + 40px" }}
+                  onClick={() => navigate("/")}
                 >
                   {/* Decorative Corner Accents */}
                   <div className="absolute top-0 left-0 w-3 h-3 border-t-4 border-l-4 border-[#2c3968] rounded-tl-sm"></div>
@@ -748,7 +857,7 @@ export default function PhoneSpecPage({
               <div className="xl:hidden flex justify-center mt-6 px-4">
                 <div
                   className="relative flex flex-col items-center justify-center border-2 border-dashed border-[#2c3968]/30 dark:border-[#4a7cf6]/30 bg-gradient-to-br from-[#2c3968]/5 to-transparent dark:from-[#4a7cf6]/5 w-full max-w-md py-6 px-4 group/catalog hover:border-[#2c3968]/50 dark:hover:border-[#4a7cf6]/50 transition-all duration-300 rounded-lg cursor-pointer"
-                  onClick={onNavigateToCatalog}
+                  onClick={() => navigate("/")}
                 >
                   {/* Decorative Corner Accents */}
                   <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-3 border-l-3 border-[#2c3968] rounded-tl-sm"></div>

@@ -3,7 +3,6 @@ import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner@2.0.3";
 import { useAuth } from "../context/AuthContext";
 import { FirebaseError } from "firebase/app";
-import { updateProfile } from "firebase/auth";
 
 interface SignUpPageProps {
   onSignUpSuccess: () => void;

@@ -1,20 +1,40 @@
 import { Router } from "express";
-import { getAllPhones, getPhoneById, createPhone, updatePhone, deletePhone } from "../controllers/phoneController";
+import {
+  getPhonePage,
+  getPhoneById,
+  getPhoneCardById,
+  getManufacturers,
+  createPhone,
+  updatePhone,
+  deletePhone,
+} from "../controllers/phoneController";
 
 const router = Router();
 
 // --- PUBLIC ROUTES ---
 /**
- * Get all phones
- * @route GET /api/phones
+ * Get a list of all unique manufacturers
+ * @route GET /api/phones/manufacturers
  */
-router.get("/", getAllPhones);
+router.get("/manufacturers", getManufacturers);
+
+/**
+ * Get a single phone card by ID
+ * @route GET /api/phones/card/:id
+ */
+router.get("/card/:id", getPhoneCardById);
 
 /**
  * Get a single phone by ID
  * @route GET /api/phones/:id
  */
 router.get("/:id", getPhoneById);
+
+/**
+ * Get all phones
+ * @route GET /api/phones
+ */
+router.get("/", getPhonePage);
 
 // --- ADMIN ROUTES --- (maybe we can add some middleware to separate admin and public routes later)
 /**
