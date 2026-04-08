@@ -1,11 +1,17 @@
-import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner@2.0.3";
+
+// UI Components
+import { Badge } from "./ui/badge";
+
+// Icons
+import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+
+// Custom Components & APIs
 import { PhoneCard } from "../types/phoneTypes";
 import { getPhoneCardById, getPhonePage, getManufacturers } from "../api/phoneApi";
 import ComparisonCart from "./ComparisonCart";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
-import { toast } from "sonner@2.0.3";
-import { Badge } from "./ui/badge";
 
 interface PhoneCatalogPageProps {
   onNavigate: (phoneId: string) => void;

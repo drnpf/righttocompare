@@ -433,7 +433,7 @@ export default function PhoneComparisonPage({
     return (
       <div className="flex flex-col items-center justify-center min-h-[600px] w-full bg-white/50 backdrop-blur-sm rounded-3xl border-2 border-dashed border-[#2c3968]/10">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2c3968] mb-4"></div>
-        <h3 className="text-[#2c3968] font-semibold text-lg">Synchronizing with MongoDB...</h3>
+        <h3 className="text-[#2c3968] font-semibold text-lg">Synchronizing with database...</h3>
         <p className="text-[#666] text-sm">Fetching detailed specifications for your comparison.</p>
       </div>
     );
