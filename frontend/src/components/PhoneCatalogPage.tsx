@@ -8,8 +8,8 @@ import { Badge } from "./ui/badge";
 import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Custom Components & APIs
-import { PhoneCard } from "../types/phoneTypes";
-import { getPhoneCardById, getPhonePage, getManufacturers } from "../api/phoneApi";
+import { PhoneCard, PhoneSummary } from "../types/phoneTypes";
+import { getPhonePage, getManufacturers, getPhoneSummaries } from "../api/phoneApi";
 import ComparisonCart from "./ComparisonCart";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
 
@@ -61,7 +61,7 @@ export default function PhoneCatalogPage({
   const [activeTab, setActiveTab] = useState<"catalog" | "hot" | "popular">("catalog");
   const [availableManufacturers, setAvailableManufacturers] = useState<string[]>([]);
   const [isCartMinimized, setIsCartMinimized] = useState(false);
-  const [comparisonData, setComparisonData] = useState<PhoneCard[]>([]);
+  const [comparisonData, setComparisonData] = useState<PhoneSummary[]>([]);
 
   // ------------------------------------------------------------
   // | DATA SYNCHRONIZATION
@@ -160,7 +160,7 @@ export default function PhoneCatalogPage({
    * Action: Fetches phone details if IDs exist but local cache is empty
    */
   useEffect(() => {
-    const syncComparisonCart = async () => {
+    const syncCart = async () => {
       // Checks syncing is needed by comparing phone IDs passed by controller with cached comparison phone data
       const missingIds = comparisonPhoneIds.filter((id) => !comparisonData.find((phone) => phone.id === id));
 
@@ -169,22 +169,17 @@ export default function PhoneCatalogPage({
 
       // Handles case if syncing needed of missing phones from comparisonData cache
       try {
-        // Handles re-fetching phone cards that should be in comparison cart into the comparison data
-        const promises = missingIds.map((id) => getPhoneCardById(id));
-        const results = await Promise.all(promises);
-        const newCards = results.filter((p): p is PhoneCard => p !== null);
+        // Handles re-fetching phone summaries that should be in comparison cart into the comparison data
+        const newItems = await getPhoneSummaries(missingIds);
         setComparisonData((prev) => {
-          // Adding already existing cards in comparison data and the newly fetched cards into map
-          const cardsForCompare = new Map();
-          prev.forEach((phone) => cardsForCompare.set(phone.id, phone));
-          newCards.forEach((phone) => cardsForCompare.set(phone.id, phone));
-          return Array.from(cardsForCompare.values());
+          const combined = [...prev, ...newItems];
+          return Array.from(new Map(combined.map((item) => [item.id, item])).values()); // Removes duplicates
         });
       } catch (error) {
         console.error("Failed to sync comparison cart:", error);
       }
     };
-    syncComparisonCart();
+    syncCart();
   }, [comparisonPhoneIds.length]);
 
   // ------------------------------------------------------------
@@ -666,7 +661,8 @@ export default function PhoneCatalogPage({
         {comparisonPhoneIds.length > 0 && (
           <ComparisonCart
             phones={comparisonPhoneIds.map((id) => {
-              const cachedPhone = comparisonData.find((p) => p.id === id);
+              // Attempts to find phone in catalog page or comparison cache before fetching
+              const cachedPhone = allPhones.find((p) => p.id === id) || comparisonData.find((p) => p.id === id);
               return {
                 id: id,
                 name: cachedPhone?.name || "Loading",

@@ -1,5 +1,6 @@
-import { PhoneData, PhoneCard, PaginatedPhoneResponse } from "../types/phoneTypes";
-import { mapJsonToPhoneData, mapJsonToPhoneCard } from "../utils/dataMappers";
+import { Rainbow } from "lucide-react";
+import { PhoneSummary, PhoneData, PhoneCard, PaginatedPhoneResponse } from "../types/phoneTypes";
+import { mapJsonToPhoneData, mapJsonToPhoneSummary, mapJsonToPhoneCard } from "../utils/dataMappers";
 
 const API_URL = "http://localhost:5001/api/phones"; // CHANGE LATER ON PRODUCTION
 
@@ -92,7 +93,59 @@ export const getPhoneById = async (id: string): Promise<PhoneData | null> => {
 };
 
 /**
- * Fetches the phone card of a single phone by its ID from the backend.
+ * Fetches the phone summary data of a multple phone by their IDs from the backend. Only
+ * contains essential information (id, name, price, image, price) on each phone.
+ * @param id The ID of the phone to fetch
+ * @returns An array of PhoneSummary objects containing few/important details on each phone.
+ */
+export const getPhoneSummaries = async (ids: string[]): Promise<PhoneSummary[]> => {
+  // Handles no phones to fetch
+  if (!ids || ids.length == 0) return [];
+
+  // Fetching for phone summaries from backend
+  try {
+    const url = `${API_URL}/summaries?ids=${ids.join(",")}`;
+    const response = await fetch(url);
+
+    // Handles failed syncs with backend
+    if (!response.ok) throw new Error(`Batch summary fetch failed: ${response.status}`);
+
+    // Mapping array of JSON objects to PhoneSummary type
+    const rawPhone = await response.json();
+    return (rawPhone as any[]).map((item) => mapJsonToPhoneSummary(item));
+  } catch (error) {
+    console.error("Error in getPhoneSummaries:", error);
+    return [];
+  }
+};
+
+/**
+ * Fetches the phone summary data of a single phone by its ID from the backend. Only
+ * contains essential information (id, name, price, image, price).
+ * @param id The ID of the phone to fetch
+ * @returns A PhoneSummary object containing few/important details on a phone,
+ * or null if not found
+ */
+export const getPhoneSummaryById = async (id: string): Promise<PhoneSummary | null> => {
+  try {
+    const response = await fetch(`${API_URL}/summary/${id}`);
+
+    // Handles failed syncs with backend
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`Comparison cart item details fetch failed: ${response.status}`);
+
+    // Mapping the single phone object
+    const rawPhone = await response.json();
+    return mapJsonToPhoneSummary(rawPhone);
+  } catch (error) {
+    console.error(`Error in getPhoneSummaryById (${id}):`, error);
+    return null;
+  }
+};
+
+/**
+ * Fetches the phone card of a single phone by its ID from the backend. Contains essential
+ * information as well as quick specs.
  * @param id The ID of the phone to fetch
  * @returns A PhoneCard object containing few/important details on a phone,
  * or null if not found

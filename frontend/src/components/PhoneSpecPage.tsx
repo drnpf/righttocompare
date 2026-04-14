@@ -21,7 +21,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import { Toaster } from "./ui/sonner";
 import {
   Pagination,
   PaginationContent,
@@ -60,7 +59,6 @@ import {
   BookOpen,
   Lightbulb,
   Loader2,
-  ReceiptRussianRuble,
 } from "lucide-react";
 import {
   LineChart,
@@ -82,8 +80,8 @@ import { ReviewForm } from "./ReviewForm";
 import { ReviewCard, ReviewData } from "./ReviewCard";
 import { CategoryRatings } from "./MultiRatingInput";
 import { getPhoneReviews, submitReview, voteOnReview, deleteReview, ReviewsResponse } from "../api/reviewApi";
-import { ComparisonCartItem, PhoneCard, PhoneData } from "../types/phoneTypes";
-import { getPhoneById, getPhoneCardById } from "../api/phoneApi";
+import { PhoneSummary, PhoneData } from "../types/phoneTypes";
+import { getPhoneById, getPhoneSummaries } from "../api/phoneApi";
 
 // Category icons mapping - minimalistic uniform color scheme
 const categoryConfig: Record<string, { icon: any }> = {
@@ -155,7 +153,7 @@ export default function PhoneSpecPage({
   const [currentPage, setCurrentPage] = useState(1);
 
   // -- Comparison Cart States --
-  const [comparisonData, setComparisonData] = useState<ComparisonCartItem[]>([]);
+  const [comparisonData, setComparisonData] = useState<PhoneSummary[]>([]);
   const [showComparisonCart, setShowComparisonCart] = useState(false);
   const [isCartMinimized, setIsCartMinimized] = useState(false);
 
@@ -166,7 +164,7 @@ export default function PhoneSpecPage({
   }, [phoneData]);
 
   // Comparison cart items to be fetched
-  const comparisonPhones = useMemo<ComparisonCartItem[]>(() => {
+  const comparisonPhones = useMemo<PhoneSummary[]>(() => {
     // Handles case of no phone IDs needed to compare
     if (!comparisonPhoneIds || !phoneData) return [];
 
@@ -282,7 +280,7 @@ export default function PhoneSpecPage({
   /**
    * SYNC: Comparison Cart Metadata Cache
    * Signal: comparisonPhoneIds list or phoneId changes
-   * Action: Fetches ComparisonCartItems from backend for phones that are missing
+   * Action: Fetches PhoneSummary data from backend for phones that are missing
    * from the local comparisonData cache/state and fetches their metadata in parallel.
    */
   useEffect(() => {
@@ -293,24 +291,12 @@ export default function PhoneSpecPage({
       // Handles case of no phones needed to search
       if (missingIds.length === 0) return;
 
-      // Fetching missing phones from comparison cart in parallel
+      // Fetching missing phones from comparison cart
       try {
-        const promises = missingIds.map((id) => getPhoneCardById(id));
-        const results = await Promise.all(promises);
-        const newItems: ComparisonCartItem[] = results
-          .filter((data): data is PhoneCard => data !== null)
-          .map((data) => ({
-            id: data.id,
-            name: data.name,
-            manufacturer: data.manufacturer,
-            images: { main: data.images.main },
-            price: data.price,
-          }));
-
-        // Adding new comparison data
+        const newItems = await getPhoneSummaries(missingIds);
         setComparisonData((prev) => {
           const combined = [...prev, ...newItems];
-          return Array.from(new Map(combined.map((item) => [item.id, item])).values());
+          return Array.from(new Map(combined.map((item) => [item.id, item])).values()); // Removes duplicates
         });
       } catch (error) {
         console.error("Failed to sync comparison cart:", error);

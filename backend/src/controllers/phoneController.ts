@@ -94,11 +94,55 @@ export const getPhoneById = async (req: Request, res: Response) => {
 };
 
 /**
+ * Fetches multiple phone summaries in a single request.
+ * @route GET /api/phones/summaries
+ * @param req The Express request object containing the 'id' param
+ * @param res The Express response object
+ * @returns The phone summary data array (only contains essential data on phone)
+ * containing summary of each phone requested
+ */
+export const getPhoneSummaries = async (req: Request, res: Response) => {
+  try {
+    const idsString = req.query.ids as string;
+    if (!idsString) {
+      return res.status(400).json({ message: "Missing 'ids' query parameter" });
+    }
+    const ids = idsString.split(",");
+    const summaries = await phoneService.findPhoneSummaries(ids);
+    res.status(200).json(summaries);
+  } catch (error) {
+    console.error("Error fetching batch phone summaries:", error);
+    res.status(500).json({ message: "Server error fetching summaries" });
+  }
+};
+
+/**
+ * Fetches phone summary of a single phone in a single request.
+ * @route GET /api/phones/summary/:id
+ * @param req The Express request object containing the 'id' param
+ * @param res The Express response object
+ * @returns The phone summary data (only contains essential data on phone)
+ */
+export const getPhoneSummaryById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const phoneSummary = await phoneService.findPhoneSummaryById(id);
+    if (!phoneSummary) {
+      return res.status(404).json({ message: `Phone Summary with ID '${id}' not found` });
+    }
+    res.status(200).json(phoneSummary);
+  } catch (error) {
+    console.error(`Error fetching phone ${req.params.id}:`, error);
+    res.status(500).json({ message: "Server error fetching phone summary" });
+  }
+};
+
+/**
  * Fetches a specific phone card using its ID.
  * @route GET /api/phones/card/:id
  * @param req The Express request object containing the 'id' param
  * @param res The Express response object
- * @returns The phone card data (only contains essential data on phone)
+ * @returns The phone card data contains essential information and quick specs.
  */
 export const getPhoneCardById = async (req: Request, res: Response) => {
   try {
@@ -110,7 +154,7 @@ export const getPhoneCardById = async (req: Request, res: Response) => {
     res.status(200).json(phoneCard);
   } catch (error) {
     console.error(`Error fetching phone ${req.params.id}:`, error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error fetching phone card" });
   }
 };
 
@@ -141,8 +185,8 @@ export const getManufacturers = async (req: Request, res: Response) => {
 export const createPhone = async (req: Request, res: Response) => {
   try {
     // Validation the schema just incase there are missing fields
-    if (!req.body.name || !req.body.brand) {
-      return res.status(400).json({ message: "Missing required fields: name, brand" });
+    if (!req.body.name || !req.body.manufacturer) {
+      return res.status(400).json({ message: "Missing required fields: name, manufacturer" });
     }
 
     const newPhone = await phoneService.createNewPhone(req.body);

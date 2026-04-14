@@ -4,6 +4,8 @@ import {
   getPhoneById,
   getPhoneCardById,
   getManufacturers,
+  getPhoneSummaries,
+  getPhoneSummaryById,
   createPhone,
   updatePhone,
   deletePhone,
@@ -17,6 +19,18 @@ const router = Router();
  * @route GET /api/phones/manufacturers
  */
 router.get("/manufacturers", getManufacturers);
+
+/**
+ * Get multiple phone summaries by IDs
+ * @route GET /api/phones/summaries?ids=id1,id2,id3
+ */
+router.get("/summaries", getPhoneSummaries);
+
+/**
+ * Get a single phone summary item by ID
+ * @route GET /api/phones/summary/:id
+ */
+router.get("/summary/:id", getPhoneSummaryById);
 
 /**
  * Get a single phone card by ID

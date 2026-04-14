@@ -1,19 +1,27 @@
 import { Smartphone, Camera, Cpu, Battery, Ruler, Weight } from "lucide-react";
-import { PhoneData, PhoneCard } from "../types/phoneTypes";
+import { PhoneData, PhoneCard, PhoneSummary } from "../types/phoneTypes";
+
+export const mapJsonToPhoneSummary = (dbPhone: any): PhoneSummary => {
+  return {
+    id: dbPhone.id,
+    name: dbPhone.name,
+    manufacturer: dbPhone.manufacturer,
+    price: typeof dbPhone.price === "number" ? `$${dbPhone.price.toLocaleString()}` : dbPhone.price || "N/A",
+    images: dbPhone.images || { main: "" },
+  };
+};
 
 export const mapJsonToPhoneCard = (dbPhone: any): PhoneCard => {
   const { specs } = dbPhone;
 
   return {
-    id: dbPhone.id,
-    name: dbPhone.name,
-    manufacturer: dbPhone.manufacturer,
-    releaseDate: new Date(dbPhone.releaseDate).toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    }),
-    price: `$${dbPhone.price.toLocaleString()}`,
-    images: dbPhone.images,
+    ...mapJsonToPhoneSummary(dbPhone),
+    releaseDate: dbPhone.releaseDate
+      ? new Date(dbPhone.releaseDate).toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        })
+      : "Unknown Release",
 
     // Quick specs for the spec summary on top of spec page
     quickSpecs: [

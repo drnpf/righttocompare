@@ -20,7 +20,7 @@ export interface CarrierCompatibility {
 /**
  * Contains only base data on a phone.
  */
-export interface BasePhone {
+export interface PhoneSummary {
   id: string;
   name: string;
   manufacturer: string;
@@ -31,23 +31,12 @@ export interface BasePhone {
 }
 
 /**
- * Contains necessary data for comparison cart items.
- */
-export interface ComparisonCartItem extends BasePhone {}
-
-/**
- * Contains only necessary data of a phone for phone cards on catalog page.
- */
-export interface PhoneSummary extends BasePhone {
-  releaseDate: string;
-}
-
-/**
  * Contains only necessary data and and the most
  * important specs that users might want to see. This class
  * is used for the catalog page card objects.
  */
 export interface PhoneCard extends PhoneSummary {
+  releaseDate: string;
   quickSpecs: QuickSpec[];
 }
 

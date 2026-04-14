@@ -5,10 +5,10 @@ import { Button } from "./ui/button";
 import { X, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 
 // Custom Components
-import { ComparisonCartItem } from "../types/phoneTypes";
+import { PhoneSummary } from "../types/phoneTypes";
 
 interface ComparisonCartProps {
-  phones: ComparisonCartItem[];
+  phones: PhoneSummary[];
   onRemovePhone: (phoneId: string) => void;
   onCompare: () => void;
   onClose: () => void;

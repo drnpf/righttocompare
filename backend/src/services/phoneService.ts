@@ -1,6 +1,18 @@
 import Phone, { IPhone } from "../models/Phone";
 
 /**
+ * Projection for the PhoneSummary view. Only has essential fields for catalog grid and comparison cart
+ */
+const PHONE_SUMMARY_PROJECTION = {
+  _id: 0,
+  id: 1,
+  name: 1,
+  manufacturer: 1,
+  price: 1,
+  "images.main": 1,
+};
+
+/**
  * Projection for the PhoneCard view. Only has essential fields for catalog grid and comparison cart
  */
 const PHONE_CARD_PROJECTION = {
@@ -102,6 +114,30 @@ export const findPhonePage = async (
  */
 export const findPhoneById = async (id: string): Promise<IPhone | null> => {
   const phone = await Phone.findOne({ id: id }).lean();
+  return phone;
+};
+
+/**
+ * Finds multiple phone summaries by their IDs. Returns an array of JSON objects.
+ * Performs batch retrieval of phone objects. This is used to populate Comparison Cart.
+ * @param id The unique string ID of the phone
+ * @returns An array of phone summary JSON objects
+ */
+export const findPhoneSummaries = async (ids: string[]): Promise<IPhone[]> => {
+  const phones = await Phone.find({ id: { $in: ids } })
+    .select(PHONE_SUMMARY_PROJECTION)
+    .lean();
+  return phones;
+};
+
+/**
+ * Finds multiple phone summaries by their IDs. Returns an array of JSON objects.
+ * Performs batch retrieval of phone objects. This is used to populate Comparison Cart.
+ * @param id The unique string ID of the phone
+ * @returns The resultant phone data JSON object representing a phone summary.
+ */
+export const findPhoneSummaryById = async (id: string): Promise<IPhone | null> => {
+  const phone = await Phone.findOne({ id: id }).select(PHONE_SUMMARY_PROJECTION).lean();
   return phone;
 };
 
