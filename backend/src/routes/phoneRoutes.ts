@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getPhonePage,
   getPhoneById,
+  getPhoneBatch,
   getPhoneCardById,
   getManufacturers,
   getPhoneSummaries,
@@ -19,6 +20,12 @@ const router = Router();
  * @route GET /api/phones/manufacturers
  */
 router.get("/manufacturers", getManufacturers);
+
+/**
+ * Get multiple full phone data by IDs
+ * @route GET /api/phones/batch?ids=id1,id2,id3
+ */
+router.get("/batch", getPhoneBatch);
 
 /**
  * Get multiple phone summaries by IDs

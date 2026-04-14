@@ -1,4 +1,4 @@
-import Phone, { IPhone } from "../models/Phone";
+import Phone, { IPhone, IPhoneSummary, IPhoneCard } from "../models/Phone";
 
 /**
  * Projection for the PhoneSummary view. Only has essential fields for catalog grid and comparison cart
@@ -87,7 +87,7 @@ export const findPhonePage = async (
     if (options.maxPrice !== undefined) query.price.$lte = options.maxPrice;
   }
 
-  // Sorting results
+  // Sorting results (CAN ADD MORE SORTS HERE)
   const SORT_STRATEGIES: Record<string, Record<string, 1 | -1>> = {
     price_asc: { price: 1 },
     price_desc: { price: -1 },
@@ -96,7 +96,7 @@ export const findPhonePage = async (
     newest: { releaseDate: -1 },
   };
 
-  // Gets sort strategy from argument if it exist otherwise fallback to newest if garbage input
+  // Gets sort strategy from argument if it exist otherwise sort by newest if garbage input
   const sortOrder = SORT_STRATEGIES[options.sortBy || "newest"] || SORT_STRATEGIES.newest;
 
   // Fetching list of phone JSON objects on a certain page and # of phones in list
@@ -113,21 +113,20 @@ export const findPhonePage = async (
  * @returns The resultant phone data JSON object containing full specs.
  */
 export const findPhoneById = async (id: string): Promise<IPhone | null> => {
-  const phone = await Phone.findOne({ id: id }).lean();
-  return phone;
+  return await Phone.findOne({ id: id }).lean();
 };
 
 /**
- * Finds multiple phone summaries by their IDs. Returns an array of JSON objects.
- * Performs batch retrieval of phone objects. This is used to populate Comparison Cart.
- * @param id The unique string ID of the phone
- * @returns An array of phone summary JSON objects
+ * Finds multiple phone by their IDs. Returns a JSON object sorted according to
+ * the order of the requesting string array of IDs.
+ * @param id The list of unique string ID of the phone
+ * @returns An array of phone data JSON objects containing full specs.
  */
-export const findPhoneSummaries = async (ids: string[]): Promise<IPhone[]> => {
-  const phones = await Phone.find({ id: { $in: ids } })
-    .select(PHONE_SUMMARY_PROJECTION)
-    .lean();
-  return phones;
+export const findPhonesById = async (ids: string[]): Promise<IPhone[]> => {
+  const phones = (await Phone.find({ id: { $in: ids } }).lean()) as any[];
+
+  // Mapping phone objects to retain original ID list order
+  return ids.map((requestedId) => phones.find((p) => p.id === requestedId)).filter((p): p is IPhone => p !== undefined);
 };
 
 /**
@@ -136,9 +135,25 @@ export const findPhoneSummaries = async (ids: string[]): Promise<IPhone[]> => {
  * @param id The unique string ID of the phone
  * @returns The resultant phone data JSON object representing a phone summary.
  */
-export const findPhoneSummaryById = async (id: string): Promise<IPhone | null> => {
-  const phone = await Phone.findOne({ id: id }).select(PHONE_SUMMARY_PROJECTION).lean();
-  return phone;
+export const findPhoneSummaryById = async (id: string): Promise<IPhoneSummary | null> => {
+  return await Phone.findOne({ id: id }).select(PHONE_SUMMARY_PROJECTION).lean();
+};
+
+/**
+ * Finds multiple phone summaries by their IDs. Returns an array of JSON objects.
+ * Performs batch retrieval of phone objects. This is used to populate Comparison Cart.
+ * @param id The unique string ID of the phone
+ * @returns An array of phone summary JSON objects
+ */
+export const findPhoneSummaries = async (ids: string[]): Promise<IPhoneSummary[]> => {
+  const phones = (await Phone.find({ id: { $in: ids } })
+    .select(PHONE_SUMMARY_PROJECTION)
+    .lean()) as any[];
+
+  // Mapping phone objects to retain original ID list order
+  return ids
+    .map((requestedId) => phones.find((p) => p.id === requestedId))
+    .filter((p): p is IPhoneSummary => p !== undefined);
 };
 
 /**
@@ -146,9 +161,8 @@ export const findPhoneSummaryById = async (id: string): Promise<IPhone | null> =
  * @param id The unique string ID of the phone
  * @returns The resultant phone data JSON object representing a phone card.
  */
-export const findPhoneCardById = async (id: string): Promise<IPhone | null> => {
-  const phone = await Phone.findOne({ id: id }).select(PHONE_CARD_PROJECTION).lean();
-  return phone;
+export const findPhoneCardById = async (id: string): Promise<IPhoneCard | null> => {
+  return await Phone.findOne({ id: id }).select(PHONE_CARD_PROJECTION).lean();
 };
 
 /**
@@ -176,8 +190,7 @@ export const createNewPhone = async (phoneData: Partial<IPhone>): Promise<IPhone
  * @returns The updated phone document
  */
 export const updatePhoneById = async (id: string, updateData: Partial<IPhone>): Promise<IPhone | null> => {
-  const updatedPhone = await Phone.findOneAndUpdate({ id: id }, updateData, { new: true, runValidators: true });
-  return updatedPhone;
+  return await Phone.findOneAndUpdate({ id: id }, updateData, { new: true, runValidators: true });
 };
 
 /**

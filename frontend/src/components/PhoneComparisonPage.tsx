@@ -37,7 +37,7 @@ import {
 import { PartialStar } from "./PartialStar";
 import SpecTableOfContents from "./SpecTableOfContents";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
-import { getPhoneById, getPhonePage } from "../api/phoneApi";
+import { getPhoneBatch, getPhonePage } from "../api/phoneApi";
 import { PhoneCard, PhoneData } from "../types/phoneTypes";
 
 // Category icons mapping
@@ -156,9 +156,7 @@ export default function PhoneComparisonPage({
 
       // Attempting to fetch all phones in compare
       try {
-        const promises = phoneIds.map((id) => getPhoneById(id));
-        const results = await Promise.all(promises);
-        const validPhones = results.filter((p): p is PhoneData => p !== null); // Handles cleaning null case since getPhoneById can return null
+        const validPhones = await getPhoneBatch(phoneIds);
         setPhoneDataList(validPhones);
       } catch (error) {
         // Handles failed fetch error
