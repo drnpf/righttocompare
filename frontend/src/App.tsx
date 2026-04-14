@@ -21,9 +21,11 @@ const SignUpPage = lazy(() => import("./components/SignUpPage"));
 const UserProfilePage = lazy(() => import("./components/UserProfilePage"));
 const AdminDashboardPage = lazy(() => import("./components/AdminDashboardPage"));
 const PasswordResetPage = lazy(() => import("./components/PasswordResetPage"));
+
+// UI Component (Lazy Loaded)
 const AIChatWidget = lazy(() => import("./components/AIChatWidget"));
 
-// Helper functions for localStorage
+// Helper function for getting Recently Viewed phones from localStorage
 const getRecentlyViewedFromStorage = (): string[] => {
   try {
     const stored = localStorage.getItem("recentlyViewedPhones");
@@ -33,6 +35,7 @@ const getRecentlyViewedFromStorage = (): string[] => {
   }
 };
 
+// Helper function for saving Recently Viewed phones to localStorage
 const saveRecentlyViewedToStorage = (phoneIds: string[]) => {
   try {
     localStorage.setItem("recentlyViewedPhones", JSON.stringify(phoneIds));
@@ -41,6 +44,7 @@ const saveRecentlyViewedToStorage = (phoneIds: string[]) => {
   }
 };
 
+// Helper function for getting currently compared phones from localStorage
 const getComparisonFromStorage = (): string[] => {
   try {
     const stored = localStorage.getItem("comparisonPhoneIds");
@@ -50,6 +54,7 @@ const getComparisonFromStorage = (): string[] => {
   }
 };
 
+// Helper function for saving currently compared phones to localStorage
 const saveComparisonToStorage = (phoneIds: string[]) => {
   try {
     localStorage.setItem("comparisonPhoneIds", JSON.stringify(phoneIds));

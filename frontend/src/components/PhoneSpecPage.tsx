@@ -60,6 +60,7 @@ import {
   BookOpen,
   Lightbulb,
   Loader2,
+  ReceiptRussianRuble,
 } from "lucide-react";
 import {
   LineChart,
@@ -81,9 +82,8 @@ import { ReviewForm } from "./ReviewForm";
 import { ReviewCard, ReviewData } from "./ReviewCard";
 import { CategoryRatings } from "./MultiRatingInput";
 import { getPhoneReviews, submitReview, voteOnReview, deleteReview, ReviewsResponse } from "../api/reviewApi";
-import { PhoneData } from "../types/phoneTypes";
-import { getPhoneById } from "../api/phoneApi";
-import { phonesData } from "../data/phoneData";
+import { ComparisonCartItem, PhoneCard, PhoneData } from "../types/phoneTypes";
+import { getPhoneById, getPhoneCardById } from "../api/phoneApi";
 
 // Category icons mapping - minimalistic uniform color scheme
 const categoryConfig: Record<string, { icon: any }> = {
@@ -104,7 +104,7 @@ interface PhoneSpecPageProps {
   onComparisonChange: (phoneIds: string[]) => void;
   recentlyViewedPhones: string[];
   onAddToRecentlyViewed: (phoneId: string) => void;
-  onNavigateToComparison: (phoneIds: string[]) => void;
+  onNavigateToComparison: () => void;
 }
 
 export default function PhoneSpecPage({
@@ -138,15 +138,6 @@ export default function PhoneSpecPage({
   const [isPriceAlertOpen, setIsPriceAlertOpen] = useState(false);
   const [priceAlertEmail, setPriceAlertEmail] = useState("");
   const [targetPrice, setTargetPrice] = useState("");
-  const [localComparisonPhones, setLocalComparisonPhones] = useState<
-    Array<{
-      id: string;
-      name: string;
-      manufacturer: string;
-      image: string;
-      price: string;
-    }>
-  >([]);
 
   // -- Spec Tooltip Glossary States --
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
@@ -164,13 +155,48 @@ export default function PhoneSpecPage({
   const [currentPage, setCurrentPage] = useState(1);
 
   // -- Comparison Cart States --
+  const [comparisonData, setComparisonData] = useState<ComparisonCartItem[]>([]);
   const [showComparisonCart, setShowComparisonCart] = useState(false);
   const [isCartMinimized, setIsCartMinimized] = useState(false);
 
   // -- Derived States --
+  // Spec Sheet category labels
   const categories = useMemo(() => {
     return phoneData ? Object.keys(phoneData.categories) : [];
   }, [phoneData]);
+
+  // Comparison cart items to be fetched
+  const comparisonPhones = useMemo<ComparisonCartItem[]>(() => {
+    // Handles case of no phone IDs needed to compare
+    if (!comparisonPhoneIds || !phoneData) return [];
+
+    // Fetching phone data necessary for phones in comparison cart
+    return comparisonPhoneIds.map((id) => {
+      // If ID matches current phone on page just use current data
+      if (id === phoneData?.id) {
+        return {
+          id: phoneData.id,
+          name: phoneData.name,
+          manufacturer: phoneData.manufacturer,
+          images: { main: phoneData.images.main },
+          price: phoneData.price,
+        };
+      }
+
+      // Use fetched comparison data from local storage
+      const cached = comparisonData.find((p) => p.id === id);
+      if (cached) return cached;
+
+      // Loading state for comparison cart item
+      return {
+        id,
+        name: "Loading",
+        manufacturer: "",
+        images: { main: "" },
+        price: "---",
+      };
+    });
+  }, [comparisonPhoneIds, phoneData, comparisonData]);
 
   // ------------------------------------------------------------
   // | DATA SYNCHRONIZATION
@@ -253,7 +279,46 @@ export default function PhoneSpecPage({
     };
   }, [phoneId, fetchReviews, onAddToRecentlyViewed]);
 
-  // -- SPECIFICATION LIST DATA --
+  /**
+   * SYNC: Comparison Cart Metadata Cache
+   * Signal: comparisonPhoneIds list or phoneId changes
+   * Action: Fetches ComparisonCartItems from backend for phones that are missing
+   * from the local comparisonData cache/state and fetches their metadata in parallel.
+   */
+  useEffect(() => {
+    const syncCart = async () => {
+      // Finds phones that are not the current phone and does not already exist in comparison cart cache
+      const missingIds = comparisonPhoneIds.filter((id) => id !== phoneId && !comparisonData.find((p) => p.id === id));
+
+      // Handles case of no phones needed to search
+      if (missingIds.length === 0) return;
+
+      // Fetching missing phones from comparison cart in parallel
+      try {
+        const promises = missingIds.map((id) => getPhoneCardById(id));
+        const results = await Promise.all(promises);
+        const newItems: ComparisonCartItem[] = results
+          .filter((data): data is PhoneCard => data !== null)
+          .map((data) => ({
+            id: data.id,
+            name: data.name,
+            manufacturer: data.manufacturer,
+            images: { main: data.images.main },
+            price: data.price,
+          }));
+
+        // Adding new comparison data
+        setComparisonData((prev) => {
+          const combined = [...prev, ...newItems];
+          return Array.from(new Map(combined.map((item) => [item.id, item])).values());
+        });
+      } catch (error) {
+        console.error("Failed to sync comparison cart:", error);
+      }
+    };
+    syncCart();
+  }, [comparisonPhoneIds, phoneId, comparisonData]);
+
   // ------------------------------------------------------------
   // | RENDER GUARD PAGES
   // ------------------------------------------------------------
@@ -408,49 +473,6 @@ export default function PhoneSpecPage({
     setShowReviewForm(false);
   };
 
-  // -- COMPARISON --
-  // Derive comparison phones from external IDs if provided
-  const comparisonPhones = comparisonPhoneIds
-    ? (comparisonPhoneIds
-        .map((id) => {
-          const phoneData = (phonesData as any)[id];
-          return phoneData
-            ? {
-                id: phoneData.id,
-                name: phoneData.name,
-                manufacturer: phoneData.manufacturer,
-                image: phoneData.images.main,
-                price: phoneData.price,
-              }
-            : null;
-        })
-        .filter(Boolean) as Array<{
-        id: string;
-        name: string;
-        manufacturer: string;
-        image: string;
-        price: string;
-      }>)
-    : localComparisonPhones;
-
-  const setComparisonPhones = (
-    phones: Array<{
-      id: string;
-      name: string;
-      manufacturer: string;
-      image: string;
-      price: string;
-    }>,
-  ) => {
-    if (onComparisonChange) {
-      // Update external state with IDs only
-      onComparisonChange(phones.map((p) => p.id));
-    } else {
-      // Update local state
-      setLocalComparisonPhones(phones);
-    }
-  };
-
   // -- PRICE HISTORY --
   // Generate price history data (mock data for demonstration)
   const generatePriceHistory = () => {
@@ -479,7 +501,6 @@ export default function PhoneSpecPage({
         price: price,
       });
     }
-
     return history;
   };
 
@@ -578,16 +599,11 @@ export default function PhoneSpecPage({
 
   // -- COMPARISON CART --
   const handleAddToComparison = () => {
-    const currentPhone = {
-      id: phoneData.id,
-      name: phoneData.name,
-      manufacturer: phoneData.manufacturer,
-      image: phoneData.images.main,
-      price: phoneData.price,
-    };
+    // Handles phone data failed to load case
+    if (!phoneData) return;
 
-    // Check if phone is already in comparison
-    if (comparisonPhones.some((phone) => phone.id === currentPhone.id)) {
+    // Checks if phone already in cart
+    if (comparisonPhoneIds.includes(phoneData.id)) {
       toast.error("Already in comparison", {
         description: "This phone is already added to your cart",
         duration: 3000,
@@ -596,7 +612,7 @@ export default function PhoneSpecPage({
     }
 
     // Check if cart is full
-    if (comparisonPhones.length >= 3) {
+    if (comparisonPhoneIds.length >= 3) {
       toast.error("Comparison cart full", {
         description: "You can compare up to 3 phones at once",
         duration: 3000,
@@ -604,10 +620,12 @@ export default function PhoneSpecPage({
       return;
     }
 
-    setComparisonPhones([...comparisonPhones, currentPhone].slice().sort((a, b) => a.id.localeCompare(b.id)));
-    setShowComparisonCart(true);
+    // Adding current phone to comparison phones
+    const updatedIds = [...comparisonPhoneIds, phoneData.id];
+    onComparisonChange(updatedIds);
 
-    // Add to recently viewed
+    // UI Feedback on comparison add
+    setShowComparisonCart(true);
     if (onAddToRecentlyViewed) {
       onAddToRecentlyViewed(phoneData.id);
     }
@@ -619,7 +637,8 @@ export default function PhoneSpecPage({
   };
 
   const handleRemoveFromComparison = (phoneId: string) => {
-    setComparisonPhones(comparisonPhones.filter((phone) => phone.id !== phoneId));
+    const updatedIds = comparisonPhoneIds.filter((id) => id !== phoneId);
+    onComparisonChange(updatedIds);
     toast.success("Removed from comparison", {
       description: "Phone has been removed from your cart",
       duration: 2500,
@@ -628,8 +647,7 @@ export default function PhoneSpecPage({
 
   const handleCompare = () => {
     if (onNavigateToComparison) {
-      const phoneIds = comparisonPhones.map((phone) => phone.id);
-      onNavigateToComparison(phoneIds);
+      onNavigateToComparison();
     } else {
       toast.success("Opening comparison", {
         description: `Comparing ${comparisonPhones.length} phones...`,
@@ -640,7 +658,7 @@ export default function PhoneSpecPage({
 
   const handleCloseComparisonCart = () => {
     // The cart will automatically hide when there are no phones/closing minimizes the cart
-    setShowComparisonCart(true);
+    setShowComparisonCart(false);
   };
 
   // ------------------------------------------------------------
@@ -1751,34 +1769,6 @@ export default function PhoneSpecPage({
         onClose={handleCloseComparisonCart}
         isMinimized={isCartMinimized}
         onMinimizedChange={setIsCartMinimized}
-      />
-
-      {/* Toaster with dynamic positioning */}
-      <Toaster
-        position="bottom-right"
-        expand={false}
-        richColors
-        toastOptions={{
-          style: {
-            marginBottom:
-              comparisonPhones.length > 0
-                ? isCartMinimized
-                  ? "72px"
-                  : comparisonPhones.length === 3
-                    ? "420px"
-                    : "442px"
-                : "24px",
-            padding: "16px",
-            borderRadius: "12px",
-            fontSize: "14px",
-            border: "1px solid #e0e0e0",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
-          },
-          classNames: {
-            title: "font-medium",
-            description: "text-sm opacity-80",
-          },
-        }}
       />
     </>
   );

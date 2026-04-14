@@ -17,7 +17,7 @@ interface PhoneCatalogPageProps {
   onNavigate: (phoneId: string) => void;
   comparisonPhoneIds?: string[];
   onComparisonChange?: (phoneIds: string[]) => void;
-  onNavigateToComparison?: (phoneIds: string[]) => void;
+  onNavigateToComparison?: () => void;
   recentlyViewedPhones?: string[];
 }
 
@@ -669,17 +669,17 @@ export default function PhoneCatalogPage({
               const cachedPhone = comparisonData.find((p) => p.id === id);
               return {
                 id: id,
-                name: cachedPhone?.name || "Unknown",
-                manufacturer: cachedPhone?.manufacturer || "Unknown",
-                image: cachedPhone?.images?.main || "",
-                price: cachedPhone?.price || "N/A",
+                name: cachedPhone?.name || "Loading",
+                manufacturer: cachedPhone?.manufacturer || "",
+                images: { main: cachedPhone?.images?.main || "" },
+                price: cachedPhone?.price || "---",
               };
             })}
             onRemovePhone={(phoneId) => {
               setComparisonData((prev) => prev.filter((p) => p.id !== phoneId));
               onComparisonChange?.(comparisonPhoneIds.filter((id) => id !== phoneId));
             }}
-            onCompare={() => onNavigateToComparison?.(comparisonPhoneIds)}
+            onCompare={() => onNavigateToComparison?.()}
             isMinimized={isCartMinimized}
             onMinimizedChange={setIsCartMinimized}
             onClose={() => setIsCartMinimized(true)}

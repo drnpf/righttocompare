@@ -1,5 +1,9 @@
 import { ReviewData } from "../components/ReviewCard";
 
+// ------------------------------------------------------------
+// | PHONE DATA OBJECT
+// ------------------------------------------------------------
+// --- Building Blocks ---
 export interface QuickSpec {
   icon: any;
   label: string;
@@ -12,18 +16,30 @@ export interface CarrierCompatibility {
   notes?: string;
 }
 
+// --- Phone Data Object ---
 /**
- * Contains only necessary data of a phone.
+ * Contains only base data on a phone.
  */
-export interface PhoneSummary {
+export interface BasePhone {
   id: string;
   name: string;
   manufacturer: string;
-  releaseDate: string;
   price: string;
   images: {
     main: string;
   };
+}
+
+/**
+ * Contains necessary data for comparison cart items.
+ */
+export interface ComparisonCartItem extends BasePhone {}
+
+/**
+ * Contains only necessary data of a phone for phone cards on catalog page.
+ */
+export interface PhoneSummary extends BasePhone {
+  releaseDate: string;
 }
 
 /**
@@ -46,6 +62,9 @@ export interface PhoneData extends PhoneCard {
   reviews: ReviewData[];
 }
 
+// ------------------------------------------------------------
+// | PAGINATION
+// ------------------------------------------------------------
 /**
  * Pagination class to contain pagination metadata from backend on
  * all metadata involving phones including total number of pages,
