@@ -1,4 +1,3 @@
-import { Rainbow } from "lucide-react";
 import { PhoneSummary, PhoneData, PhoneCard, PaginatedPhoneResponse } from "../types/phoneTypes";
 import { mapJsonToPhoneData, mapJsonToPhoneSummary, mapJsonToPhoneCard } from "../utils/dataMappers";
 
