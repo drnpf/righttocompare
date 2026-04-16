@@ -1,5 +1,5 @@
 import { PhoneSummary, PhoneData, PhoneCard, PaginatedPhoneResponse } from "../types/phoneTypes";
-import { mapJsonToPhoneData, mapJsonToPhoneSummary, mapJsonToPhoneCard } from "../utils/dataMappers";
+import { mapJsonToPhoneData, mapJsonToPhoneSummary, mapJsonToPhoneCard } from "../utils/phoneDataMappers";
 
 const API_URL = "http://localhost:5001/api/phones"; // CHANGE LATER ON PRODUCTION
 
