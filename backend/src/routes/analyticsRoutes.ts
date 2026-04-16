@@ -1,5 +1,5 @@
 import { Router } from "express";
-import * as comparisonController from "../controllers/comparisonController";
+import * as comparisonController from "../controllers/analyticsController";
 
 const router = Router();
 

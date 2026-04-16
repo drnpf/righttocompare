@@ -1,4 +1,4 @@
-import ComparisonAnalytics, { ITrendingComparisons, IComparisonAnalytics } from "../models/ComparisonAnalytics";
+import ComparisonAnalytics, { ITrendingComparisons, IComparisonAnalytics } from "../models/Analytics";
 import { findPhoneSummaries } from "./phoneService";
 
 /**

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import * as comparisonService from "../services/comparisonService";
+import * as comparisonService from "../services/analyticsService";
 
 /**
  * Logs a new comparison view count. This is triggered whenever a user
