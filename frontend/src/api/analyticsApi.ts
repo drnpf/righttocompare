@@ -1,5 +1,6 @@
 import { PopularComparison } from "../types/analyticsTypes";
 import { mapJsonToPopularComparison } from "../utils/analyticsDataMappers";
+import { getClientId } from "../utils/clientId";
 
 const API_URL = "http://localhost:5001/api/analytics"; // CHANGE LATER ON PRODUCTION
 
@@ -13,7 +14,7 @@ export const logComparison = async (phoneIds: string[]): Promise<void> => {
     const response = await fetch(`${API_URL}/compare`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phoneIds }),
+      body: JSON.stringify({ phoneIds, clientId: getClientId() }),
     });
 
     // Logging that analytics failed on backend

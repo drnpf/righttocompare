@@ -9,19 +9,20 @@ import { findPhoneSummaries } from "./phoneService";
  * IP to view log.
  * @param phoneIds Array of strings that are phone IDs
  *      i.e. ["apple-15", "google-8"]
- * @param userIp Requesting user's IP address
+ * @param clientId Requesting user's client ID (their session ID generated on frontend
+ * or in local storage)
  */
-export const recordComparisonView = async (phoneIds: string[], userIp: string): Promise<void> => {
+export const recordComparisonView = async (phoneIds: string[], clientId: string): Promise<void> => {
   // Checking that there are at least 2 phones to add the comparison
   if (!phoneIds || phoneIds.length < 2) return;
 
-  // Sorting IDs and creating search key
+  // Sorting phone IDs and creating search key
   const sortedIds = [...phoneIds].sort();
   const key = sortedIds.join("_");
 
   try {
-    // Attempting to record current requestor's IP to having viewed object
-    await ComparisonViewLog.create({ ip: userIp, comparisonKey: key });
+    // Attempting to record current requestor's session ID to having viewed object
+    await ComparisonViewLog.create({ clientId: clientId, comparisonKey: key });
 
     // Updating the comparison's view count by 1 or adding it if does not exist
     await ComparisonAnalytics.findOneAndUpdate(
@@ -36,7 +37,7 @@ export const recordComparisonView = async (phoneIds: string[], userIp: string): 
   } catch (error: any) {
     // If error 11000 in recording requestor IP then user has already viewed
     if (error.code === 11000) {
-      console.log(`ANALYTICS: Duplicate view ignored for IP: ${userIp}`);
+      console.log(`ANALYTICS: Duplicate view ignored for client: ${clientId}`);
       return;
     }
     console.error("ANALYTICS (ERROR): Failed to record view of comparison:", error.message);

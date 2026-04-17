@@ -11,7 +11,7 @@ const COMPARISON_VIEWED_TTL = 30 * 60; // The time till the user can contribute 
  */
 const comparisonViewLogSchema = new Schema(
   {
-    ip: { type: String, required: true },
+    clientId: { type: String, required: true }, // The client session ID
     comparisonKey: { type: String, required: true },
     createdAt: { type: Date, default: Date.now, expires: COMPARISON_VIEWED_TTL },
   },

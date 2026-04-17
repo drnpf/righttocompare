@@ -10,19 +10,21 @@ import * as analyticsService from "../services/analyticsService";
  * @returns 204 No Content on success
  */
 export const logComparison = async (req: Request, res: Response) => {
-  try {
-    const { phoneIds } = req.body;
+  // Getting requesting client session ID for view log
+  const clientId = req.body.clientId ?? "MISSING_CLIENT_ID";
+  if (clientId === "MISSING_CLIENT_ID") {
+    console.warn(`WARNING: Analytics request from a client from IP. ${req.ip}`);
+  }
 
+  try {
     // Checking that there are at least 2 phone IDs to update a comparison
+    const phoneIds = req.body.phoneIds;
     if (!phoneIds || !Array.isArray(phoneIds) || phoneIds.length < 2) {
-      return res.status(400).json({ message: "A comparison requires at least 2 valid phone IDs." });
+      return res.status(400).json({ message: "Invalid request. A comparison requires at least 2 valid phone IDs." });
     }
 
-    // Getting requesting user IP address for view log
-    const userIp = req.ip ?? "127.0.0.1";
-
     // Logging the comparison view
-    await analyticsService.recordComparisonView(phoneIds, userIp);
+    await analyticsService.recordComparisonView(phoneIds, clientId);
     res.status(204).send();
   } catch (error) {
     console.error("Error logging comparison:", error);
