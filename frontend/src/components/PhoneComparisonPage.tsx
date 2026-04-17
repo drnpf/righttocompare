@@ -1106,7 +1106,12 @@ export default function PhoneComparisonPage({
       )}
 
       {/* Table of Contents */}
-      <SpecTableOfContents specCategories={allCategories} mode="comparison" phoneCount={phones.length} />
+      <SpecTableOfContents
+        specCategories={allCategories}
+        mode="comparison"
+        phoneCount={phones.length}
+        initialExpanded={false}
+      />
     </div>
   );
 }

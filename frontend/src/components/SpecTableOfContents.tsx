@@ -42,6 +42,7 @@ interface SpecTableOfContentsProps {
   specCategories?: string[];
   mode?: "phone-spec" | "comparison";
   phoneCount?: number; // Number of phones selected in comparison mode
+  initialExpanded?: boolean;
 }
 
 // Helper function to get icon for category
@@ -65,9 +66,10 @@ export default function SpecTableOfContents({
   specCategories = [],
   mode = "phone-spec",
   phoneCount = 0,
+  initialExpanded = true,
 }: SpecTableOfContentsProps) {
   const [activeSection, setActiveSection] = useState<string>(mode === "comparison" ? "comparison-header" : "overview");
-  const [isExpanded, setIsExpanded] = useState<boolean>(true);
+  const [isExpanded, setIsExpanded] = useState<boolean>(initialExpanded);
   const [isFullSpecsPopoverOpen, setIsFullSpecsPopoverOpen] = useState<boolean>(false);
   const [isFullSpecsPopoverOpenCollapsed, setIsFullSpecsPopoverOpenCollapsed] = useState<boolean>(false);
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState<boolean>(false);
