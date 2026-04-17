@@ -1,12 +1,16 @@
 import mongoose, { Schema, Document } from "mongoose";
 import { IPhoneSummary } from "./Phone";
 
-export interface ITrendingComparisons {
-  views: number;
-  lastCompared: Date;
+/**
+ * The Popular Comparisons object to contain information on the phones in a comparison.
+ */
+export interface IPopularComparisons {
   phones: IPhoneSummary[];
 }
 
+/**
+ * The Comparison Analytics document schema on MongoDB.
+ */
 export interface IComparisonAnalytics extends Document {
   comparisonKey: string; // The comparison ID which is just going to be a sorted concat of phone IDs
   phoneIds: string[]; // Phone IDs being compared

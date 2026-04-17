@@ -31,7 +31,7 @@ export const logComparison = async (phoneIds: string[]): Promise<void> => {
  */
 export const getPopularComparisons = async (days: number, limit: number): Promise<PopularComparison[]> => {
   try {
-    const url = `${API_URL}/trending?days=${days}&limit=${limit}`;
+    const url = `${API_URL}/popular?days=${days}&limit=${limit}`;
     const response = await fetch(url);
 
     // Handles failed connection to backend

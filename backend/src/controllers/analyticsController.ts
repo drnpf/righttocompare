@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import * as comparisonService from "../services/analyticsService";
+import * as analyticsService from "../services/analyticsService";
 
 /**
  * Logs a new comparison view count. This is triggered whenever a user
@@ -19,7 +19,7 @@ export const logComparison = async (req: Request, res: Response) => {
     }
 
     // Logging the comparison view
-    await comparisonService.recordComparisonView(phoneIds);
+    await analyticsService.recordComparisonView(phoneIds);
     res.status(204).send();
   } catch (error) {
     console.error("Error logging comparison:", error);
@@ -41,10 +41,10 @@ export const getTrending = async (req: Request, res: Response) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 5; // default is 5 days for how many comparison data are pulled
 
     // Getting trending comparisons data
-    const trending = await comparisonService.getTrendingComparisons(days, limit);
+    const trending = await analyticsService.getPopularComparisons(days, limit);
     res.status(200).json(trending);
   } catch (error) {
-    console.error("Error fetchig trending comparisons data:", error);
-    res.status(500).json({ message: "Server error fetching trending comparison data." });
+    console.error("Error fetching popular comparisons data:", error);
+    res.status(500).json({ message: "Server error fetching popular comparison data." });
   }
 };

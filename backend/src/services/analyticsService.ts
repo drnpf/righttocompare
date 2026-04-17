@@ -1,4 +1,4 @@
-import ComparisonAnalytics, { ITrendingComparisons, IComparisonAnalytics } from "../models/Analytics";
+import ComparisonAnalytics, { IPopularComparisons, IComparisonAnalytics } from "../models/Analytics";
 import { findPhoneSummaries } from "./phoneService";
 
 /**
@@ -33,27 +33,25 @@ export const recordComparisonView = async (phoneIds: string[]): Promise<ICompari
  * Fetches most popular comparison within a specified time window.
  * @param days Number of days to look back for comparisons (i.e. 7-within a week; 30-within a month)
  * @param limit Max number of comparison/results to return
- * @returns An array of trending comparison objects (sorted by view counts to measure popularity)
+ * @returns An array of popular comparison objects (sorted by view counts to measure popularity)
  */
-export const getTrendingComparisons = async (days: number = 30, limit: number = 5): Promise<ITrendingComparisons[]> => {
+export const getPopularComparisons = async (days: number = 30, limit: number = 5): Promise<IPopularComparisons[]> => {
   // Establishing the time window to get comparison data in
   const timeWindow = new Date();
   timeWindow.setDate(timeWindow.getDate() - days);
 
   // Fetching for comparison data from backend that are within time window
-  const trendingComparisons = await ComparisonAnalytics.find({
+  const popularComparisons = await ComparisonAnalytics.find({
     lastCompared: { $gte: timeWindow }, // Getting compares within time windows
   })
     .sort({ views: -1 }) // Sorts by most popular/most views
     .limit(limit);
 
-  // Getting phone card summaries of trending phones
+  // Getting phone summaries of phones in popular comparisons
   return await Promise.all(
-    trendingComparisons.map(async (record) => {
+    popularComparisons.map(async (record) => {
       const summaries = await findPhoneSummaries(record.phoneIds);
       return {
-        views: record.views,
-        lastCompared: record.lastCompared,
         phones: summaries,
       };
     }),
