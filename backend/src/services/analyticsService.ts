@@ -1,32 +1,46 @@
-import ComparisonAnalytics, { IPopularComparisons, IComparisonAnalytics } from "../models/Analytics";
+import ComparisonAnalytics, { IPopularComparisons } from "../models/Analytics";
+import { ComparisonViewLog } from "../models/ComparisonViewLog";
 import { findPhoneSummaries } from "./phoneService";
 
 /**
  * Adds/updates the comparison's view count by 1. The IDs are sorted
  * to make sure we do not have duplicate comparisons (if the compared
- * phone's IDs were added without sorting).
+ * phone's IDs were added without sorting). Records requesting user's
+ * IP to view log.
  * @param phoneIds Array of strings that are phone IDs
  *      i.e. ["apple-15", "google-8"]
- * @return The updated or newly created comparison document
+ * @param userIp Requesting user's IP address
  */
-export const recordComparisonView = async (phoneIds: string[]): Promise<IComparisonAnalytics | null> => {
+export const recordComparisonView = async (phoneIds: string[], userIp: string): Promise<void> => {
   // Checking that there are at least 2 phones to add the comparison
-  if (!phoneIds || phoneIds.length < 2) return null;
+  if (!phoneIds || phoneIds.length < 2) return;
 
   // Sorting IDs and creating search key
   const sortedIds = [...phoneIds].sort();
   const key = sortedIds.join("_");
 
-  // Updating the comparison's view count by 1 or adding it if does not exist
-  return await ComparisonAnalytics.findOneAndUpdate(
-    { comparisonKey: key },
-    {
-      $inc: { views: 1 }, // Increments the view
-      $setOnInsert: { phoneIds: sortedIds }, // Used for new comparison inserted
-      $set: { lastCompared: new Date() }, // Updates last view/compared date
-    },
-    { upsert: true, new: true },
-  );
+  try {
+    // Attempting to record current requestor's IP to having viewed object
+    await ComparisonViewLog.create({ ip: userIp, comparisonKey: key });
+
+    // Updating the comparison's view count by 1 or adding it if does not exist
+    await ComparisonAnalytics.findOneAndUpdate(
+      { comparisonKey: key },
+      {
+        $inc: { views: 1 }, // Increments the view
+        $setOnInsert: { phoneIds: sortedIds }, // Used for new comparison inserted
+        $set: { lastCompared: new Date() }, // Updates last view/compared date
+      },
+      { upsert: true, new: true },
+    );
+  } catch (error: any) {
+    // If error 11000 in recording requestor IP then user has already viewed
+    if (error.code === 11000) {
+      console.log(`ANALYTICS: Duplicate view ignored for IP: ${userIp}`);
+      return;
+    }
+    console.error("ANALYTICS (ERROR): Failed to record view of comparison:", error.message);
+  }
 };
 
 /**

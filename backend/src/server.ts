@@ -22,6 +22,9 @@ import "./config/firebase";
 const app: Application = express();
 const PORT = process.env.PORT || 5001;
 
+// App settings
+app.set("trust proxy", true); // Gets client's real IP from x-forwarded-for header rather than IP of load balancer/server
+
 /**
  * Middleware Configurations (Express)
  * CORS: Allows requests to come in from Frontend (or different servers)

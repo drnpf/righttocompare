@@ -18,12 +18,15 @@ export const logComparison = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "A comparison requires at least 2 valid phone IDs." });
     }
 
+    // Getting requesting user IP address for view log
+    const userIp = req.ip ?? "127.0.0.1";
+
     // Logging the comparison view
-    await analyticsService.recordComparisonView(phoneIds);
+    await analyticsService.recordComparisonView(phoneIds, userIp);
     res.status(204).send();
   } catch (error) {
     console.error("Error logging comparison:", error);
-    res.status(500).json({ message: "Server error logging comparison." });
+    res.status(500).json({ error: "Server error logging comparison." });
   }
 };
 
@@ -45,6 +48,6 @@ export const getTrending = async (req: Request, res: Response) => {
     res.status(200).json(trending);
   } catch (error) {
     console.error("Error fetching popular comparisons data:", error);
-    res.status(500).json({ message: "Server error fetching popular comparison data." });
+    res.status(500).json({ error: "Server error fetching popular comparison data." });
   }
 };
