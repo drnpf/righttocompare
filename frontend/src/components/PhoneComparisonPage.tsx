@@ -34,11 +34,14 @@ import {
 } from "lucide-react";
 
 // Custom Components & APIs
+import { PhoneCard, PhoneData } from "../types/phoneTypes";
+
 import { PartialStar } from "./PartialStar";
 import SpecTableOfContents from "./SpecTableOfContents";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
+import { ComparisonBar } from "./ComparisonBar";
+
 import { getPhoneBatch, getPhonePage } from "../api/phoneApi";
-import { PhoneCard, PhoneData } from "../types/phoneTypes";
 import { logComparison } from "../api/analyticsApi";
 
 // Category icons mapping
@@ -976,12 +979,49 @@ export default function PhoneComparisonPage({
                               </td>
                               {phones.map((phone) => {
                                 const value = phone.categories[category]?.[specKey];
+
+                                // Logic to decide if this spec should have a bar
+                                const numericKeywords = [
+                                  "capacity",
+                                  "ram",
+                                  "storage",
+                                  "score",
+                                  "size",
+                                  "brightness",
+                                  "rate",
+                                  "density",
+                                  "weight",
+                                  "price",
+                                ];
+                                const blacklist = ["dimensions", "resolution", "camera", "video"];
+                                const isNumeric =
+                                  numericKeywords.some((key) => specKey.toLowerCase().includes(key)) &&
+                                  !blacklist.some((key) => specKey.toLowerCase().includes(key));
+
+                                // Identifies if lower = Better (i.e. weight/price)
+                                const isLowerBetter =
+                                  specKey.toLowerCase().includes("weight") || specKey.toLowerCase().includes("price");
+
                                 return (
                                   <td
                                     key={phone.id}
                                     className="px-6 py-3 bg-white border-t border-[#e0e0e0] border-l border-[#e0e0e0] group-hover:bg-[#fafbfc]"
                                   >
-                                    <span className="text-sm text-[#2c3968] break-words">{value || "N/A"}</span>
+                                    <div className="flex flex-col min-h-[42px] justify-center">
+                                      <span className="text-sm text-[#2c3968] break-words font-medium">
+                                        {value || "N/A"}
+                                      </span>
+
+                                      {/* Render the bar if numeric */}
+                                      {isNumeric && value && (
+                                        <ComparisonBar
+                                          value={value}
+                                          // Passes this spec value from all 2-3 phones for normalization
+                                          allValues={phones.map((p) => p.categories[category]?.[specKey])}
+                                          reverse={isLowerBetter}
+                                        />
+                                      )}
+                                    </div>
                                   </td>
                                 );
                               })}
