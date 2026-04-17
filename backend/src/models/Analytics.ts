@@ -25,7 +25,7 @@ const ComparisonAnalyticsSchema: Schema = new Schema(
     views: { type: Number, default: 0 },
     lastCompared: { type: Date, default: Date.now() },
   },
-  { timestamps: true }, // Date of creation/or last update on Mongo
+  { timestamps: true, collection: "comparison_analytics" },
 );
 
 // Sorts comparisons by highest view
