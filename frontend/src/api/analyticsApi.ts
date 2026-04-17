@@ -35,7 +35,7 @@ export const getPopularComparisons = async (days: number, limit: number): Promis
     const response = await fetch(url);
 
     // Handles failed connection to backend
-    if (!response.ok) throw new Error(`Popular comparions fetch failed: ${response.status}`);
+    if (!response.ok) throw new Error(`Popular comparisons fetch failed: ${response.status}`);
 
     // Mapping each PhoneSummary objects to their respective comparisons
     const rawData = await response.json();

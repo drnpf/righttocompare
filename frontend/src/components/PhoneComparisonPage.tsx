@@ -39,6 +39,7 @@ import SpecTableOfContents from "./SpecTableOfContents";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
 import { getPhoneBatch, getPhonePage } from "../api/phoneApi";
 import { PhoneCard, PhoneData } from "../types/phoneTypes";
+import { logComparison } from "../api/analyticsApi";
 
 // Category icons mapping
 const categoryConfig: Record<string, { icon: any }> = {
@@ -101,6 +102,8 @@ interface PhoneComparisonPageProps {
 const SEARCH_DELAY_LOADING_MS = 150; // The time until loading UI displays on search
 const SEARCH_DEBOUNCE_MS = 300; // Time to wait after typing stops before sending search query to server
 const SEARCH_RESULT_LIMIT = 10; // Number of phones to show in "Add Phone" dropdown
+
+const COMPARISON_ANALYTICS_LOG_DEBOUNCE_MS = 3000; // Time to wait till the comparison's analytics are updated (view incremented and last compare date updated)
 
 // ------------------------------------------------------------
 // | PHONE COMPARISON PAGE DEFINITION
@@ -167,6 +170,23 @@ export default function PhoneComparisonPage({
       }
     };
     loadPhones();
+  }, [phoneIds]);
+
+  /**
+   * POPULARITY TRACKING OF COMPARISON:
+   * Signal: Change in phoneIds array
+   * Action: Logs the comparison being viewed after some set time to account for
+   * user possibly still searching for third phone to compare.
+   */
+  useEffect(() => {
+    // Only updates if there are at least 2 phones
+    if (phoneIds.length < 2) return;
+
+    // Sets a timer to wait until the analytics of comparison being viewed is updated
+    const viewTimer = setTimeout(() => logComparison(phoneIds), COMPARISON_ANALYTICS_LOG_DEBOUNCE_MS);
+
+    // Resets timer on any change in phoneIds array (i.e. adding/removing a phone)
+    return () => clearTimeout(viewTimer);
   }, [phoneIds]);
 
   /**
