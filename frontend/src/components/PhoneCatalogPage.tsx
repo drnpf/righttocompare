@@ -12,6 +12,7 @@ import { PhoneCard, PhoneSummary } from "../types/phoneTypes";
 import { getPhonePage, getManufacturers, getPhoneSummaries } from "../api/phoneApi";
 import ComparisonCart from "./ComparisonCart";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
+import { CatalogFilters } from "./CatalogFilters";
 
 interface PhoneCatalogPageProps {
   onNavigate: (phoneId: string) => void;
@@ -57,11 +58,12 @@ export default function PhoneCatalogPage({
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "price" | "release">("name");
   const [availableManufacturers, setAvailableManufacturers] = useState<string[]>([]);
-  const [manufacturerFilter, setManufacturerFilter] = useState<string>("all");
+  const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>([]);
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(2000);
   const [selectedRAM, setSelectedRAM] = useState<number[]>([]);
   const [selectedStorage, setSelectedStorage] = useState<number[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
 
   // --- Comparison States ---
   const [isCartMinimized, setIsCartMinimized] = useState(false);
@@ -98,7 +100,7 @@ export default function PhoneCatalogPage({
    */
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, manufacturerFilter, sortBy, activeTab]);
+  }, [searchQuery, selectedManufacturers, sortBy, activeTab, maxPrice, minPrice, selectedRAM, selectedStorage]);
 
   /**
    * PHONE CATALOG PAGE SYNC:
@@ -127,8 +129,12 @@ export default function PhoneCatalogPage({
         // Building options object to query DB for phones
         const options = {
           search: searchQuery,
-          manufacturer: manufacturerFilter === "all" ? [] : [manufacturerFilter],
+          manufacturer: selectedManufacturers,
           sortBy: sortBy === "release" ? "newest" : sortBy === "price" ? "price_desc" : "name_asc",
+          minPrice: minPrice,
+          maxPrice: maxPrice,
+          ram: selectedRAM,
+          storage: selectedStorage,
         };
         const { phones, pagination } = await getPhonePage(currentPage, itemsPerPage, options);
 
@@ -160,7 +166,17 @@ export default function PhoneCatalogPage({
       clearTimeout(debounceTimer);
       clearTimeout(loadingTimer);
     };
-  }, [currentPage, searchQuery, manufacturerFilter, sortBy, activeTab]);
+  }, [
+    currentPage,
+    searchQuery,
+    selectedManufacturers,
+    sortBy,
+    activeTab,
+    maxPrice,
+    minPrice,
+    selectedRAM,
+    selectedStorage,
+  ]);
 
   /**
    * SYNC: Comparison Cart Refreshes
@@ -193,6 +209,17 @@ export default function PhoneCatalogPage({
   // ------------------------------------------------------------
   // | HOME PAGE LOGIC
   // ------------------------------------------------------------
+
+  // Helper function to clear all filters on catalog filter
+  const handleClearAll = () => {
+    setSearchQuery("");
+    setSelectedManufacturers([]);
+    setMinPrice(0);
+    setMaxPrice(2000);
+    setSelectedRAM([]);
+    setSelectedStorage([]);
+    setSortBy("name");
+  };
 
   // Helper function to check if a phone was released within the past year
   const parsePhoneDate = (dateStr: string) => new Date(dateStr);
@@ -361,25 +388,17 @@ export default function PhoneCatalogPage({
             </div>
 
             <div className="flex flex-wrap gap-3 items-center">
-              {/* Manufacturer Filter */}
-              <div className="relative">
-                <select
-                  value={manufacturerFilter}
-                  onChange={(e) => setManufacturerFilter(e.target.value)}
-                  className="appearance-none pl-4 pr-10 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all cursor-pointer"
-                >
-                  <option value="all">All Brands</option>
-                  {availableManufacturers.map((manufacturer) => (
-                    <option key={manufacturer} value={manufacturer}>
-                      {manufacturer}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] pointer-events-none"
-                  size={20}
-                />
-              </div>
+              {/* Toggle Filters Button */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`px-4 py-3 rounded-lg border text-sm font-bold transition-all ${
+                  showFilters
+                    ? "bg-[#2c3968] text-white border-transparent"
+                    : "border-[#d9d9d9] dark:border-[#2d3548] text-[#2c3968] dark:text-[#4a7cf6] hover:bg-gray-50"
+                }`}
+              >
+                {showFilters ? "Hide Filters" : "Filters"}
+              </button>
 
               {/* Sort By */}
               <div className="relative">
@@ -425,33 +444,81 @@ export default function PhoneCatalogPage({
           </div>
 
           {/* Active Filters */}
-          {(searchQuery || manufacturerFilter !== "all") && (
+          {(searchQuery ||
+            selectedManufacturers.length > 0 ||
+            selectedRAM.length > 0 ||
+            selectedStorage.length > 0 ||
+            maxPrice < 2000) && (
             <div className="mt-4 pt-4 border-t border-[#e5e5e5] dark:border-[#2d3548]">
               <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-[#666] dark:text-[#a0a8b8]">Active filters:</span>
+                <span className="text-[12px] font-bold text-[#999] dark:text-[#707070] uppercase tracking-wider mr-2">
+                  Active filters:
+                </span>
+
+                {/* Search Query Badge */}
                 {searchQuery && (
-                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full">
-                    Search: "{searchQuery}"
+                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
+                    "{searchQuery}"
                   </span>
                 )}
-                {manufacturerFilter !== "all" && (
-                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full">
-                    Brand: {manufacturerFilter}
+
+                {/* Manufacturer Badges */}
+                {selectedManufacturers.length > 0 && (
+                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
+                    Brands: {selectedManufacturers.join(", ")}
                   </span>
                 )}
+
+                {/* RAM Badges */}
+                {selectedRAM.length > 0 && (
+                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
+                    RAM: {selectedRAM.map((r) => `${r}GB`).join(", ")}
+                  </span>
+                )}
+
+                {/* Storage Badges */}
+                {selectedStorage.length > 0 && (
+                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
+                    Storage: {selectedStorage.map((s) => (s >= 1024 ? "1TB" : `${s}GB`)).join(", ")}
+                  </span>
+                )}
+
+                {/* Price Badge - Only shows if moved from the default $2000 */}
+                {maxPrice < 2000 && (
+                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
+                    Under ${maxPrice}
+                  </span>
+                )}
+
+                {/* The Global Reset */}
                 <button
-                  onClick={() => {
-                    setSearchQuery("");
-                    setManufacturerFilter("all");
-                  }}
-                  className="text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] underline"
+                  onClick={handleClearAll}
+                  className="ml-2 text-xs font-bold text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-colors underline underline-offset-4"
                 >
-                  Clear all
+                  Reset All
                 </button>
               </div>
             </div>
           )}
         </div>
+
+        {/* 3. YOUR ADVANCED FILTER DRAWER */}
+        {showFilters && (
+          <CatalogFilters
+            availableManufacturers={availableManufacturers}
+            selectedManufacturers={selectedManufacturers}
+            setSelectedManufacturers={setSelectedManufacturers}
+            minPrice={minPrice}
+            setMinPrice={setMinPrice}
+            maxPrice={maxPrice}
+            setMaxPrice={setMaxPrice}
+            selectedRAM={selectedRAM}
+            setSelectedRAM={setSelectedRAM}
+            selectedStorage={selectedStorage}
+            setSelectedStorage={setSelectedStorage}
+            onClearAll={handleClearAll}
+          />
+        )}
 
         {/* Results Count */}
         <div className="mb-4">
