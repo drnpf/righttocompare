@@ -53,15 +53,23 @@ export default function PhoneCatalogPage({
   const [hasPrevPage, setHasPrevPage] = useState(false);
   const itemsPerPage = 24;
 
-  // --- UI States ---
+  // --- Filter States ---
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"name" | "price" | "release">("name");
-  const [manufacturerFilter, setManufacturerFilter] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<"catalog" | "hot" | "popular">("catalog");
   const [availableManufacturers, setAvailableManufacturers] = useState<string[]>([]);
+  const [manufacturerFilter, setManufacturerFilter] = useState<string>("all");
+  const [minPrice, setMinPrice] = useState<number>(0);
+  const [maxPrice, setMaxPrice] = useState<number>(2000);
+  const [selectedRAM, setSelectedRAM] = useState<number[]>([]);
+  const [selectedStorage, setSelectedStorage] = useState<number[]>([]);
+
+  // --- Comparison States ---
   const [isCartMinimized, setIsCartMinimized] = useState(false);
   const [comparisonData, setComparisonData] = useState<PhoneSummary[]>([]);
+
+  // --- UI States ---
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [activeTab, setActiveTab] = useState<"catalog" | "hot" | "popular">("catalog");
 
   // ------------------------------------------------------------
   // | DATA SYNCHRONIZATION
