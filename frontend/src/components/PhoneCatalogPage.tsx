@@ -487,10 +487,10 @@ export default function PhoneCatalogPage({
                   </span>
                 )}
 
-                {/* Price Badge - Only shows if moved from the default $2000 */}
-                {maxPrice < 2000 && (
-                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
-                    Under ${maxPrice}
+                {/* Price Badge */}
+                {(minPrice > 0 || maxPrice < 2000) && (
+                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium tabular-nums">
+                    Price: ${minPrice} - ${maxPrice}
                   </span>
                 )}
 

@@ -37,8 +37,12 @@ export const mapJsonToPhoneCard = (dbPhone: any): PhoneCard => {
     // Quick specs for the spec summary on top of spec page
     quickSpecs: [
       { icon: Cpu, label: "Processor", value: specs.performance.processor },
-      { icon: Layers, label: "Memory", value: `${specs.performance.ram.options[0]}GB RAM` },
-      { icon: HardDrive, label: "Storage", value: `${specs.performance.storageOptions[0]}GB Base` },
+      { icon: Layers, label: "Memory", value: `${specs.performance.ram.options.join("/")}GB RAM` },
+      {
+        icon: HardDrive,
+        label: "Storage",
+        value: specs.performance.storageOptions.map((s: number) => (s >= 1024 ? "1TB" : `${s}GB`)).join(" / "),
+      },
       { icon: Smartphone, label: "Display", value: `${specs.display.screenSizeInches}" ${specs.display.technology}` },
       { icon: Camera, label: "Main Cam", value: `${specs.camera.mainMegapixels}MP` },
       { icon: Battery, label: "Battery", value: `${specs.battery.capacitymAh} mAh` },

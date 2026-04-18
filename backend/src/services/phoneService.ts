@@ -94,12 +94,12 @@ export const findPhonePage = async (
 
   // RAM filter
   if (options.ram && options.ram.length > 0) {
-    query["spec.performance.ram.options"] = { $in: options.ram };
+    query["specs.performance.ram.options"] = { $in: options.ram };
   }
 
   // Storage filter
   if (options.storage && options.storage.length > 0) {
-    query["spec.performance.storage.options"] = { $in: options.storage };
+    query["specs.performance.storageOptions"] = { $in: options.storage };
   }
 
   // Sorting results (CAN ADD MORE SORTS HERE)

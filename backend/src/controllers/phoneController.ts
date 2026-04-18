@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { raw, Request, Response } from "express";
 import * as phoneService from "../services/phoneService";
 
 /**
@@ -35,6 +35,22 @@ export const getPhonePage = async (req: Request, res: Response) => {
     const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined;
     const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined;
 
+    // Sanitization of RAM
+    let ram: number[] = [];
+    if (req.query.ram) {
+      const rawRam = Array.isArray(req.query.ram) ? (req.query.ram as string[]) : [req.query.ram as string];
+      ram = rawRam.map(Number);
+    }
+
+    // Sanitization of storage
+    let storage: number[] = [];
+    if (req.query.storage) {
+      const rawStorage = Array.isArray(req.query.storage)
+        ? (req.query.storage as string[])
+        : [req.query.storage as string];
+      storage = rawStorage.map(Number);
+    }
+
     // Sanitization of brands if multiple brands chosen
     let manufacturer: string[] = [];
     if (req.query.manufacturer) {
@@ -49,6 +65,8 @@ export const getPhonePage = async (req: Request, res: Response) => {
       manufacturer,
       minPrice,
       maxPrice,
+      ram,
+      storage,
       sortBy,
     });
 
