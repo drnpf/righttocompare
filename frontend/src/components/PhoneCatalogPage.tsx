@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner@2.0.3";
 
 // UI Components
@@ -53,6 +53,7 @@ export default function PhoneCatalogPage({
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPrevPage, setHasPrevPage] = useState(false);
   const itemsPerPage = 24;
+  const lastPageRef = useRef(currentPage);
 
   // --- Filter States ---
   const [searchQuery, setSearchQuery] = useState("");
@@ -148,8 +149,11 @@ export default function PhoneCatalogPage({
         setHasPrevPage(pagination.hasPrevPage);
         setError(null);
 
-        // Scrolls to top when fresh mount of catalog page/refresh
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        // Scrolls to top on page mount/refresh/new pagination page
+        if (currentPage !== lastPageRef.current) {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          lastPageRef.current = currentPage; // Syncs the reference
+        }
       } catch (error) {
         setError("Failed to fetch phones");
       } finally {
