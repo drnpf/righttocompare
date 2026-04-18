@@ -12,6 +12,7 @@ export const parseNumericValue = (value: string | number | undefined): number =>
   // Checking if value contains 'x' or by to flag as dimension
   const strValue = value.toString().toLowerCase().replace(/,/g, "");
   if (strValue.includes("x") || strValue.includes(" by ")) return 0;
+  if (strValue.includes("/")) return 0; // For phones with different variants (i.e. 128/256 GB storage)
 
   // Regex pattern for matching (digits.digits) [\d+ \. \d+]
   const numberPattern = /(\d+(\.\d+)?)/;
