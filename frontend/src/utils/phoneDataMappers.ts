@@ -1,6 +1,11 @@
 import { Smartphone, Camera, Cpu, Battery, Ruler, Weight } from "lucide-react";
 import { PhoneData, PhoneCard, PhoneSummary } from "../types/phoneTypes";
 
+/**
+ * Maps raw phone data JSON to lightweight PhoneSummary object.
+ * @param dbPhone The raw phone object from the database
+ * @returns The formatted phone summary data
+ */
 export const mapJsonToPhoneSummary = (dbPhone: any): PhoneSummary => {
   return {
     id: dbPhone.id,
@@ -11,6 +16,12 @@ export const mapJsonToPhoneSummary = (dbPhone: any): PhoneSummary => {
   };
 };
 
+/**
+ * Maps raw phone data JSON to PhoneCard object used for the catalog
+ * page cards.
+ * @param dbPhone The raw phone object from the database
+ * @returns The formatted phone card data with icons mapped with the quick specs
+ */
 export const mapJsonToPhoneCard = (dbPhone: any): PhoneCard => {
   const { specs } = dbPhone;
 
@@ -35,6 +46,12 @@ export const mapJsonToPhoneCard = (dbPhone: any): PhoneCard => {
   };
 };
 
+/**
+ * Maps raw phone data JSON to PhoneData object used for the specification page
+ * and comparison page. Contains full specifications of the phone.
+ * @param dbPhone The raw phone object from the database
+ * @returns The formatted phone data object containing full phone specifications
+ */
 export const mapJsonToPhoneData = (dbPhone: any): PhoneData => {
   const { specs } = dbPhone;
 

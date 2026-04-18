@@ -73,7 +73,7 @@ export const getPhonePage = async (req: Request, res: Response) => {
 };
 
 /**
- * Fetches a specific phone using its ID,
+ * Fetches a specific phone using its ID.
  * @route GET /api/phones/:id
  * @param req The Express request object containing the 'id' param
  * @param res The Express response object
@@ -90,6 +90,37 @@ export const getPhoneById = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(`Error fetching phone ${req.params.id}:`, error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Fetches multiple full phone objects by their IDs.
+ * @route GET /api/phones/batch
+ * @param req The Express request object containing the 'id' param
+ * @param res The Express response object
+ * @returns
+ */
+export const getPhoneBatch = async (req: Request, res: Response) => {
+  try {
+    const idsString = req.query.ids as string;
+
+    // Handles case of no IDs passed to request parameter
+    if (!idsString) {
+      return res.status(400).json({ message: "Missing 'ids' query parameter" });
+    }
+
+    // Putting IDs into array
+    const ids = idsString.split(",");
+
+    // Limiting number of full phone specs to retrieve
+    if (ids.length > 3) {
+      return res.status(400).json({ message: "Maximum of 3 phones allowed for batch retrieval" });
+    }
+    const phones = await phoneService.findPhonesById(ids);
+    res.status(200).json(phones);
+  } catch (error) {
+    console.error("Error fetching phone batch:", error);
+    res.status(500).json({ message: "Server error fetching phone batch" });
   }
 };
 

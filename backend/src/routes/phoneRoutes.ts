@@ -1,15 +1,5 @@
 import { Router } from "express";
-import {
-  getPhonePage,
-  getPhoneById,
-  getPhoneCardById,
-  getManufacturers,
-  getPhoneSummaries,
-  getPhoneSummaryById,
-  createPhone,
-  updatePhone,
-  deletePhone,
-} from "../controllers/phoneController";
+import * as phoneController from "../controllers/phoneController";
 
 const router = Router();
 
@@ -18,55 +8,61 @@ const router = Router();
  * Get a list of all unique manufacturers
  * @route GET /api/phones/manufacturers
  */
-router.get("/manufacturers", getManufacturers);
+router.get("/manufacturers", phoneController.getManufacturers);
+
+/**
+ * Get multiple full phone data by IDs
+ * @route GET /api/phones/batch?ids=id1,id2,id3
+ */
+router.get("/batch", phoneController.getPhoneBatch);
 
 /**
  * Get multiple phone summaries by IDs
  * @route GET /api/phones/summaries?ids=id1,id2,id3
  */
-router.get("/summaries", getPhoneSummaries);
+router.get("/summaries", phoneController.getPhoneSummaries);
 
 /**
  * Get a single phone summary item by ID
  * @route GET /api/phones/summary/:id
  */
-router.get("/summary/:id", getPhoneSummaryById);
+router.get("/summary/:id", phoneController.getPhoneSummaryById);
 
 /**
  * Get a single phone card by ID
  * @route GET /api/phones/card/:id
  */
-router.get("/card/:id", getPhoneCardById);
+router.get("/card/:id", phoneController.getPhoneCardById);
 
 /**
  * Get a single phone by ID
  * @route GET /api/phones/:id
  */
-router.get("/:id", getPhoneById);
+router.get("/:id", phoneController.getPhoneById);
 
 /**
  * Get all phones
  * @route GET /api/phones
  */
-router.get("/", getPhonePage);
+router.get("/", phoneController.getPhonePage);
 
 // --- ADMIN ROUTES --- (maybe we can add some middleware to separate admin and public routes later)
 /**
  * Create a new phone
  * @route POST /api/phones
  */
-router.post("/", createPhone);
+router.post("/", phoneController.createPhone);
 
 /**
  * Update an existing phone by ID
  * @route PUT /api/phones/:id
  */
-router.put("/:id", updatePhone);
+router.put("/:id", phoneController.updatePhone);
 
 /**
  * Delete a phone by ID
  * @route DELETE /api/phones/:id
  */
-router.delete("/:id", deletePhone);
+router.delete("/:id", phoneController.deletePhone);
 
 export default router;

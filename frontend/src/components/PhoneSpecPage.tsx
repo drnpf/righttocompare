@@ -652,7 +652,7 @@ export default function PhoneSpecPage({
   // ------------------------------------------------------------
   return (
     <>
-      <SpecTableOfContents specCategories={categories} />
+      <SpecTableOfContents specCategories={categories} initialExpanded={false} />
       <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 py-8">
         {/* 1. Phone Image & Overview */}
         <div id="overview" className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-8 mb-8">

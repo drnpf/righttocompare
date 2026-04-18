@@ -34,11 +34,15 @@ import {
 } from "lucide-react";
 
 // Custom Components & APIs
+import { PhoneCard, PhoneData } from "../types/phoneTypes";
+
 import { PartialStar } from "./PartialStar";
 import SpecTableOfContents from "./SpecTableOfContents";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
-import { getPhoneById, getPhonePage } from "../api/phoneApi";
-import { PhoneCard, PhoneData } from "../types/phoneTypes";
+import { ComparisonBar } from "./ComparisonBar";
+
+import { getPhoneBatch, getPhonePage } from "../api/phoneApi";
+import { logComparison } from "../api/analyticsApi";
 
 // Category icons mapping
 const categoryConfig: Record<string, { icon: any }> = {
@@ -102,6 +106,8 @@ const SEARCH_DELAY_LOADING_MS = 150; // The time until loading UI displays on se
 const SEARCH_DEBOUNCE_MS = 300; // Time to wait after typing stops before sending search query to server
 const SEARCH_RESULT_LIMIT = 10; // Number of phones to show in "Add Phone" dropdown
 
+const COMPARISON_ANALYTICS_LOG_DEBOUNCE_MS = 3000; // Time to wait till the comparison's analytics are updated (view incremented and last compare date updated)
+
 // ------------------------------------------------------------
 // | PHONE COMPARISON PAGE DEFINITION
 // ------------------------------------------------------------
@@ -156,9 +162,7 @@ export default function PhoneComparisonPage({
 
       // Attempting to fetch all phones in compare
       try {
-        const promises = phoneIds.map((id) => getPhoneById(id));
-        const results = await Promise.all(promises);
-        const validPhones = results.filter((p): p is PhoneData => p !== null); // Handles cleaning null case since getPhoneById can return null
+        const validPhones = await getPhoneBatch(phoneIds);
         setPhoneDataList(validPhones);
       } catch (error) {
         // Handles failed fetch error
@@ -169,6 +173,23 @@ export default function PhoneComparisonPage({
       }
     };
     loadPhones();
+  }, [phoneIds]);
+
+  /**
+   * POPULARITY TRACKING OF COMPARISON:
+   * Signal: Change in phoneIds array
+   * Action: Logs the comparison being viewed after some set time to account for
+   * user possibly still searching for third phone to compare.
+   */
+  useEffect(() => {
+    // Only updates if there are at least 2 phones
+    if (phoneIds.length < 2) return;
+
+    // Sets a timer to wait until the analytics of comparison being viewed is updated
+    const viewTimer = setTimeout(() => logComparison(phoneIds), COMPARISON_ANALYTICS_LOG_DEBOUNCE_MS);
+
+    // Resets timer on any change in phoneIds array (i.e. adding/removing a phone)
+    return () => clearTimeout(viewTimer);
   }, [phoneIds]);
 
   /**
@@ -958,12 +979,49 @@ export default function PhoneComparisonPage({
                               </td>
                               {phones.map((phone) => {
                                 const value = phone.categories[category]?.[specKey];
+
+                                // Logic to decide if this spec should have a bar
+                                const numericKeywords = [
+                                  "capacity",
+                                  "ram",
+                                  "storage",
+                                  "score",
+                                  "size",
+                                  "brightness",
+                                  "rate",
+                                  "density",
+                                  "weight",
+                                  "price",
+                                ];
+                                const blacklist = ["dimensions", "resolution", "camera", "video"];
+                                const isNumeric =
+                                  numericKeywords.some((key) => specKey.toLowerCase().includes(key)) &&
+                                  !blacklist.some((key) => specKey.toLowerCase().includes(key));
+
+                                // Identifies if lower = Better (i.e. weight/price)
+                                const isLowerBetter =
+                                  specKey.toLowerCase().includes("weight") || specKey.toLowerCase().includes("price");
+
                                 return (
                                   <td
                                     key={phone.id}
                                     className="px-6 py-3 bg-white border-t border-[#e0e0e0] border-l border-[#e0e0e0] group-hover:bg-[#fafbfc]"
                                   >
-                                    <span className="text-sm text-[#2c3968] break-words">{value || "N/A"}</span>
+                                    <div className="flex flex-col min-h-[42px] justify-center">
+                                      <span className="text-sm text-[#2c3968] break-words font-medium">
+                                        {value || "N/A"}
+                                      </span>
+
+                                      {/* Render the bar if numeric */}
+                                      {isNumeric && value && (
+                                        <ComparisonBar
+                                          value={value}
+                                          // Passes this spec value from all 2-3 phones for normalization
+                                          allValues={phones.map((p) => p.categories[category]?.[specKey])}
+                                          reverse={isLowerBetter}
+                                        />
+                                      )}
+                                    </div>
                                   </td>
                                 );
                               })}
@@ -1088,7 +1146,12 @@ export default function PhoneComparisonPage({
       )}
 
       {/* Table of Contents */}
-      <SpecTableOfContents specCategories={allCategories} mode="comparison" phoneCount={phones.length} />
+      <SpecTableOfContents
+        specCategories={allCategories}
+        mode="comparison"
+        phoneCount={phones.length}
+        initialExpanded={false}
+      />
     </div>
   );
 }

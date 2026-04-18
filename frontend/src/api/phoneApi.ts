@@ -1,6 +1,5 @@
-import { Rainbow } from "lucide-react";
 import { PhoneSummary, PhoneData, PhoneCard, PaginatedPhoneResponse } from "../types/phoneTypes";
-import { mapJsonToPhoneData, mapJsonToPhoneSummary, mapJsonToPhoneCard } from "../utils/dataMappers";
+import { mapJsonToPhoneData, mapJsonToPhoneSummary, mapJsonToPhoneCard } from "../utils/phoneDataMappers";
 
 const API_URL = "http://localhost:5001/api/phones"; // CHANGE LATER ON PRODUCTION
 
@@ -89,6 +88,32 @@ export const getPhoneById = async (id: string): Promise<PhoneData | null> => {
   } catch (error) {
     console.error(`Error in getPhoneById (${id}):`, error);
     return null;
+  }
+};
+
+/**
+ * Fetches the full phone data of a multple phone by their IDs from the backend.
+ * @param id The ID of the phone to fetch
+ * @returns An array of PhoneData objects containing full details on each phone.
+ */
+export const getPhoneBatch = async (ids: string[]): Promise<PhoneData[]> => {
+  // Handles no phones to fetch
+  if (!ids || ids.length == 0) return [];
+
+  // Fetching for full phone data objects from backend
+  try {
+    const url = `${API_URL}/batch?ids=${ids.join(",")}`;
+    const response = await fetch(url);
+
+    // Handles failed syncs with backend
+    if (!response.ok) throw new Error(`Batch fetch failed: ${response.status}`);
+
+    // Mapping array of JSON objects to PhoneData type
+    const rawPhone = await response.json();
+    return (rawPhone as any[]).map((item) => mapJsonToPhoneData(item));
+  } catch (error) {
+    console.error("Error in getPhoneBatch:", error);
+    return [];
   }
 };
 

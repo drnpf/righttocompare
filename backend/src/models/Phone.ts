@@ -25,29 +25,50 @@ export interface IReview {
   notHelpfulVoters: string[]; // User IDs who voted not helpful
 }
 
-export interface IPhone extends Document {
-  id: string; // The ID like galaxy-s24-ultra -- we're going to use this for url
+export interface IPhoneSummary {
+  id: string;
   name: string;
   manufacturer: string;
-  releaseDate: Date;
   price: number;
   images: {
     main: string;
-    // Add front, back, or side here later if we got those pics
   };
+}
+
+export interface IPhoneCard extends IPhoneSummary {
+  releaseDate: Date;
   specs: {
     display: {
       screenSizeInches: number;
+      technology: string;
+    };
+    camera: {
+      mainMegapixels: number;
+    };
+    performance: {
+      processor: string;
+    };
+    battery: {
+      capacitymAh: number;
+    };
+    design: {
+      dimensionsMm: string;
+      weightGrams: number;
+    };
+  };
+}
+
+export interface IPhone extends IPhoneCard, Document {
+  specs: IPhoneCard["specs"] & {
+    display: IPhoneCard["specs"]["display"] & {
       resolution: string;
-      technology: string; // i.e. OLED, AMOLED, etc.
       refreshRateHz: number;
       peakBrightnessNits: number;
       protection?: string;
       pixelDensityPpi?: number;
       screenToBodyRatioPercent?: number;
     };
-    performance: {
-      processor: string;
+    performance: IPhoneCard["specs"]["performance"] & {
       cpu: string;
       gpu: string;
       ram: {
@@ -64,21 +85,17 @@ export interface IPhone extends Document {
       geekbenchMultiCore: number;
       antutuScore: number;
     };
-    camera: {
-      mainMegapixels: number;
+    camera: IPhoneCard["specs"]["camera"] & {
       ultrawideMegapixels?: number;
       telephotoMegapixels?: number;
       frontMegapixels: number;
       features?: string[]; // i.e. ["Night Mode", "8K Video"]
     };
-    design: {
-      dimensionsMm: string; // i.e "123.4 x 75.6 x 8.9 mm"
-      weightGrams: number;
+    design: IPhoneCard["specs"]["design"] & {
       buildMaterials?: string; // i.e. "Aluminum frame, Gorilla Glass Victus+ front and back"
       colorsAvailable: string[]; // i.e. ["Phantom Black", "Green", "Lavender", "Cream"]
     };
-    battery: {
-      capacitymAh: number;
+    battery: IPhoneCard["specs"]["battery"] & {
       chargingSpeedW: number;
       batteryType: string;
       wirelessCharging: boolean;
@@ -230,6 +247,7 @@ const PhoneSchema: Schema = new Schema<IPhone>(
   },
   {
     timestamps: true,
+    collection: "phones",
   },
 );
 
