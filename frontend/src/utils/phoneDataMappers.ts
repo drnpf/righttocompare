@@ -1,4 +1,4 @@
-import { Smartphone, Camera, Cpu, Battery, Ruler, Weight } from "lucide-react";
+import { Smartphone, Camera, Cpu, Battery, HardDrive, RefreshCw, Layers } from "lucide-react";
 import { PhoneData, PhoneCard, PhoneSummary } from "../types/phoneTypes";
 
 /**
@@ -36,12 +36,16 @@ export const mapJsonToPhoneCard = (dbPhone: any): PhoneCard => {
 
     // Quick specs for the spec summary on top of spec page
     quickSpecs: [
+      { icon: Cpu, label: "Processor", value: specs.performance.processor },
+      { icon: Layers, label: "Memory", value: `${specs.performance.ram.options.join("/")}GB RAM` },
+      {
+        icon: HardDrive,
+        label: "Storage",
+        value: specs.performance.storageOptions.map((s: number) => (s >= 1024 ? "1TB" : `${s}GB`)).join(" / "),
+      },
       { icon: Smartphone, label: "Display", value: `${specs.display.screenSizeInches}" ${specs.display.technology}` },
       { icon: Camera, label: "Main Cam", value: `${specs.camera.mainMegapixels}MP` },
-      { icon: Cpu, label: "Processor", value: specs.performance.processor },
       { icon: Battery, label: "Battery", value: `${specs.battery.capacitymAh} mAh` },
-      { icon: Ruler, label: "Dimensions", value: specs.design.dimensionsMm },
-      { icon: Weight, label: "Weight", value: `${specs.design.weightGrams}g` },
     ],
   };
 };

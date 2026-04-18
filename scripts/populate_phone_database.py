@@ -27,86 +27,118 @@ def get_mongodb_client():
 
 
 def generate_mock_phones(num_phones=12):
-    manufacturers = ['Apple', 'Samsung', 'Google', 'OnePlus', 'Xiaomi']
+    manufacturers = ['Apple', 'Samsung', 'Google', 'OnePlus', 'Xiaomi', 'Sony', 'Asus']
+    # Pools for random selection
+    ram_pool = [6, 8, 12, 16, 18, 24]
+    storage_pool = [128, 256, 512, 1024]
+    
     mock_phones = []
 
-    # Generates mock phones
     for i in range(1, num_phones + 1):
         manufacturer = random.choice(manufacturers)
+        
+        # Apple must have iOS and others have Android
+        is_apple = manufacturer == 'Apple'
+        os_name = f"iOS {random.choice(['16', '17', '18'])}" if is_apple else f"Android {random.choice(['13', '14', '15'])}"
+        
+        # Picks a random number of options (1 to 3) from the pools and sorts them
+        phone_ram = sorted(random.sample(ram_pool, k=random.randint(1, 3)))
+        phone_storage = sorted(random.sample(storage_pool, k=random.randint(1, 3)))
 
         # Generates a random release date in the last 2 years
         release_date = datetime.now() - timedelta(days=random.randint(0, 365*2))
         
+        # Establishing a random pool of carriers
+        carrier_pool = [
+            "Verizon", "T-Mobile", "AT&T", "Google Fi", 
+            "Mint Mobile", "Visible", "Cricket", "Boost Mobile", 
+            "US Cellular", "Metro by T-Mobile"
+        ]
+        selected_carriers = random.sample(carrier_pool, k=random.randint(4, 7))
+
+        # Randomly picking carrier compatibility/incompatibility
+        carrier_compatibility = []
+        for carrier in selected_carriers:
+            is_compatible = random.choices([True, False], weights=[85, 15])[0]
+            carrier_compatibility.append({
+                "name": carrier, 
+                "compatible": is_compatible
+            })
+
+        # Creating the phone
         phone = {
             "id": f"{manufacturer.lower()}-x{i}-pro",
             "name": f"{manufacturer} X{i} Pro",
             "manufacturer": manufacturer,
             "releaseDate": release_date,
-            "price": random.choice([699, 799, 899, 999, 1099, 1199]),
-            "images": {"main": f"https://picsum.photos/seed/phone{i}/400/600",}, # using a random pic from picsum
+            "price": random.randint(399, 1899), 
+            "images": {"main": f"https://picsum.photos/seed/phone{i}/400/600",},
             "specs": {
                 "display": {
-                    "screenSizeInches": round(random.uniform(6.1, 6.9), 1),
-                    "resolution": f"{random.choice([1080, 1440, 2160, 3200])}x{random.choice([2400, 3200, 3840])}",
-                    "technology": random.choice(["OLED", "AMOLED", "LCD"]),
-                    "refreshRateHz": random.choice([60, 90, 120]),
-                    "peakBrightnessNits": random.randint(1500, 2600),
-                    "pixelDensityPpi": random.randint(260, 650),
+                    "screenSizeInches": round(random.uniform(5.4, 6.9), 1), # Added small phone support
+                    "resolution": f"{random.choice([1080, 1440, 2160])}x{random.choice([2340, 3120, 3840])}",
+                    "technology": random.choice(["OLED", "AMOLED", "Super Retina XDR", "Dynamic AMOLED"]),
+                    "refreshRateHz": random.choice([60, 90, 120, 144, 165]), # Added gaming refresh rates
+                    "peakBrightnessNits": random.randint(1000, 3000),
+                    "pixelDensityPpi": random.randint(300, 600),
                 },
                 "performance": {
-                    "processor": f"MockChip v{random.randint(1, 5)}",
-                    "cpu": f"{random.randint(2, 8)}-core CPU",
-                    "gpu": f"MockGPU v{random.randint(1, 5)}",
-                    "ram": {"options": [8, 12], "technology": "LPDDR5X"},
-                    "storageOptions": [128, 256, 512],
-                    "operatingSystem": f"Android {random.choice(['12', '13', '14'])}",
+                    "processor": f"{'A' if is_apple else 'Snapdragon '} {random.randint(12, 18)}",
+                    "cpu": f"{random.randint(6, 10)}-core CPU",
+                    "gpu": f"{manufacturer} GPU v{random.randint(1, 5)}",
+                    "ram": {
+                        "options": phone_ram, # Variable RAM
+                        "technology": random.choice(["LPDDR5", "LPDDR5X"])
+                    },
+                    "storageOptions": phone_storage, # Variable Storage
+                    "operatingSystem": os_name,
+                    "expandableStorage": random.choice([True, False]) if not is_apple else False,
                 },
                 "benchmarks": {
-                    "geekbenchSingleCore": random.randint(1500, 2500),
-                    "geekbenchMultiCore": random.randint(5000, 7500),
-                    "antutuScore": random.randint(1000000, 1600000),
+                    "geekbenchSingleCore": random.randint(1500, 3000),
+                    "geekbenchMultiCore": random.randint(4000, 9000),
+                    "antutuScore": random.randint(800000, 2000000),
                 },
                 "camera": {
-                    "mainMegapixels": random.choice([48, 50, 108, 200]),
-                    "frontMegapixels": 12,
+                    "mainMegapixels": random.choice([12, 48, 50, 108, 200]),
+                    "ultrawideMegapixels": random.choice([None, 12, 16, 48]),
+                    "telephotoMegapixels": random.choice([None, 10, 12, 48, 64]),
+                    "frontMegapixels": random.choice([12, 32, 40]),
+                    "features": random.sample(["Night Mode", "OIS", "8K Video", "Macro", "RAW support"], 3)
                 },
                 "battery": {
-                    "capacitymAh": random.choice([4500, 5000]),
-                    "chargingSpeedW": random.choice([25, 45, 65, 80]),
-                    "batteryType": "Li-Ion",
+                    "capacitymAh": random.randint(3000, 6000),
+                    "chargingSpeedW": random.choice([20, 25, 45, 65, 80, 120]),
+                    "batteryType": "Li-Po",
                     "wirelessCharging": random.choice([True, False]),
                 },
                 "design": {
-                    "dimensionsMm": f"{random.uniform(150, 170):.1f} x {random.uniform(70, 80):.1f} x {random.uniform(7, 9):.1f} mm",
-                    "weightGrams": random.randint(180, 220),
-                    "buildMaterials": random.choice(["Aluminum frame with glass back", "Plastic frame with plastic back"]),
-                    "colorsAvailable": random.sample(["Black", "White", "Blue", "Red", "Green"], 3),
+                    "dimensionsMm": f"{random.uniform(140, 170):.1f} x {random.uniform(68, 78):.1f} x {random.uniform(7, 9.5):.1f} mm",
+                    "weightGrams": random.randint(160, 240),
+                    "buildMaterials": random.choice(["Glass/Titanium", "Glass/Aluminum", "Eco-Leather", "Plastic"]),
+                    "colorsAvailable": random.sample(["Midnight", "Starlight", "Titanium Grey", "Forest Green", "Deep Sea Blue"], 3),
                 },
                 "connectivity": {
                     "has5G": True,
-                    "bluetoothVersion": "5.3",
+                    "bluetoothVersion": random.choice(["5.0", "5.3", "5.4"]),
                     "hasNfc": True,
-                    "headphoneJack": False,
+                    "headphoneJack": random.choice([True, False]) if not is_apple else False,
                 },
                 "sensors": {
-                    "fingerprint": "Under-display",
+                    "fingerprint": random.choice(["Under-display", "Side-mounted", "None"]),
                     "faceRecognition": True,
                     "accelerometer": True,
                     "gyroscope": True,
                     "proximity": True,
                     "compass": True,
-                    "barometer": True,
+                    "barometer": random.choice([True, False]),
                 }
             },
-            "carrierCompatibility": [
-                {"name": "Verizon", "compatible": True},
-                {"name": "T-Mobile", "compatible": True},
-            ],
+            "carrierCompatibility": carrier_compatibility,
             "reviews": [],
         }
         mock_phones.append(phone)
     return mock_phones
-
 
 def populate_phone_db(num_phones=12, clear_first=False):
     try: # Attempting to connect Mongo client to DB and add mock phones

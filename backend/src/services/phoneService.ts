@@ -23,13 +23,13 @@ const PHONE_CARD_PROJECTION = {
   releaseDate: 1,
   price: 1,
   "images.main": 1,
+  "specs.performance.processor": 1,
+  "specs.performance.ram.options": 1,
+  "specs.performance.storageOptions": 1,
   "specs.display.screenSizeInches": 1,
   "specs.display.technology": 1,
   "specs.camera.mainMegapixels": 1,
-  "specs.performance.processor": 1,
   "specs.battery.capacitymAh": 1,
-  "specs.design.dimensionsMm": 1,
-  "specs.design.weightGrams": 1,
 };
 
 /**
@@ -40,10 +40,13 @@ const PHONE_CARD_PROJECTION = {
  * @param limit The number of phones to retrieve per page
  * @param options (optional) An array of options that can be used apply to search
  *  - search: string query to search phone by
- *  - brand: array of brands to filter phones by
+ *  - manufacturer: array of manufacturers to filter phones by
  *  - minPrice: minimum price to filter out phones by their price
  *  - maxPrice: maximum price to filter out phones by their price
+ *  - ram: a list of ram size options to filter by
+ *  - storage: a list of storage options to filter by
  *  - sortBy: string indicating how to sort phone listing
+ *  -
  * @returns An object containing the list of phone JSON objects and the total
  * number of phones in the database.
  */
@@ -55,6 +58,8 @@ export const findPhonePage = async (
     manufacturer?: string[];
     minPrice?: number;
     maxPrice?: number;
+    ram?: number[];
+    storage?: number[];
     sortBy?: string;
   },
 ): Promise<{ phones: IPhone[]; total: number }> => {
@@ -68,23 +73,33 @@ export const findPhonePage = async (
   // Creating the search query object for searching in MongoDB
   let query: any = {};
   if (options.search) {
-    // Searches name and manufacturer for the phones containing search string (case-insensitive)
+    // Search query (on phone name and manufacturer)
     query.$or = [
       { name: { $regex: options.search, $options: "i" } },
       { manufacturer: { $regex: options.search, $options: "i" } },
     ];
   }
 
-  // Filtering query by brand
+  // Manufacturer filter
   if (options.manufacturer && options.manufacturer.length > 0) {
     query.manufacturer = { $in: options.manufacturer };
   }
 
-  // Filtering query by price range
+  // Price range filter
   if (options.minPrice !== undefined || options.maxPrice !== undefined) {
     query.price = {};
     if (options.minPrice !== undefined) query.price.$gte = options.minPrice;
     if (options.maxPrice !== undefined) query.price.$lte = options.maxPrice;
+  }
+
+  // RAM filter
+  if (options.ram && options.ram.length > 0) {
+    query["specs.performance.ram.options"] = { $in: options.ram };
+  }
+
+  // Storage filter
+  if (options.storage && options.storage.length > 0) {
+    query["specs.performance.storageOptions"] = { $in: options.storage };
   }
 
   // Sorting results (CAN ADD MORE SORTS HERE)

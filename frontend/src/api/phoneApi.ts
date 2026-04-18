@@ -17,6 +17,8 @@ export const DEFAULT_PHONE_LIMIT = 12; // Default phones per page
  *  - manufacturer: array of manufacturers to filter phones by
  *  - minPrice: minimum price to filter out phones by their price
  *  - maxPrice: maximum price to filter out phones by their price
+ *  - ram: a list of ram size options to filter by
+ *  - storage: a list of storage options to filter by
  *  - sortBy: string indicating how to sort phone listing
  * @returns A list of PhoneData objects containing the phone data
  */
@@ -28,6 +30,8 @@ export const getPhonePage = async (
     manufacturer?: string[];
     minPrice?: number;
     maxPrice?: number;
+    ram?: number[];
+    storage?: number[];
     sortBy?: string;
   },
 ): Promise<PaginatedPhoneResponse> => {
@@ -36,10 +40,22 @@ export const getPhonePage = async (
     const params = new URLSearchParams();
     params.append("page", page.toString());
     params.append("limit", limit.toString());
+
+    // Searching
     if (options.search) params.append("search", options.search);
+
+    // Manufacturer filtering
     options.manufacturer?.forEach((m) => params.append("manufacturer", m));
+
+    // Price filtering
     if (options.minPrice != null) params.append("minPrice", options.minPrice.toString());
     if (options.maxPrice != null) params.append("maxPrice", options.maxPrice.toString());
+
+    // RAM and Storage filtering
+    options.ram?.forEach((r) => params.append("ram", r.toString()));
+    options.storage?.forEach((s) => params.append("storage", s.toString()));
+
+    // Sorting
     if (options.sortBy) params.append("sortBy", options.sortBy);
 
     // Fetching phones from a page with options applied such as search query, filters, and sorts

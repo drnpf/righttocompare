@@ -47,13 +47,11 @@ export interface IPhoneCard extends IPhoneSummary {
     };
     performance: {
       processor: string;
+      ram: { options: number[] };
+      storageOptions: number[]; // i.e. [256GB, 512GB, 1TB = 1024GB]
     };
     battery: {
       capacitymAh: number;
-    };
-    design: {
-      dimensionsMm: string;
-      weightGrams: number;
     };
   };
 }
@@ -71,11 +69,7 @@ export interface IPhone extends IPhoneCard, Document {
     performance: IPhoneCard["specs"]["performance"] & {
       cpu: string;
       gpu: string;
-      ram: {
-        options: number[];
-        technology: string;
-      };
-      storageOptions: number[]; // i.e. [256GB, 512GB, 1TB = 1024GB] -- let's use numbers probably easier to sort/compare
+      ram: { technology: string };
       expandableStorage?: boolean;
       operatingSystem: string;
       upgradability?: string;
@@ -91,7 +85,9 @@ export interface IPhone extends IPhoneCard, Document {
       frontMegapixels: number;
       features?: string[]; // i.e. ["Night Mode", "8K Video"]
     };
-    design: IPhoneCard["specs"]["design"] & {
+    design: {
+      dimensionsMm: string;
+      weightGrams: number;
       buildMaterials?: string; // i.e. "Aluminum frame, Gorilla Glass Victus+ front and back"
       colorsAvailable: string[]; // i.e. ["Phantom Black", "Green", "Lavender", "Cream"]
     };
