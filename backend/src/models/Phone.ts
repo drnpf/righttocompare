@@ -18,6 +18,7 @@ export interface IReview {
   date: string;
   title: string;
   review: string;
+  sentimentTags: string[]; // e.g. ["+camera", "-battery", "+performance"]
   helpful: number;
   notHelpful: number;
   helpfulVoters: string[]; // User IDs who voted helpful
@@ -27,18 +28,18 @@ export interface IReview {
 export interface IPhone extends Document {
   id: string; // The ID like galaxy-s24-ultra -- we're going to use this for url
   name: string;
-  brand: string;
+  manufacturer: string;
   releaseDate: Date;
   price: number;
   images: {
     main: string;
-    // Add 'front', 'back', or 'side' here later if we got those pics
+    // Add front, back, or side here later if we got those pics
   };
   specs: {
     display: {
       screenSizeInches: number;
       resolution: string;
-      technology: string; // OLED, AMOLED, etc.
+      technology: string; // i.e. OLED, AMOLED, etc.
       refreshRateHz: number;
       peakBrightnessNits: number;
       protection?: string;
@@ -53,7 +54,7 @@ export interface IPhone extends Document {
         options: number[];
         technology: string;
       };
-      storageOptions: number[]; // [256GB, 512GB, 1TB = 1024GB] -- let's use numbers probably easier to sort/compare
+      storageOptions: number[]; // i.e. [256GB, 512GB, 1TB = 1024GB] -- let's use numbers probably easier to sort/compare
       expandableStorage?: boolean;
       operatingSystem: string;
       upgradability?: string;
@@ -68,13 +69,13 @@ export interface IPhone extends Document {
       ultrawideMegapixels?: number;
       telephotoMegapixels?: number;
       frontMegapixels: number;
-      features?: string[]; // ["Night Mode", "8K Video"]
+      features?: string[]; // i.e. ["Night Mode", "8K Video"]
     };
     design: {
-      dimensionsMm: string; // "165.1 x 75.6 x 8.9 mm"
+      dimensionsMm: string; // i.e "123.4 x 75.6 x 8.9 mm"
       weightGrams: number;
-      buildMaterials?: string; // "Aluminum frame, Gorilla Glass Victus+ front and back"
-      colorsAvailable: string[]; // ["Phantom Black", "Green", "Lavender", "Cream"]
+      buildMaterials?: string; // i.e. "Aluminum frame, Gorilla Glass Victus+ front and back"
+      colorsAvailable: string[]; // i.e. ["Phantom Black", "Green", "Lavender", "Cream"]
     };
     battery: {
       capacitymAh: number;
@@ -91,12 +92,12 @@ export interface IPhone extends Document {
       headphoneJack: boolean;
     };
     audio: {
-      speakers: string; // "Stereo speakers tuned by AKG"
+      speakers: string; // i.e.e "Stereo speakers tuned by AKG"
       hasHeadphoneJack: boolean;
-      audioFeatures?: string[]; // ["Dolby Atmos", "32-bit/384kHz audio"]
+      audioFeatures?: string[]; // i.e. ["Dolby Atmos", "32-bit/384kHz audio"]
     };
     sensors: {
-      fingerprint: string; // "Ultrasonic under-display"
+      fingerprint: string; // i.e. "Ultrasonic under-display"
       faceRecognition: boolean;
       accelerometer: boolean;
       gyroscope: boolean;
@@ -118,12 +119,12 @@ const PhoneSchema: Schema = new Schema<IPhone>(
   {
     id: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
-    brand: { type: String, required: true },
+    manufacturer: { type: String, required: true },
     releaseDate: { type: Date, required: true },
     price: { type: Number, required: true },
     images: {
       main: { type: String, required: true },
-      // If we have 'front', 'back', 'side' images we can add those fields here with the image/path
+      // If we have front, back, side images we can add those fields here with the image/path
     },
     specs: {
       display: {
@@ -169,10 +170,10 @@ const PhoneSchema: Schema = new Schema<IPhone>(
         chargingTimeHours: { type: Number },
       },
       design: {
-        dimensionsMm: { type: String }, // "165.1 x 75.6 x 8.9 mm"
+        dimensionsMm: { type: String }, // "i.e. 123.4 x 75.6 x 8.9 mm"
         weightGrams: { type: Number },
-        buildMaterials: { type: String }, // "Aluminum frame, Gorilla Glass Victus+ front and back"
-        colorsAvailable: [{ type: String }], // ["Phantom Black", "Green", "Lavender", "Cream"]
+        buildMaterials: { type: String }, // "i.e Aluminum frame, Gorilla Glass Victus+ front and back"
+        colorsAvailable: [{ type: String }], // i.e. ["Phantom Black", "Green", "Lavender", "Cream"]
       },
       connectivity: {
         has5G: { type: Boolean, required: true },
@@ -187,7 +188,7 @@ const PhoneSchema: Schema = new Schema<IPhone>(
         audioFeatures: [{ type: String }],
       },
       sensors: {
-        fingerprint: { type: String }, // "Ultrasonic under-display"
+        fingerprint: { type: String }, // "i.e. Ultrasonic under-display"
         faceRecognition: { type: Boolean },
         accelerometer: { type: Boolean },
         gyroscope: { type: Boolean },
@@ -219,6 +220,7 @@ const PhoneSchema: Schema = new Schema<IPhone>(
         date: { type: String, required: true },
         title: { type: String, required: true },
         review: { type: String, required: true },
+        sentimentTags: { type: [String], default: [] },
         helpful: { type: Number, default: 0 },
         notHelpful: { type: Number, default: 0 },
         helpfulVoters: { type: [String], default: [] },

@@ -31,7 +31,7 @@ All scripts in this directory share the same environment requirements.
 
 #### Usage
 
-`python3 populate_phone.py --numPhones [NUM_PHONES] --clear`
+`python3 populate_phone_database.py --numPhones [NUM_PHONES] --clear`
 
 | Flag        | Description                                                 |
 | :---------- | :---------------------------------------------------------- |
@@ -42,8 +42,8 @@ All scripts in this directory share the same environment requirements.
 
 ```python
 # Wipe phone collection then seed 50 phones
-python3 populate_phone.py --numPhones 50 --clear
+python3 populate_phone_database.py --numPhones 50 --clear
 
 # Update/Add 50 phones without deleting existing ones
-python3 populate_phone.py --numPhones 50
+python3 populate_phone_database.py --numPhones 50
 ```

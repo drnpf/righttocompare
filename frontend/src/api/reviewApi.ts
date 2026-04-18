@@ -8,6 +8,14 @@ export interface ReviewsResponse {
   totalReviews: number;
   totalPages: number;
   currentPage: number;
+  aggregateRating: number;
+  categoryAverages: {
+    camera: number;
+    battery: number;
+    design: number;
+    performance: number;
+    value: number;
+  };
 }
 
 /**

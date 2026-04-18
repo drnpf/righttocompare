@@ -1,4 +1,5 @@
 import { Discussion, Reply, IDiscussion, IReply } from "../models/Discussion";
+import { analyzeSentiment, SentimentSummary } from "../utils/sentimentAnalyzer";
 
 /**
  * Creates a new discussion.
@@ -13,6 +14,10 @@ export const createDiscussion = async (data: {
   tags: string[];
   images: string[];
 }): Promise<IDiscussion> => {
+  // Auto-detect sentiment tags from title + content
+  const sentimentTags = analyzeSentiment(`${data.title} ${data.content}`)
+    .map((t) => t.label);
+
   const discussion = new Discussion({
     title: data.title,
     content: data.content,
@@ -21,6 +26,7 @@ export const createDiscussion = async (data: {
     authorAvatar: data.authorAvatar,
     category: data.category || "Discussion",
     tags: data.tags || [],
+    sentimentTags,
     images: data.images || [],
   });
 
@@ -91,6 +97,15 @@ export const getDiscussions = async (
     totalPages,
     currentPage: page,
   };
+};
+
+/**
+ * Retrieves all discussions created by a specific user, sorted newest first.
+ */
+export const getDiscussionsByUser = async (
+  authorId: string
+): Promise<IDiscussion[]> => {
+  return Discussion.find({ authorId }).sort({ createdAt: -1 });
 };
 
 /**
@@ -196,6 +211,9 @@ export const addReply = async (data: {
     throw new Error("Discussion not found");
   }
 
+  // Auto-detect sentiment tags from reply content
+  const sentimentTags = analyzeSentiment(data.content).map((t) => t.label);
+
   const reply = new Reply({
     discussionId: discussion._id,
     content: data.content,
@@ -203,6 +221,7 @@ export const addReply = async (data: {
     authorName: data.authorName,
     authorAvatar: data.authorAvatar,
     images: data.images || [],
+    sentimentTags,
     parentReplyId: data.parentReplyId || null,
   });
 
@@ -289,4 +308,41 @@ export const deleteReply = async (
 
   await Reply.findByIdAndDelete(replyId);
   return true;
+};
+
+/**
+ * Gets a sentiment summary across all discussions and replies.
+ * Aggregates sentiment tags to show community-wide pros/cons.
+ */
+export const getCommunitySentiment = async (): Promise<SentimentSummary> => {
+  const discussions = await Discussion.find({}, { sentimentTags: 1 });
+  const replies = await Reply.find({}, { sentimentTags: 1 });
+
+  const proCounts: Record<string, number> = {};
+  const conCounts: Record<string, number> = {};
+
+  const allDocs = [...discussions, ...replies];
+
+  for (const doc of allDocs) {
+    const tags = (doc as any).sentimentTags || [];
+    for (const tag of tags) {
+      if (tag.startsWith("+")) {
+        const topic = tag.slice(1);
+        proCounts[topic] = (proCounts[topic] || 0) + 1;
+      } else if (tag.startsWith("-")) {
+        const topic = tag.slice(1);
+        conCounts[topic] = (conCounts[topic] || 0) + 1;
+      }
+    }
+  }
+
+  const pros = Object.entries(proCounts)
+    .map(([topic, count]) => ({ topic, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const cons = Object.entries(conCounts)
+    .map(([topic, count]) => ({ topic, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return { pros, cons, totalAnalyzed: allDocs.length };
 };

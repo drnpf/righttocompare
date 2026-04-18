@@ -2,19 +2,73 @@ import { Request, Response } from "express";
 import * as phoneService from "../services/phoneService";
 
 /**
- * Fetches all available phones from the database.
+ * Fetches a paginated list of phones. Supports parameters for page number and
+ * limit per page. The response includes pagination metadata which indicates:
+ *    - totalPages: The total number of pages available based on the total
+ *      number of phones and the limit per page.
+ *    - currentPage: The current page number being retrieved.
+ *    - itemsPerPage: The number of phones returned per page (the limit).
+ *    - hasNextPage: A boolean indicating if there is a next page available.
+ *    - hasPrevPage: A boolean indicating if there is a previous page available.
+ * This function also allows for searching of phone by a string query and returns
+ * a specified number of matching search results.
  * @route GET /api/phones
- * @param req The Express request object
+ * @param req The Express request object which may contain 'page' and 'limit'
+ * query parameters for pagination
  * @param res The Express response object
- * @returns The list of phones
+ * @returns A JSON response containing list of phones and pagination metadata
  */
-export const getAllPhones = async (req: Request, res: Response) => {
+export const getPhonePage = async (req: Request, res: Response) => {
   try {
-    const phones = await phoneService.findAllPhones();
-    res.status(200).json(phones);
+    // Setting default values and limits for pagination
+    const MAX_LIMIT = 50; // Limiting number of phones per page to prevent DDoS or memory issues
+    const DEFAULT_LIMIT = 12; // Default limit if not specified of phones per page
+    const PAGE_DEFAULT = 1; // Default page if not specified
+
+    // Input sanitization for findAllPhones function
+    const page = parseInt(req.query.page as string) || PAGE_DEFAULT;
+    const limit = Math.min(parseInt(req.query.limit as string) || DEFAULT_LIMIT, MAX_LIMIT);
+    const search = (req.query.search as string) || "";
+    const sortBy = (req.query.sortBy as string) || "newest";
+
+    // Sanitization of max and min price
+    const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined;
+    const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined;
+
+    // Sanitization of brands if multiple brands chosen
+    let manufacturer: string[] = [];
+    if (req.query.manufacturer) {
+      manufacturer = Array.isArray(req.query.manufacturer)
+        ? (req.query.manufacturer as string[])
+        : [req.query.manufacturer as string];
+    }
+
+    // Searching for phones with options applied (if any)
+    const { phones, total } = await phoneService.findPhonePage(page, limit, {
+      search,
+      manufacturer,
+      minPrice,
+      maxPrice,
+      sortBy,
+    });
+
+    // Returning a list of phones with pagination metadata
+    res.status(200).json({
+      success: true,
+      message: "Phones retrieved successfully",
+      data: phones,
+      pagination: {
+        totalItems: total,
+        totalPages: Math.ceil(total / limit), // Calculates total # of pages
+        currentPage: page,
+        itemsPerPage: limit,
+        hasNextPage: page * limit < total, // Checks if theoretical # of phones exceeds actual # of phones
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (err) {
     console.error("Error fetching phones:", err);
-    res.status(500).json({ message: "Server error fetching phones" });
+    res.status(500).json({ success: false, message: "Server error fetching phones" });
   }
 };
 
@@ -33,9 +87,91 @@ export const getPhoneById = async (req: Request, res: Response) => {
       return res.status(404).json({ message: `Phone with ID '${id}' not found` });
     }
     res.status(200).json(phone);
-  } catch (err) {
-    console.error(`Error fetching phone ${req.params.id}:`, err);
+  } catch (error) {
+    console.error(`Error fetching phone ${req.params.id}:`, error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Fetches multiple phone summaries in a single request.
+ * @route GET /api/phones/summaries
+ * @param req The Express request object containing the 'id' param
+ * @param res The Express response object
+ * @returns The phone summary data array (only contains essential data on phone)
+ * containing summary of each phone requested
+ */
+export const getPhoneSummaries = async (req: Request, res: Response) => {
+  try {
+    const idsString = req.query.ids as string;
+    if (!idsString) {
+      return res.status(400).json({ message: "Missing 'ids' query parameter" });
+    }
+    const ids = idsString.split(",");
+    const summaries = await phoneService.findPhoneSummaries(ids);
+    res.status(200).json(summaries);
+  } catch (error) {
+    console.error("Error fetching batch phone summaries:", error);
+    res.status(500).json({ message: "Server error fetching summaries" });
+  }
+};
+
+/**
+ * Fetches phone summary of a single phone in a single request.
+ * @route GET /api/phones/summary/:id
+ * @param req The Express request object containing the 'id' param
+ * @param res The Express response object
+ * @returns The phone summary data (only contains essential data on phone)
+ */
+export const getPhoneSummaryById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const phoneSummary = await phoneService.findPhoneSummaryById(id);
+    if (!phoneSummary) {
+      return res.status(404).json({ message: `Phone Summary with ID '${id}' not found` });
+    }
+    res.status(200).json(phoneSummary);
+  } catch (error) {
+    console.error(`Error fetching phone ${req.params.id}:`, error);
+    res.status(500).json({ message: "Server error fetching phone summary" });
+  }
+};
+
+/**
+ * Fetches a specific phone card using its ID.
+ * @route GET /api/phones/card/:id
+ * @param req The Express request object containing the 'id' param
+ * @param res The Express response object
+ * @returns The phone card data contains essential information and quick specs.
+ */
+export const getPhoneCardById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const phoneCard = await phoneService.findPhoneCardById(id);
+    if (!phoneCard) {
+      return res.status(404).json({ message: `Phone Card with ID '${id}' not found` });
+    }
+    res.status(200).json(phoneCard);
+  } catch (error) {
+    console.error(`Error fetching phone ${req.params.id}:`, error);
+    res.status(500).json({ message: "Server error fetching phone card" });
+  }
+};
+
+/**
+ * Fetches a list of all unique manufacturers.
+ * @route GET /api/phones/manufacturers
+ * @param req The Express request object
+ * @param res The Express response object containing manufacturers
+ * @returns A list of unique manufacturers
+ */
+export const getManufacturers = async (req: Request, res: Response) => {
+  try {
+    const manufacturers = await phoneService.getAllManufacturers();
+    res.status(200).json(manufacturers.sort());
+  } catch (error) {
+    console.error("Error fetching manufacturers:", error);
+    res.status(500).json({ message: "Error fetching manufacturers" });
   }
 };
 
@@ -49,17 +185,17 @@ export const getPhoneById = async (req: Request, res: Response) => {
 export const createPhone = async (req: Request, res: Response) => {
   try {
     // Validation the schema just incase there are missing fields
-    if (!req.body.name || !req.body.brand) {
-      return res.status(400).json({ message: "Missing required fields: name, brand" });
+    if (!req.body.name || !req.body.manufacturer) {
+      return res.status(400).json({ message: "Missing required fields: name, manufacturer" });
     }
 
     const newPhone = await phoneService.createNewPhone(req.body);
     res.status(201).json(newPhone);
-  } catch (err: any) {
-    console.error("Error creating phone:", err);
+  } catch (error: any) {
+    console.error("Error creating phone:", error);
 
     // Handling duplicate key error
-    if (err.code === 11000) {
+    if (error.code === 11000) {
       return res.status(409).json({ message: "A phone with this ID already exists." });
     }
     res.status(500).json({ message: "Server error creating phone" });
@@ -83,8 +219,8 @@ export const updatePhone = async (req: Request, res: Response) => {
     }
 
     res.status(200).json(updatedPhone);
-  } catch (err) {
-    console.error("Error updating phone:", err);
+  } catch (error) {
+    console.error("Error updating phone:", error);
     res.status(500).json({ message: "Server error updating phone" });
   }
 };
@@ -106,8 +242,8 @@ export const deletePhone = async (req: Request, res: Response) => {
     }
 
     res.status(200).json({ message: "Phone deleted successfully" });
-  } catch (err) {
-    console.error("Error deleting phone:", err);
+  } catch (error) {
+    console.error("Error deleting phone:", error);
     res.status(500).json({ message: "Server error deleting phone" });
   }
 };

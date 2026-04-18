@@ -808,12 +808,24 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                 </div>
               )}
 
-              <Textarea
-                placeholder={replyingTo ? "Write your reply..." : "Share your thoughts..."}
-                value={newReply}
-                onChange={(e) => setNewReply(e.target.value)}
-                className="mb-4 min-h-[120px]"
-              />
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-sm text-[#666]">
+                    {newReply.length > 0 && newReply.trim().length < 10 && (
+                      <span className="text-amber-500">Minimum 10 characters</span>
+                    )}
+                  </span>
+                  <span className={`text-xs ${newReply.length > 2000 ? 'text-red-500' : 'text-[#999]'}`}>
+                    {newReply.length}/2000
+                  </span>
+                </div>
+                <Textarea
+                  placeholder={replyingTo ? "Write your reply..." : "Share your thoughts..."}
+                  value={newReply}
+                  onChange={(e) => setNewReply(e.target.value.slice(0, 2000))}
+                  className="min-h-[120px]"
+                />
+              </div>
 
               {/* Image Upload Section */}
               <div className="mb-4">
@@ -862,7 +874,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
               <div className="flex justify-end">
                 <Button
                   onClick={handleSubmitReply}
-                  disabled={!newReply.trim() || isSubmittingReply}
+                  disabled={newReply.trim().length < 10 || isSubmittingReply}
                   className="bg-[#2c3968] hover:bg-[#1e2547]"
                 >
                   {isSubmittingReply ? (
@@ -895,7 +907,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
             </div>
           ) : (
             topLevelReplies
-              .sort((a, b) => b.timestamp - a.timestamp)
+              .sort((a, b) => a.timestamp - b.timestamp)
               .map((reply) => {
                 return renderReply(reply, 0);
               })

@@ -1,16 +1,14 @@
-import { X, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
+// UI Components
 import { Button } from "./ui/button";
 
-interface Phone {
-  id: string;
-  name: string;
-  manufacturer: string;
-  image: string;
-  price: string;
-}
+// Icons
+import { X, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
+
+// Custom Components
+import { PhoneSummary } from "../types/phoneTypes";
 
 interface ComparisonCartProps {
-  phones: Phone[];
+  phones: PhoneSummary[];
   onRemovePhone: (phoneId: string) => void;
   onCompare: () => void;
   onClose: () => void;
@@ -18,13 +16,13 @@ interface ComparisonCartProps {
   onMinimizedChange: (minimized: boolean) => void;
 }
 
-export default function ComparisonCart({ 
-  phones, 
-  onRemovePhone, 
+export default function ComparisonCart({
+  phones,
+  onRemovePhone,
   onCompare,
   onClose,
   isMinimized,
-  onMinimizedChange
+  onMinimizedChange,
 }: ComparisonCartProps) {
   const maxPhones = 3;
   const remainingSlots = maxPhones - phones.length;
@@ -84,15 +82,9 @@ export default function ComparisonCart({
               key={phone.id}
               className="flex items-center gap-3 p-3 bg-[#f7f9fc] dark:bg-[#1a1f2e] rounded-lg border border-[#e0e0e0] dark:border-[#2d3548]"
             >
-              <img
-                src={phone.image}
-                alt={phone.name}
-                className="w-12 h-12 object-contain"
-              />
+              <img src={phone.images.main} alt={phone.name} className="w-12 h-12 object-contain" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-[#2c3968] dark:text-[#4a7cf6] truncate">
-                  {phone.manufacturer}
-                </p>
+                <p className="text-sm text-[#2c3968] dark:text-[#4a7cf6] truncate">{phone.manufacturer}</p>
                 <p className="text-xs text-[#666] dark:text-[#a0a8b8] truncate">{phone.name}</p>
               </div>
               <button
@@ -129,10 +121,12 @@ export default function ComparisonCart({
           Compare Now
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
-        
+
         {phones.length < maxPhones && (
           <p className="text-xs text-center text-[#999] dark:text-[#707070] mt-2">
-            {phones.length === 1 ? 'Add more phones for better comparison' : `Add ${maxPhones - phones.length} more phone${maxPhones - phones.length > 1 ? 's' : ''} to compare`}
+            {phones.length === 1
+              ? "Add more phones for better comparison"
+              : `Add ${maxPhones - phones.length} more phone${maxPhones - phones.length > 1 ? "s" : ""} to compare`}
           </p>
         )}
       </div>

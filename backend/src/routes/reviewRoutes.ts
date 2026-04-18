@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createReview,
   getReviews,
+  getReviewSentiment,
   voteOnReview,
   deleteReview,
 } from "../controllers/reviewController";
@@ -16,6 +17,12 @@ const router = Router();
  * @query limit - Reviews per page (default: 10)
  */
 router.get("/:phoneId/reviews", getReviews);
+
+/**
+ * Get sentiment summary (pros/cons) for a phone's reviews
+ * @route GET /api/phones/:phoneId/reviews/sentiment
+ */
+router.get("/:phoneId/reviews/sentiment", getReviewSentiment);
 
 /**
  * Create a new review for a phone

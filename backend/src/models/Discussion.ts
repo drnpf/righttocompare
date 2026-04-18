@@ -11,6 +11,7 @@ export interface IDiscussion extends Document {
   authorAvatar: string;
   category: string;
   tags: string[];
+  sentimentTags: string[]; // e.g. ["+camera", "-battery", "+performance"]
   images: string[];
   upvotes: number;
   downvotes: number;
@@ -32,6 +33,7 @@ export interface IReply extends Document {
   authorName: string;
   authorAvatar: string;
   images: string[];
+  sentimentTags: string[]; // e.g. ["+camera", "-battery"]
   upvotes: number;
   downvotes: number;
   upvoters: string[];
@@ -53,6 +55,7 @@ const discussionSchema = new Schema<IDiscussion>(
     authorAvatar: { type: String, default: "" },
     category: { type: String, default: "Discussion" },
     tags: { type: [String], default: [] },
+    sentimentTags: { type: [String], default: [] },
     images: { type: [String], default: [] },
     upvotes: { type: Number, default: 0 },
     downvotes: { type: Number, default: 0 },
@@ -75,6 +78,7 @@ const replySchema = new Schema<IReply>(
     authorName: { type: String, required: true },
     authorAvatar: { type: String, default: "" },
     images: { type: [String], default: [] },
+    sentimentTags: { type: [String], default: [] },
     upvotes: { type: Number, default: 0 },
     downvotes: { type: Number, default: 0 },
     upvoters: { type: [String], default: [] },

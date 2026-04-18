@@ -27,30 +27,31 @@ def get_mongodb_client():
 
 
 def generate_mock_phones(num_phones=12):
-    brands = ['Apple', 'Samsung', 'Google', 'OnePlus', 'Xiaomi']
+    manufacturers = ['Apple', 'Samsung', 'Google', 'OnePlus', 'Xiaomi']
     mock_phones = []
 
     # Generates mock phones
     for i in range(1, num_phones + 1):
-        brand = random.choice(brands)
+        manufacturer = random.choice(manufacturers)
 
         # Generates a random release date in the last 2 years
         release_date = datetime.now() - timedelta(days=random.randint(0, 365*2))
         
         phone = {
-            "id": f"{brand.lower()}-x{i}-pro",
-            "name": f"{brand} X{i} Pro",
-            "brand": brand,
+            "id": f"{manufacturer.lower()}-x{i}-pro",
+            "name": f"{manufacturer} X{i} Pro",
+            "manufacturer": manufacturer,
             "releaseDate": release_date,
             "price": random.choice([699, 799, 899, 999, 1099, 1199]),
-            "images": {"main": f"https://picsum.photos/seed/phone{i}/400/600"}, # using a random pic from picsum
+            "images": {"main": f"https://picsum.photos/seed/phone{i}/400/600",}, # using a random pic from picsum
             "specs": {
                 "display": {
                     "screenSizeInches": round(random.uniform(6.1, 6.9), 1),
                     "resolution": f"{random.choice([1080, 1440, 2160, 3200])}x{random.choice([2400, 3200, 3840])}",
                     "technology": random.choice(["OLED", "AMOLED", "LCD"]),
                     "refreshRateHz": random.choice([60, 90, 120]),
-                    "peakBrightnessNits": random.randint(1500, 2600)
+                    "peakBrightnessNits": random.randint(1500, 2600),
+                    "pixelDensityPpi": random.randint(260, 650),
                 },
                 "performance": {
                     "processor": f"MockChip v{random.randint(1, 5)}",
@@ -58,28 +59,34 @@ def generate_mock_phones(num_phones=12):
                     "gpu": f"MockGPU v{random.randint(1, 5)}",
                     "ram": {"options": [8, 12], "technology": "LPDDR5X"},
                     "storageOptions": [128, 256, 512],
-                    "operatingSystem": f"Android {random.choice(['12', '13', '14'])}"
+                    "operatingSystem": f"Android {random.choice(['12', '13', '14'])}",
                 },
                 "benchmarks": {
                     "geekbenchSingleCore": random.randint(1500, 2500),
                     "geekbenchMultiCore": random.randint(5000, 7500),
-                    "antutuScore": random.randint(1000000, 1600000)
+                    "antutuScore": random.randint(1000000, 1600000),
                 },
                 "camera": {
                     "mainMegapixels": random.choice([48, 50, 108, 200]),
-                    "frontMegapixels": 12
+                    "frontMegapixels": 12,
                 },
                 "battery": {
                     "capacitymAh": random.choice([4500, 5000]),
                     "chargingSpeedW": random.choice([25, 45, 65, 80]),
                     "batteryType": "Li-Ion",
-                    "wirelessCharging": random.choice([True, False])
+                    "wirelessCharging": random.choice([True, False]),
+                },
+                "design": {
+                    "dimensionsMm": f"{random.uniform(150, 170):.1f} x {random.uniform(70, 80):.1f} x {random.uniform(7, 9):.1f} mm",
+                    "weightGrams": random.randint(180, 220),
+                    "buildMaterials": random.choice(["Aluminum frame with glass back", "Plastic frame with plastic back"]),
+                    "colorsAvailable": random.sample(["Black", "White", "Blue", "Red", "Green"], 3),
                 },
                 "connectivity": {
                     "has5G": True,
                     "bluetoothVersion": "5.3",
                     "hasNfc": True,
-                    "headphoneJack": False
+                    "headphoneJack": False,
                 },
                 "sensors": {
                     "fingerprint": "Under-display",
@@ -88,14 +95,14 @@ def generate_mock_phones(num_phones=12):
                     "gyroscope": True,
                     "proximity": True,
                     "compass": True,
-                    "barometer": True
+                    "barometer": True,
                 }
             },
             "carrierCompatibility": [
                 {"name": "Verizon", "compatible": True},
-                {"name": "T-Mobile", "compatible": True}
+                {"name": "T-Mobile", "compatible": True},
             ],
-            "reviews": []
+            "reviews": [],
         }
         mock_phones.append(phone)
     return mock_phones

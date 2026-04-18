@@ -1,4 +1,5 @@
 import Phone, { IPhone, IReview, ICategoryRatings } from "../models/Phone";
+import { analyzeSentiment } from "../utils/sentimentAnalyzer";
 
 /**
  * Adds a new review to a phone document.
@@ -35,6 +36,10 @@ export const addReviewToPhone = async (
     : 0;
   const newReviewId = maxId + 1;
 
+  // Auto-detect sentiment tags from review title + text
+  const sentimentTags = analyzeSentiment(`${reviewData.title} ${reviewData.review}`)
+    .map((t) => t.label);
+
   const newReview: IReview = {
     id: newReviewId,
     userId: reviewData.userId,
@@ -48,6 +53,7 @@ export const addReviewToPhone = async (
     }),
     title: reviewData.title,
     review: reviewData.review,
+    sentimentTags,
     helpful: 0,
     notHelpful: 0,
     helpfulVoters: [],
@@ -60,11 +66,11 @@ export const addReviewToPhone = async (
 };
 
 /**
- * Retrieves all reviews for a phone with pagination.
+ * Retrieves all reviews for a phone with pagination and aggregate ratings.
  * @param phoneId The unique string ID of the phone
  * @param page Page number (1-indexed)
  * @param limit Number of reviews per page
- * @returns Object with reviews array and pagination info
+ * @returns Object with reviews array, pagination info, and aggregate ratings
  */
 export const getReviewsForPhone = async (
   phoneId: string,
@@ -75,20 +81,54 @@ export const getReviewsForPhone = async (
   totalReviews: number;
   totalPages: number;
   currentPage: number;
+  aggregateRating: number;
+  categoryAverages: ICategoryRatings;
 } | null> => {
   const phone = await Phone.findOne({ id: phoneId });
   if (!phone) return null;
 
-  const totalReviews = phone.reviews.length;
+  const allReviews = phone.reviews;
+  const totalReviews = allReviews.length;
   const totalPages = Math.ceil(totalReviews / limit);
   const startIndex = (page - 1) * limit;
-  const reviews = phone.reviews.slice(startIndex, startIndex + limit);
+  const reviews = allReviews.slice(startIndex, startIndex + limit);
+
+  // Compute aggregate rating and per-category averages from ALL reviews
+  let aggregateRating = 0;
+  let categoryAverages: ICategoryRatings = { camera: 0, battery: 0, design: 0, performance: 0, value: 0 };
+
+  if (totalReviews > 0) {
+    const totals = allReviews.reduce(
+      (acc, r) => ({
+        camera: acc.camera + r.categoryRatings.camera,
+        battery: acc.battery + r.categoryRatings.battery,
+        design: acc.design + r.categoryRatings.design,
+        performance: acc.performance + r.categoryRatings.performance,
+        value: acc.value + r.categoryRatings.value,
+      }),
+      { camera: 0, battery: 0, design: 0, performance: 0, value: 0 }
+    );
+
+    categoryAverages = {
+      camera: Number((totals.camera / totalReviews).toFixed(1)),
+      battery: Number((totals.battery / totalReviews).toFixed(1)),
+      design: Number((totals.design / totalReviews).toFixed(1)),
+      performance: Number((totals.performance / totalReviews).toFixed(1)),
+      value: Number((totals.value / totalReviews).toFixed(1)),
+    };
+
+    aggregateRating = Number(
+      ((categoryAverages.camera + categoryAverages.battery + categoryAverages.design + categoryAverages.performance + categoryAverages.value) / 5).toFixed(1)
+    );
+  }
 
   return {
     reviews,
     totalReviews,
     totalPages,
     currentPage: page,
+    aggregateRating,
+    categoryAverages,
   };
 };
 
@@ -194,4 +234,46 @@ export const getReviewById = async (
   if (!phone) return null;
 
   return phone.reviews.find((r) => r.id === reviewId) || null;
+};
+
+/**
+ * Gets a sentiment summary (pros/cons) for a phone based on all review sentiment tags.
+ * @param phoneId The unique string ID of the phone
+ * @returns Pros and cons with frequency counts, or null if phone not found
+ */
+export const getSentimentSummary = async (
+  phoneId: string
+): Promise<{
+  pros: { topic: string; count: number }[];
+  cons: { topic: string; count: number }[];
+  totalReviews: number;
+} | null> => {
+  const phone = await Phone.findOne({ id: phoneId });
+  if (!phone) return null;
+
+  const proCounts: Record<string, number> = {};
+  const conCounts: Record<string, number> = {};
+
+  for (const review of phone.reviews) {
+    const tags = review.sentimentTags || [];
+    for (const tag of tags) {
+      if (tag.startsWith("+")) {
+        const topic = tag.slice(1);
+        proCounts[topic] = (proCounts[topic] || 0) + 1;
+      } else if (tag.startsWith("-")) {
+        const topic = tag.slice(1);
+        conCounts[topic] = (conCounts[topic] || 0) + 1;
+      }
+    }
+  }
+
+  const pros = Object.entries(proCounts)
+    .map(([topic, count]) => ({ topic, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const cons = Object.entries(conCounts)
+    .map(([topic, count]) => ({ topic, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return { pros, cons, totalReviews: phone.reviews.length };
 };

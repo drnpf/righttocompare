@@ -44,6 +44,20 @@ export const createDiscussion = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * Gets community-wide sentiment summary from all discussions and replies.
+ * @route GET /api/discussions/sentiment
+ */
+export const getCommunitySentiment = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await discussionService.getCommunitySentiment();
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("Error fetching community sentiment:", err);
+    res.status(500).json({ message: "Server error fetching sentiment" });
+  }
+};
+
+/**
  * Gets paginated discussions with filtering and search.
  * @route GET /api/discussions
  */
@@ -68,6 +82,21 @@ export const getDiscussions = async (req: AuthRequest, res: Response) => {
   } catch (err) {
     console.error("Error fetching discussions:", err);
     res.status(500).json({ message: "Server error fetching discussions" });
+  }
+};
+
+/**
+ * Gets all discussions created by a specific user.
+ * @route GET /api/discussions/user/:userId
+ */
+export const getUserDiscussions = async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const discussions = await discussionService.getDiscussionsByUser(userId);
+    res.status(200).json(discussions);
+  } catch (err) {
+    console.error("Error fetching user discussions:", err);
+    res.status(500).json({ message: "Server error fetching user discussions" });
   }
 };
 
