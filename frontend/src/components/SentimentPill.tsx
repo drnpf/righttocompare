@@ -1,19 +1,27 @@
 import { useDarkMode } from "./DarkModeContext";
 import { SentimentTag } from "../types/sentimentTypes";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronUp, ChevronDown, X } from "lucide-react";
 
 interface SentimentPillProps {
   tag: SentimentTag;
   count?: number;
+  isActive?: boolean;
   onClick?: (topic: string) => void;
 }
 
-export function SentimentPill({ tag, count, onClick }: SentimentPillProps) {
+export function SentimentPill({ tag, count, isActive, onClick }: SentimentPillProps) {
   const { isDarkMode } = useDarkMode();
 
-  // Parse the tag: prefix determines the "vibe", slice removes the prefix for the label
+  // Parse the tag to determine if positive/negative and removes the sign to prep for labeling
   const isPositive = tag.startsWith("+");
   const label = tag.slice(1);
+
+  // Glow effect for case where sentiment pills are active buttons
+  const activeClass = isActive
+    ? isDarkMode
+      ? "ring-2 ring-white scale-105"
+      : "ring-2 ring-[#2c3968] scale-105"
+    : "opacity-80 hover:opacity-100";
 
   // Dynamic Styles based on sentiment and theme
   const colorClasses = isPositive
@@ -25,36 +33,15 @@ export function SentimentPill({ tag, count, onClick }: SentimentPillProps) {
       : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100";
 
   return (
-    <div
-      onClick={() => onClick?.(label)}
-      className={`
-        inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border 
-        text-[10px] font-bold uppercase tracking-wider transition-all duration-200
-        ${colorClasses}
-        ${onClick ? "cursor-pointer" : "cursor-default"}
-      `}
+    <button
+      onClick={() => onClick?.(tag)}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[10px] font-bold uppercase transition-all cursor-pointer select-none ${activeClass} ${colorClasses}`}
     >
-      {/* Icon Indicator */}
-      {isPositive ? (
-        <ChevronUp size={12} className="stroke-[3px]" />
-      ) : (
-        <ChevronDown size={12} className="stroke-[3px]" />
-      )}
-
-      {/* The Topic Label */}
+      {/* If active show X. If not, show arrow */}
+      {isActive ? <X size={12} strokeWidth={3} /> : isPositive ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
       <span>{label}</span>
-
-      {/* The Agreement Count (Conditional) */}
-      {count !== undefined && (
-        <div
-          className={`
-          ml-1 pl-1.5 border-l flex items-center
-          ${isDarkMode ? "border-white/10" : "border-black/10"}
-        `}
-        >
-          <span className="opacity-70">{count}</span>
-        </div>
-      )}
-    </div>
+      {/* Hide count in the top active bar */}
+      {!isActive && count !== undefined && <span className="ml-1 pl-1.5 border-l opacity-70">{count}</span>}
+    </button>
   );
 }

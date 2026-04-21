@@ -1,3 +1,4 @@
+import { CategoryRatings } from "../components/MultiRatingInput";
 import { ReviewData } from "./reviewTypes";
 import { SentimentSummary } from "./sentimentTypes";
 
@@ -51,10 +52,12 @@ export interface PhoneSpecification extends PhoneCard {
 }
 
 /**
- * Contains social data of the phone (i.e. reviews).
+ * Contains metadata as a result of social features, on RTC, of the phone.
  */
 export interface PhoneCommunity {
-  reviews: ReviewData[];
+  totalReviews: number;
+  aggregateRating: number;
+  categoryAverages: CategoryRatings;
 }
 
 /**

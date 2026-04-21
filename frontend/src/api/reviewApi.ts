@@ -1,5 +1,5 @@
 import { CategoryRatings } from "../components/MultiRatingInput";
-import { ReviewData, ReviewsResponse } from "../types/reviewTypes";
+import { ReviewFilterOptions, ReviewData, ReviewsResponse } from "../types/reviewTypes";
 import { SentimentSummary } from "../types/sentimentTypes";
 import { mapJsonToSentimentSummary } from "../utils/mappers/sentimentMappers";
 
@@ -10,24 +10,31 @@ const API_URL = "http://localhost:5001/api/phones"; // CHANGE LATER ON PRODUCTIO
  * @param phoneId The phone ID (e.g., "galaxy-s24-ultra")
  * @param page Page number (default: 1)
  * @param limit Reviews per page (default: 10)
+ * @param options Filter and sort options (sentiments array, sortBy string)
  * @returns Reviews data with pagination info
  */
 export const getPhoneReviews = async (
   phoneId: string,
   page: number = 1,
   limit: number = 10,
+  options: ReviewFilterOptions = {},
 ): Promise<ReviewsResponse | null> => {
   try {
-    const response = await fetch(`${API_URL}/${phoneId}/reviews?page=${page}&limit=${limit}`);
+    // Destructuring options JSON
+    const { sentiments = [], sortBy = "newest" } = options;
 
-    if (response.status === 404) {
-      return null;
-    }
+    // Creating query string
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      sortBy: sortBy,
+    });
+    if (sentiments.length > 0) queryParams.append("sentiment", sentiments.join(","));
+    const response = await fetch(`${API_URL}/${phoneId}/reviews?${queryParams.toString()}`);
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch reviews");
-    }
-
+    // Handles error case
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error("Failed to fetch reviews");
     return await response.json();
   } catch (error) {
     console.error("Error fetching reviews:", error);

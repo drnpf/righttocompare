@@ -148,13 +148,15 @@ export default function PhoneSpecPage({
 
   // -- Review States --
   const [reviews, setReviews] = useState<ReviewData[]>([]);
-  const [totalReviews, setTotalReviews] = useState(0);
-  const [aggregateRating, setAggregateRating] = useState(0);
+  const [filteredTotal, setFilteredTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [isLoadingReviews, setIsLoadingReviews] = useState(true);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isVoting, setIsVoting] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "helpful">("newest");
+  const [activeSentiment, setActiveSentiment] = useState<string[]>([]);
 
   // -- Review Sentiment States --
   const [sentimentSummary, setSentimentSummary] = useState<SentimentSummary | null>(null);
@@ -213,24 +215,17 @@ export default function PhoneSpecPage({
    * Signal: On function call
    * Action: Fetches reviews and review metadata from backend (i.e. total reviews, aggregate rating)
    */
-  const fetchReviews = useCallback(async (targetPhoneId: string, page: number = 1) => {
+  const fetchReviews = useCallback(async (targetPhoneId: string, page: number = 1, sort: any, filters: string[]) => {
     setIsLoadingReviews(true);
     try {
-      const response = await getPhoneReviews(targetPhoneId, page, 3);
+      const response = await getPhoneReviews(targetPhoneId, page, 3, { sortBy: sort, sentiments: filters });
       if (response) {
         setReviews(response.reviews);
-        setTotalReviews(response.totalReviews);
-        setAggregateRating(response.aggregateRating);
-      } else {
-        setReviews([]);
-        setTotalReviews(0);
-        setAggregateRating(0);
+        setFilteredTotal(response.totalReviews);
+        setTotalPages(response.totalPages);
       }
     } catch (error) {
       console.error("Failed to fetch reviews:", error);
-      setReviews([]);
-      setTotalReviews(0);
-      setAggregateRating(0);
     } finally {
       setIsLoadingReviews(false);
     }
@@ -252,6 +247,16 @@ export default function PhoneSpecPage({
     };
     fetchSentiment();
   }, [phoneId]);
+
+  /**
+   * SYNC: Phone Review Page
+   * Signal: phoneId, current page, sort style, sentiment filters changes or on
+   * call of fetch reviews
+   * Action: Fetches the review sentiment summary from backend on current phone
+   */
+  useEffect(() => {
+    if (phoneId && !loading) fetchReviews(phoneId, currentPage, sortBy, activeSentiment);
+  }, [phoneId, currentPage, sortBy, activeSentiment, fetchReviews, loading]);
 
   /**
    * SYNC: Phone Specifications
@@ -282,10 +287,6 @@ export default function PhoneSpecPage({
           onAddToRecentlyViewed(phoneId);
           hasAddedToHistory.current = phoneId; // Tracks if phone as already been added
         }
-
-        // Fetching initial reviews
-        await fetchReviews(phoneId, 1);
-        setCurrentPage(1);
       } catch (error) {
         console.error("Error fetching phone:", error);
       } finally {
@@ -328,7 +329,7 @@ export default function PhoneSpecPage({
       }
     };
     syncCart();
-  }, [comparisonPhoneIds, phoneId, comparisonData]);
+  }, [comparisonPhoneIds, phoneId]);
 
   // ------------------------------------------------------------
   // | RENDER GUARD PAGES
@@ -369,39 +370,30 @@ export default function PhoneSpecPage({
   // | COMPONENT LOGIC
   // ------------------------------------------------------------
 
-  // -- RATINGS --
-  // Calculate overall rating from reviews
-  const calculateOverallRating = () => {
-    if (reviews.length === 0) return 0;
+  // -- REVIEW SENTIMENT --
+  // Handles filtering via sentiment pills
+  const handleSentimentClick = (tag: string) => {
+    setActiveSentiment((prev) => {
+      const isAlreadySelected = prev.includes(tag);
+      const nextSentiments = isAlreadySelected ? prev.filter((t) => t !== tag) : [...prev, tag];
 
-    const totalRating = reviews.reduce((sum, review) => {
-      const reviewAvg = review.categoryRatings
-        ? (review.categoryRatings.camera +
-            review.categoryRatings.battery +
-            review.categoryRatings.design +
-            review.categoryRatings.performance +
-            review.categoryRatings.value) /
-          5
-        : review.rating;
-      return sum + reviewAvg;
-    }, 0);
-    return Number((totalRating / reviews.length).toFixed(1));
+      // The useEffect watcher will see these changes and trigger fetchReviews
+      setCurrentPage(1);
+      return nextSentiments;
+    });
   };
 
-  const overallRating = calculateOverallRating();
-  const ratingsCount = totalReviews;
-
   // -- REVIEWS --
-  // Calculate pagination values
-  const reviewsPerPage = 3;
-  const totalPages = Math.ceil(totalReviews / reviewsPerPage);
+  const overallRating = phoneData.aggregateRating;
+  const ratingsCount = phoneData.totalReviews;
 
   // Handle page change
   const handlePageChange = (page: number) => {
-    if (phoneId) {
-      setCurrentPage(page);
-      fetchReviews(phoneId, page);
-    }
+    // Just update the state; the watcher handles the rest
+    setCurrentPage(page);
+
+    // Scroll to top of reviews on page change
+    reviewsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleLeaveReviewClick = () => {
@@ -436,7 +428,7 @@ export default function PhoneSpecPage({
     }
   };
 
-  // Handle submitting a new review via API
+  // Handle submitting a new review
   const handleSubmitReview = async (data: { title: string; review: string; categoryRatings: CategoryRatings }) => {
     if (!currentUser?.firebaseUser) {
       toast.error("Please sign in to submit a review");
@@ -446,42 +438,46 @@ export default function PhoneSpecPage({
     setIsSubmittingReview(true);
     try {
       const token = await currentUser.firebaseUser.getIdToken();
-      const newReview = await submitReview(phoneData.id, data, token);
-      if (newReview) {
-        setReviews((prev) => [newReview, ...prev]);
-        setTotalReviews((prev) => prev + 1);
-        setShowReviewForm(false);
+      const result = await submitReview(phoneData!.id, data, token);
+
+      if (result) {
+        // 1. Re-fetch Phone Specs to get updated categoryAverages and aggregateRating
+        const updatedPhone = await getPhoneById(phoneData!.id);
+        if (updatedPhone) setPhoneData(updatedPhone);
+
+        // 2. Reset list to page 1 to show the new review
         setCurrentPage(1);
+        setActiveSentiment([]); // Clear filters to ensure the new review is visible
+
+        setShowReviewForm(false);
         toast.success("Review submitted successfully!");
       }
     } catch (error: any) {
-      if (error.message?.includes("already reviewed")) {
-        toast.error("You have already reviewed this phone");
-      } else {
-        toast.error(error.message || "Failed to submit review");
-      }
+      toast.error(error.message || "Failed to submit review");
     } finally {
       setIsSubmittingReview(false);
     }
   };
 
-  // Handle deleting a review via API
+  // Handle deleting a review
   const handleDeleteReview = async (reviewId: number) => {
     if (!currentUser?.firebaseUser) return;
 
     try {
       const token = await currentUser.firebaseUser.getIdToken();
-      await deleteReview(phoneData.id, reviewId, token);
-      setReviews((prev) => prev.filter((r) => r.id !== reviewId));
-      setTotalReviews((prev) => prev - 1);
+      await deleteReview(phoneData!.id, reviewId, token);
+
+      // Refetch phone specs to sync the consesus category ratings bars
+      const updatedPhone = await getPhoneById(phoneData!.id);
+      if (updatedPhone) setPhoneData(updatedPhone);
+
+      // Refetch current review page
+      fetchReviews(phoneId!, currentPage, sortBy, activeSentiment);
+
       toast.success("Review deleted successfully");
     } catch (error: any) {
       toast.error(error.message || "Failed to delete review");
     }
-  };
-
-  const handleCancelReview = () => {
-    setShowReviewForm(false);
   };
 
   // -- PRICE HISTORY --
@@ -1555,10 +1551,15 @@ export default function PhoneSpecPage({
         {/* 6. Reviews Section */}
         <Collapsible open={isReviewsOpen} onOpenChange={setIsReviewsOpen}>
           <div id="reviews" ref={reviewsSectionRef} className="bg-white rounded-2xl shadow-sm p-8 mb-8 mt-8">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
               <div className="flex items-center gap-3">
                 <div>
-                  <h2 className="text-[#2c3968] mb-2">User Reviews</h2>
+                  <h2 className="text-[#2c3968] mb-2">
+                    User Reviews
+                    {activeSentiment.length > 0 && (
+                      <span className="text-sm font-normal text-[#666] ml-2">({filteredTotal} matched)</span>
+                    )}
+                  </h2>
                   <div className="h-1 w-20 bg-[#2c3968] rounded-full"></div>
                 </div>
                 <CollapsibleTrigger className="ml-2">
@@ -1567,27 +1568,55 @@ export default function PhoneSpecPage({
                   />
                 </CollapsibleTrigger>
               </div>
-              {!showReviewForm && (
-                <Button
-                  className="bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] hover:from-[#2c3968]/90 hover:to-[#3d4b7f]/90 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
-                  onClick={() => setShowReviewForm(true)}
+
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                {/* Sorting Control */}
+                <select
+                  value={sortBy}
+                  onChange={(e) => {
+                    setSortBy(e.target.value as any);
+                    setCurrentPage(1);
+                  }}
+                  className="text-sm bg-transparent border-b-2 border-[#2c3968]/20 focus:border-[#2c3968] outline-none py-1 cursor-pointer transition-colors"
                 >
-                  <PenSquare className="w-4 h-4 mr-2" />
-                  Write a Review
-                </Button>
-              )}
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="helpful">Most Helpful</option>
+                </select>
+
+                {!showReviewForm && (
+                  <Button
+                    className="bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] hover:from-[#2c3968]/90 hover:to-[#3d4b7f]/90 shadow-md hover:shadow-lg transition-all"
+                    onClick={() => setShowReviewForm(true)}
+                  >
+                    <PenSquare className="w-4 h-4 mr-2" />
+                    Write a Review
+                  </Button>
+                )}
+              </div>
             </div>
+
             <CollapsibleContent>
-              {/* Sentiment Summary */}
-              {sentimentSummary && <SentimentSummaryCard data={sentimentSummary} isLoading={isLoadingSentiment} />}
-              {/* Rating Statistics */}
+              {/* Sentiment Summary (Pros/Cons + Filtering) */}
+              {sentimentSummary && (
+                <SentimentSummaryCard
+                  data={sentimentSummary}
+                  isLoading={isLoadingSentiment}
+                  activeFilters={activeSentiment}
+                  onPillClick={handleSentimentClick}
+                />
+              )}
+
+              {/* Global Community Statistics */}
               <div className="mb-8 bg-gradient-to-br from-[#f7f9fc] to-white border-2 border-[#2c3968]/10 rounded-2xl p-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  {/* Overall Rating - Left Column */}
+                  {/* Overall Score */}
                   <div className="lg:col-span-1 flex flex-col items-center justify-center bg-white rounded-xl p-6 shadow-sm border border-[#2c3968]/10">
-                    <p className="text-sm text-[#666] mb-2">Overall Rating</p>
+                    <p className="text-sm text-[#666] mb-2 uppercase tracking-tighter font-bold opacity-60">
+                      Overall Rating
+                    </p>
                     <div className="flex items-baseline gap-2 mb-3">
-                      <span className="text-5xl text-[#2c3968]">{overallRating}</span>
+                      <span className="text-5xl text-[#2c3968] font-bold">{overallRating}</span>
                       <span className="text-xl text-[#666]">/5</span>
                     </div>
                     <div className="flex gap-1 mb-3">
@@ -1604,62 +1633,47 @@ export default function PhoneSpecPage({
                         );
                       })}
                     </div>
-                    <p className="text-sm text-[#666]">
-                      Based on {ratingsCount} {ratingsCount === 1 ? "review" : "reviews"}
+                    <p className="text-xs text-[#666] text-center">
+                      Based on <strong>{ratingsCount}</strong> community insights
                     </p>
                   </div>
 
-                  {/* Category Ratings - Right Columns */}
+                  {/* Direct mapping of Denormalized Category Averages */}
                   <div className="lg:col-span-2">
-                    <p className="text-sm text-[#666] mb-4">Average Ratings by Category</p>
+                    <p className="text-sm text-[#666] mb-4 uppercase tracking-tighter font-bold opacity-60">
+                      Community Consensus
+                    </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {(() => {
-                        // Calculate average for each category
-                        const reviewCount = reviews.length || 1; // Prevent division by zero
-                        const categoryAverages = {
-                          camera: reviews.reduce((sum, r) => sum + (r.categoryRatings?.camera || 0), 0) / reviewCount,
-                          battery: reviews.reduce((sum, r) => sum + (r.categoryRatings?.battery || 0), 0) / reviewCount,
-                          design: reviews.reduce((sum, r) => sum + (r.categoryRatings?.design || 0), 0) / reviewCount,
-                          performance:
-                            reviews.reduce((sum, r) => sum + (r.categoryRatings?.performance || 0), 0) / reviewCount,
-                          value: reviews.reduce((sum, r) => sum + (r.categoryRatings?.value || 0), 0) / reviewCount,
-                        };
-
-                        const categories = [
-                          { name: "Camera", key: "camera", icon: Camera },
-                          { name: "Battery", key: "battery", icon: Battery },
-                          { name: "Design", key: "design", icon: Palette },
-                          { name: "Performance", key: "performance", icon: Cpu },
-                          { name: "Value", key: "value", icon: DollarSign },
-                        ];
-
-                        return categories.map((category) => {
-                          const avg = categoryAverages[category.key as keyof typeof categoryAverages];
-                          const percentage = (avg / 5) * 100;
-
-                          return (
-                            <div
-                              key={category.key}
-                              className="bg-white rounded-lg p-4 border border-[#e0e0e0] hover:border-[#2c3968]/30 transition-colors"
-                            >
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <category.icon className="w-4 h-4 text-[#2c3968]" />
-                                  <span className="text-sm text-[#1e1e1e]">{category.name}</span>
-                                </div>
-                                <span className="text-sm text-[#2c3968]">{avg.toFixed(1)}</span>
+                      {[
+                        { name: "Camera", key: "camera", icon: Camera },
+                        { name: "Battery", key: "battery", icon: Battery },
+                        { name: "Design", key: "design", icon: Palette },
+                        { name: "Performance", key: "performance", icon: Cpu },
+                        { name: "Value", key: "value", icon: DollarSign },
+                      ].map((cat) => {
+                        // Accessing data directly from phoneData without recalculating!
+                        const avg = phoneData.categoryAverages?.[cat.key as keyof CategoryRatings] || 0;
+                        return (
+                          <div
+                            key={cat.key}
+                            className="bg-white rounded-lg p-4 border border-[#e0e0e0] hover:border-[#2c3968]/30 transition-colors shadow-sm"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <cat.icon className="w-4 h-4 text-[#2c3968]" />
+                                <span className="text-sm font-medium">{cat.name}</span>
                               </div>
-                              {/* Progress Bar */}
-                              <div className="w-full bg-[#e0e0e0] rounded-full h-2 overflow-hidden">
-                                <div
-                                  className="h-full bg-gradient-to-r from-[#2c3968] to-[#2c3968]/80 rounded-full transition-all duration-500"
-                                  style={{ width: `${percentage}%` }}
-                                />
-                              </div>
+                              <span className="text-sm font-bold text-[#2c3968]">{avg.toFixed(1)}</span>
                             </div>
-                          );
-                        });
-                      })()}
+                            <div className="w-full bg-[#e0e0e0] rounded-full h-2 overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] transition-all duration-700"
+                                style={{ width: `${(avg / 5) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

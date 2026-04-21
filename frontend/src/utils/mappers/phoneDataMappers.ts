@@ -127,12 +127,15 @@ export const mapJsonToPhoneSpecification = (dbPhone: any): PhoneSpecification =>
  */
 export const mapJsonToPhoneCommunity = (dbPhone: any): PhoneCommunity => {
   return {
-    // Mapping reviews and validating sentimentTags array
-    reviews: (dbPhone.reviews || []).map((review: any) => ({
-      ...review,
-      sentimentTags: Array.isArray(review.sentimentTags) ? review.sentimentTags : [],
-      date: review.date || "Recent",
-    })),
+    totalReviews: dbPhone.totalReviews ?? 0,
+    aggregateRating: dbPhone.aggregateRating ?? 0,
+    categoryAverages: dbPhone.categoryAverages || {
+      camera: 0,
+      battery: 0,
+      design: 0,
+      performance: 0,
+      value: 0,
+    },
   };
 };
 

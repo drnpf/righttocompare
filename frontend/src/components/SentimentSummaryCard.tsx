@@ -1,4 +1,5 @@
-import { TrendingUp, TrendingDown, Info, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, Info, Sparkles, RotateCcw } from "lucide-react";
+import { Button } from "./ui/button";
 import { SentimentSummary } from "../types/sentimentTypes";
 import { SentimentPill } from "./SentimentPill";
 import { useDarkMode } from "./DarkModeContext";
@@ -7,6 +8,8 @@ interface SentimentSummaryCardProp {
   data: SentimentSummary | null;
   isLoading?: boolean;
   sourceType?: string; // "reviews", "discussions", "posts"
+  activeFilters?: string[];
+  onPillClick?: (tag: string) => void;
 }
 
 const generateVerdict = (pros: string[], cons: string[]): string => {
@@ -44,7 +47,13 @@ const generateVerdict = (pros: string[], cons: string[]): string => {
   return `The early word is in: users are currently navigating the balance between the ${proList} and the ${conList}. It's a developing story, but the ${topPro} is currently the feature to watch.`;
 };
 
-export function SentimentSummaryCard({ data, isLoading, sourceType = "reviews" }: SentimentSummaryCardProp) {
+export function SentimentSummaryCard({
+  data,
+  isLoading,
+  sourceType = "reviews",
+  activeFilters = [],
+  onPillClick,
+}: SentimentSummaryCardProp) {
   const { isDarkMode } = useDarkMode();
 
   const renderBoldVerdict = (text: string) => {
@@ -95,6 +104,10 @@ export function SentimentSummaryCard({ data, isLoading, sourceType = "reviews" }
   // Handles case if there is no analysis data
   if (!data || data.totalAnalyzed === 0) return null;
 
+  // Handles filtering out chosen tags from choosable list
+  const visiblePros = data.pros.filter((p) => !activeFilters.includes(`+${p.topic}`));
+  const visibleCons = data.cons.filter((c) => !activeFilters.includes(`-${c.topic}`));
+
   // Handles case if there is data to analyze for sentiment
   const proNames = data?.pros.map((p) => p.topic.toLowerCase());
   const conNames = data?.cons.map((c) => c.topic.toLowerCase());
@@ -107,17 +120,43 @@ export function SentimentSummaryCard({ data, isLoading, sourceType = "reviews" }
         isDarkMode ? "bg-[#161b22] border-[#2d3748]" : "bg-white border-[#2c3968]/5 shadow-sm"
       }`}
     >
-      {/* Header Info */}
-      <div className="flex items-center justify-between mb-6">
-        <h3
-          className={`text-sm font-bold uppercase tracking-widest ${isDarkMode ? "text-[#4a7cf6]" : "text-[#2c3968]"}`}
-        >
-          Community Consensus
-        </h3>
-        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-medium italic">
-          <Info size={12} />
-          Analyzed from {data.totalAnalyzed} {sourceType}
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex items-center justify-between">
+          <h3
+            className={`text-sm font-bold uppercase tracking-widest ${isDarkMode ? "text-[#4a7cf6]" : "text-[#2c3968]"}`}
+          >
+            Community Consensus
+          </h3>
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-medium italic">
+            <Info size={12} />
+            Analyzed from {data.totalAnalyzed} {sourceType}
+          </div>
         </div>
+
+        {/* Active Filters Bar */}
+        {activeFilters.length > 0 && (
+          <div
+            className={`flex flex-wrap items-center gap-3 p-3 rounded-xl border-dashed border-2 ${
+              isDarkMode ? "bg-gray-900/40 border-gray-700" : "bg-gray-50 border-gray-200"
+            }`}
+          >
+            <span className="text-[10px] font-bold uppercase opacity-50 ml-1">Active Filters:</span>
+            <div className="flex flex-wrap gap-2">
+              {activeFilters.map((tag) => (
+                <SentimentPill key={tag} tag={tag as any} isActive={true} onClick={onPillClick} />
+              ))}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => activeFilters.forEach((f) => onPillClick?.(f))}
+              className="h-7 px-2 text-[10px] uppercase font-bold text-red-500 hover:bg-red-50 cursor-pointer"
+            >
+              <RotateCcw size={12} className="mr-1" />
+              Clear All
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Verdict */}
@@ -143,29 +182,31 @@ export function SentimentSummaryCard({ data, isLoading, sourceType = "reviews" }
             <span className="text-xs font-bold uppercase">Community Loves</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {data.pros.length > 0 ? (
-              data.pros.map((p, idx) => <SentimentPill key={`pro-${idx}`} tag={`+${p.topic}`} count={p.count} />)
+            {visiblePros.length > 0 ? (
+              visiblePros.map((p, idx) => (
+                <SentimentPill key={`pro-${idx}`} tag={`+${p.topic}`} count={p.count} onClick={onPillClick} />
+              ))
             ) : (
-              <p className="text-xs text-gray-500 italic px-1">Gathering positive trends...</p>
+              <p className="text-[10px] text-gray-400 italic">No more pros to select.</p>
             )}
           </div>
         </div>
 
         {/* Cons Section */}
         <div
-          className={`space-y-4 pt-6 md:pt-0 md:pl-8 border-t md:border-t-0 md:border-l ${
-            isDarkMode ? "border-gray-800" : "border-gray-100"
-          }`}
+          className={`space-y-4 pt-6 md:pt-0 md:pl-8 md:border-l ${isDarkMode ? "border-gray-800" : "border-gray-100"}`}
         >
           <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
             <TrendingDown size={16} />
             <span className="text-xs font-bold uppercase">Pain Points</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {data.cons.length > 0 ? (
-              data.cons.map((c, idx) => <SentimentPill key={`con-${idx}`} tag={`-${c.topic}`} count={c.count} />)
+            {visibleCons.length > 0 ? (
+              visibleCons.map((c, idx) => (
+                <SentimentPill key={`con-${idx}`} tag={`-${c.topic}`} count={c.count} onClick={onPillClick} />
+              ))
             ) : (
-              <p className="text-xs text-gray-500 italic px-1">No major complaints yet.</p>
+              <p className="text-[10px] text-gray-400 italic">No more pain points to select.</p>
             )}
           </div>
         </div>

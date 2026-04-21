@@ -53,7 +53,15 @@ export function ReviewCard({ review, currentUserId, onVote, onDelete, isVoting =
           </div>
           <div>
             <p className={`font-medium ${isDarkMode ? "text-[#e0e4eb]" : "text-[#2c3968]"}`}>{review.userName}</p>
-            <p className={`text-sm ${isDarkMode ? "text-[#a0a8b8]" : "text-[#666]"}`}>{review.date}</p>
+            <p className={`text-sm ${isDarkMode ? "text-[#a0a8b8]" : "text-[#666]"}`}>
+              {review.date
+                ? new Date(review.date).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "Recent"}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
