@@ -1,4 +1,5 @@
-import { ReviewData } from "../components/ReviewCard";
+import { ReviewData } from "./reviewTypes";
+import { SentimentSummary } from "./sentimentTypes";
 
 // ------------------------------------------------------------
 // | PHONE DATA OBJECT
@@ -41,15 +42,27 @@ export interface PhoneCard extends PhoneSummary {
 }
 
 /**
- * The complete phone data class that contains all information
- * about a phone. This class is used for the phone spec sheet
- * and phone comparison page.
+ * Contains full phone specification on a specific phone. This class is used
+ * for the phone spec sheet on the phone spec and phone comparison page.
  */
-export interface PhoneData extends PhoneCard {
+export interface PhoneSpecification extends PhoneCard {
   categories: Record<string, Record<string, string | number>>;
   carrierCompatibility: CarrierCompatibility[];
-  reviews: ReviewData[];
 }
+
+/**
+ * Contains social data of the phone (i.e. reviews).
+ */
+export interface PhoneCommunity {
+  reviews: ReviewData[];
+  sentimentSummary?: SentimentSummary;
+}
+
+/**
+ * The complete phone data object. Contains full phone specification and
+ * all social data on the phone.
+ */
+export interface PhoneData extends PhoneSpecification, PhoneCommunity {}
 
 // ------------------------------------------------------------
 // | PAGINATION
