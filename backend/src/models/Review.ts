@@ -13,7 +13,7 @@ export interface IReview {
   userName: string;
   rating: number; // 1-5 (calculated average from categoryRatings)
   categoryRatings: ICategoryRatings;
-  date: string;
+  date: Date;
   title: string;
   review: string;
   sentimentTags: string[]; // e.g. ["+camera", "-battery", "+performance"]

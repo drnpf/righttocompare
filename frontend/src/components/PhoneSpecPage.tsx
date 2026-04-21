@@ -480,6 +480,11 @@ export default function PhoneSpecPage({
     }
   };
 
+  // Handle canceling the review form
+  const handleCancelReview = () => {
+    setShowReviewForm(false);
+  };
+
   // -- PRICE HISTORY --
   // Generate price history data (mock data for demonstration)
   const generatePriceHistory = () => {

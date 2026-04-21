@@ -1,6 +1,4 @@
 import { CategoryRatings } from "../components/MultiRatingInput";
-import { ReviewData } from "./reviewTypes";
-import { SentimentSummary } from "./sentimentTypes";
 
 // ------------------------------------------------------------
 // | PHONE DATA OBJECT

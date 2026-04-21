@@ -51,11 +51,7 @@ export const addReviewToPhone = async (
     userName: reviewData.userName,
     rating: overallRating,
     categoryRatings: reviewData.categoryRatings,
-    date: new Date().toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }),
+    date: new Date(),
     title: reviewData.title,
     review: reviewData.review,
     sentimentTags,
@@ -268,29 +264,40 @@ export const getSentimentSummary = async (
 
   const proCounts: Record<string, number> = {};
   const conCounts: Record<string, number> = {};
+  const allTopics = new Set<string>();
 
+  // Getting raw count of all + and - tags and topics
   for (const review of phone.reviews) {
     const tags = review.sentimentTags || [];
     for (const tag of tags) {
-      if (tag.startsWith("+")) {
-        const topic = tag.slice(1);
-        proCounts[topic] = (proCounts[topic] || 0) + 1;
-      } else if (tag.startsWith("-")) {
-        const topic = tag.slice(1);
-        conCounts[topic] = (conCounts[topic] || 0) + 1;
-      }
+      const isPos = tag.startsWith("+");
+      const topic = tag.slice(1);
+      allTopics.add(topic);
+
+      // Counts + or - topics
+      if (isPos) proCounts[topic] = (proCounts[topic] || 0) + 1;
+      else conCounts[topic] = (conCounts[topic] || 0) + 1;
     }
   }
 
-  const pros = Object.entries(proCounts)
-    .map(([topic, count]) => ({ topic, count }))
-    .sort((a, b) => b.count - a.count);
+  const pros: { topic: string; count: number }[] = [];
+  const cons: { topic: string; count: number }[] = [];
 
-  const cons = Object.entries(conCounts)
-    .map(([topic, count]) => ({ topic, count }))
-    .sort((a, b) => b.count - a.count);
+  allTopics.forEach((topic) => {
+    const pCount = proCounts[topic] || 0;
+    const cCount = conCounts[topic] || 0;
 
-  return { pros, cons, totalReviews: phone.reviews.length };
+    // The + or - with higher count gets that topic
+    if (pCount > cCount) pros.push({ topic, count: pCount });
+    else if (cCount > pCount) cons.push({ topic, count: cCount });
+
+    // If pCount == cCount then ignore since the topic is controversial
+  });
+  return {
+    pros: pros.sort((a, b) => b.count - a.count),
+    cons: cons.sort((a, b) => b.count - a.count),
+    totalReviews: phone.reviews.length,
+  };
 };
 
 const recalculatePhoneMetadata = (phone: IPhone): void => {
