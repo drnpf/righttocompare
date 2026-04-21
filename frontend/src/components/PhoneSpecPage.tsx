@@ -442,6 +442,9 @@ export default function PhoneSpecPage({
       const updatedReview = await voteOnReview(phoneData.id, reviewId, voteType, token);
       if (updatedReview) {
         setReviews((prev) => prev.map((r) => (r.id === reviewId ? updatedReview : r)));
+
+        // Fetches for reviews if a review was liked and the sort method is based on most helpful
+        if (sortBy === "helpful") fetchReviews(phoneId!, currentPage, sortBy, activeSentiment);
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to vote on review");
