@@ -136,3 +136,26 @@ export const deleteReview = async (phoneId: string, reviewId: number, token: str
     throw error;
   }
 };
+
+/**
+ * Fetches the aggregate sentiment summary for a phone's review.
+ * @param phoneId The phone ID
+ * @returns Sentiment summary data mapped to SentimentSummary type
+ */
+export const getPhoneReviewSentiment = async (phoneId: string): Promise<SentimentSummary | null> => {
+  try {
+    // Attempting to fetch for review sentiment on specified phone
+    const response = await fetch(`${API_URL}/${phoneId}/reviews/sentiment`);
+
+    // Handling failed fetches
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error("Failed to fetch review sentiment summary");
+
+    // Mapping sentiment to SentimentSummary class
+    const data = await response.json();
+    return mapJsonToSentimentSummary(data);
+  } catch (error) {
+    console.error("Error fetching review sentiment summary:", error);
+    return null;
+  }
+};
