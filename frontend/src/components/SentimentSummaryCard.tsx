@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, Info, Sparkles, RotateCcw } from "lucide-react";
+import { TrendingUp, TrendingDown, Info, Sparkles, RotateCcw, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { SentimentSummary } from "../types/sentimentTypes";
 import { SentimentPill } from "./SentimentPill";
@@ -10,6 +10,7 @@ interface SentimentSummaryCardProp {
   sourceType?: string; // "reviews", "discussions", "posts"
   activeFilters?: string[];
   onPillClick?: (tag: string) => void;
+  matchedCount?: number;
 }
 
 const generateVerdict = (pros: string[], cons: string[]): string => {
@@ -53,6 +54,7 @@ export function SentimentSummaryCard({
   sourceType = "reviews",
   activeFilters = [],
   onPillClick,
+  matchedCount = 0,
 }: SentimentSummaryCardProp) {
   const { isDarkMode } = useDarkMode();
 
@@ -133,30 +135,54 @@ export function SentimentSummaryCard({
           </div>
         </div>
 
-        {/* Active Filters Bar */}
-        {activeFilters.length > 0 && (
-          <div
-            className={`flex flex-wrap items-center gap-3 p-3 rounded-xl border-dashed border-2 ${
-              isDarkMode ? "bg-gray-900/40 border-gray-700" : "bg-gray-50 border-gray-200"
-            }`}
-          >
-            <span className="text-[10px] font-bold uppercase opacity-50 ml-1">Active Filters:</span>
-            <div className="flex flex-wrap gap-2">
-              {activeFilters.map((tag) => (
-                <SentimentPill key={tag} tag={tag as any} isActive={true} onClick={onPillClick} />
-              ))}
+        {/* --- PERPETUAL ACTIVE FILTERS BAR --- */}
+        <div
+          className={`
+          flex items-center px-4 py-3 mb-6 rounded-xl transition-all duration-300 min-h-[58px]
+          ${
+            activeFilters.length > 0
+              ? isDarkMode
+                ? "bg-gray-900/40 border-dashed border-2 border-gray-700"
+                : "bg-gray-50 border-dashed border-2 border-gray-200"
+              : "border-2 border-transparent bg-transparent" // Reserved empty space
+          }
+        `}
+        >
+          {activeFilters.length > 0 ? (
+            <div className="flex flex-wrap items-center justify-between w-full gap-3 animate-in fade-in slide-in-from-top-1 duration-300">
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-bold uppercase opacity-50">Filtered By:</span>
+                <div className="flex flex-wrap gap-2">
+                  {activeFilters.map((tag) => (
+                    <SentimentPill key={tag} tag={tag as any} isActive={true} onClick={onPillClick} />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                {/* Contextual matchedCount */}
+                <span className="text-[10px] font-bold py-1 px-2 rounded bg-[#2c3968]/10 text-[#2c3968] dark:bg-[#4a7cf6]/20 dark:text-[#4a7cf6]">
+                  {matchedCount} Matches Found
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => activeFilters.forEach((f) => onPillClick?.(f))}
+                  className="h-7 px-2 text-[10px] uppercase font-bold text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+                >
+                  <RotateCcw size={12} className="mr-1" />
+                  Reset
+                </Button>
+              </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => activeFilters.forEach((f) => onPillClick?.(f))}
-              className="h-7 px-2 text-[10px] uppercase font-bold text-red-500 hover:bg-red-50 cursor-pointer"
-            >
-              <RotateCcw size={12} className="mr-1" />
-              Clear All
-            </Button>
-          </div>
-        )}
+          ) : (
+            /* This placeholder keeps the user oriented and holds the space */
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase opacity-20 tracking-widest select-none">
+              <Search size={14} />
+              <span>Select sentiments below to narrow your search</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Verdict */}

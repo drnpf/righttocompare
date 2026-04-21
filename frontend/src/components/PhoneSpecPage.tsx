@@ -100,6 +100,11 @@ const categoryConfig: Record<string, { icon: any }> = {
   sensors: { icon: Radio },
 };
 
+// ------------------------------------------------------------
+// | CONFIGURATIONS
+// ------------------------------------------------------------
+const REVIEW_FETCH_FILTER_DEBOUNCE_MS = 300;
+
 // Phone Spec Page interface
 interface PhoneSpecPageProps {
   comparisonPhoneIds: string[];
@@ -233,20 +238,31 @@ export default function PhoneSpecPage({
 
   /**
    * SYNC: Phone Review Sentiment Summary
+   * Action: Fetches the sentiment summary from the backend.
+   */
+  const fetchSentiment = useCallback(async (targetPhoneId: string) => {
+    if (!targetPhoneId) return;
+    setIsLoadingSentiment(true);
+    try {
+      const data = await getPhoneReviewSentiment(targetPhoneId);
+      setSentimentSummary(data);
+    } catch (error) {
+      console.error("Failed to fetch sentiment summary:", error);
+    } finally {
+      setIsLoadingSentiment(false);
+    }
+  }, []);
+
+  /**
+   * SYNC: Phone Review Sentiment Summary
    * Signal: phoneId change
    * Action: Fetches the review sentiment summary from backend on current phone
    */
   useEffect(() => {
-    const fetchSentiment = async () => {
-      if (!phoneId) return;
-
-      setIsLoadingSentiment(true);
-      const data = await getPhoneReviewSentiment(phoneId);
-      setSentimentSummary(data);
-      setIsLoadingSentiment(false);
-    };
-    fetchSentiment();
-  }, [phoneId]);
+    if (phoneId) {
+      fetchSentiment(phoneId);
+    }
+  }, [phoneId, fetchSentiment]);
 
   /**
    * SYNC: Phone Review Page
@@ -255,7 +271,13 @@ export default function PhoneSpecPage({
    * Action: Fetches the review sentiment summary from backend on current phone
    */
   useEffect(() => {
-    if (phoneId && !loading) fetchReviews(phoneId, currentPage, sortBy, activeSentiment);
+    if (!phoneId || loading) return;
+
+    // Creating timer until request is sent to backend
+    const timer = setTimeout(() => {
+      fetchReviews(phoneId, currentPage, sortBy, activeSentiment);
+    }, REVIEW_FETCH_FILTER_DEBOUNCE_MS); // Change debounce timer at CONFIGURATION at top
+    return () => clearTimeout(timer);
   }, [phoneId, currentPage, sortBy, activeSentiment, fetchReviews, loading]);
 
   /**
@@ -441,11 +463,14 @@ export default function PhoneSpecPage({
       const result = await submitReview(phoneData!.id, data, token);
 
       if (result) {
-        // 1. Re-fetch Phone Specs to get updated categoryAverages and aggregateRating
+        //  Refetch phone specs to get updated categoryAverages and aggregateRating
         const updatedPhone = await getPhoneById(phoneData!.id);
         if (updatedPhone) setPhoneData(updatedPhone);
 
-        // 2. Reset list to page 1 to show the new review
+        // Reanalyzing sentiment on adding new review
+        fetchSentiment(phoneData!.id);
+
+        // Reset list to page 1 to show the new review
         setCurrentPage(1);
         setActiveSentiment([]); // Clear filters to ensure the new review is visible
 
@@ -470,6 +495,9 @@ export default function PhoneSpecPage({
       // Refetch phone specs to sync the consesus category ratings bars
       const updatedPhone = await getPhoneById(phoneData!.id);
       if (updatedPhone) setPhoneData(updatedPhone);
+
+      // Reanalyzing sentiment on adding new review
+      fetchSentiment(phoneData!.id);
 
       // Refetch current review page
       fetchReviews(phoneId!, currentPage, sortBy, activeSentiment);
@@ -1559,12 +1587,7 @@ export default function PhoneSpecPage({
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
               <div className="flex items-center gap-3">
                 <div>
-                  <h2 className="text-[#2c3968] mb-2">
-                    User Reviews
-                    {activeSentiment.length > 0 && (
-                      <span className="text-sm font-normal text-[#666] ml-2">({filteredTotal} matched)</span>
-                    )}
-                  </h2>
+                  <h2 className="text-[#2c3968] mb-2">User Reviews</h2>
                   <div className="h-1 w-20 bg-[#2c3968] rounded-full"></div>
                 </div>
                 <CollapsibleTrigger className="ml-2">
@@ -1609,6 +1632,7 @@ export default function PhoneSpecPage({
                   isLoading={isLoadingSentiment}
                   activeFilters={activeSentiment}
                   onPillClick={handleSentimentClick}
+                  matchedCount={filteredTotal}
                 />
               )}
 
@@ -1703,28 +1727,43 @@ export default function PhoneSpecPage({
               )}
 
               {/* Existing Reviews */}
-              <div className="space-y-6">
-                {isLoadingReviews ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2c3968]"></div>
-                    <span className="ml-3 text-[#666]">Loading reviews...</span>
+              <div className="relative min-h-[400px]">
+                {isLoadingReviews && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-start pt-20 z-10 pointer-events-none">
+                    <div className="flex items-center gap-3 bg-white/90 dark:bg-[#161b26]/90 px-6 py-3 rounded-full shadow-xl border border-[#2c3968]/10 backdrop-blur-sm animate-in fade-in zoom-in duration-300">
+                      <Loader2 className="animate-spin text-[#2c3968] dark:text-[#4a7cf6]" size={20} />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[#2c3968] dark:text-[#4a7cf6]">
+                        Updating Results...
+                      </span>
+                    </div>
                   </div>
-                ) : reviews.length === 0 ? (
-                  <div className="text-center py-12 text-[#666]">
-                    <p>No reviews yet. Be the first to review this phone!</p>
-                  </div>
-                ) : (
-                  reviews.map((review) => (
-                    <ReviewCard
-                      key={review.id}
-                      review={review}
-                      currentUserId={currentUser?.uid}
-                      onVote={handleVoteOnReview}
-                      onDelete={handleDeleteReview}
-                      isVoting={isVoting}
-                    />
-                  ))
                 )}
+
+                {/* Dims old reviews while new ones are being loaded */}
+                <div
+                  className={`space-y-6 transition-all duration-500 ${
+                    isLoadingReviews ? "opacity-25 grayscale-[30%] pointer-events-none scale-[0.99]" : "opacity-100"
+                  }`}
+                >
+                  {reviews.length === 0 && !isLoadingReviews ? (
+                    <div className="text-center py-20 bg-gray-50/50 dark:bg-white/5 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-800">
+                      <p className="text-sm font-medium text-gray-500 italic">
+                        No reviews match your selected filters. Try clearing some sentiments!
+                      </p>
+                    </div>
+                  ) : (
+                    reviews.map((review) => (
+                      <ReviewCard
+                        key={review.id}
+                        review={review}
+                        currentUserId={currentUser?.uid}
+                        onVote={handleVoteOnReview}
+                        onDelete={handleDeleteReview}
+                        isVoting={isVoting}
+                      />
+                    ))
+                  )}
+                </div>
               </div>
 
               {/* Pagination */}
