@@ -62,7 +62,14 @@ def mass_seed(reviews_per_phone=50):
     for phone in phones:
         generated_reviews = []
         total_rating_sum = 0
-        
+        category_sums = {
+            "camera": 0,
+            "battery": 0,
+            "design": 0,
+            "performance": 0,
+            "value": 0
+        }
+
         for i in range(reviews_per_phone):
             text, tags, persona = generate_review()
             
@@ -77,6 +84,10 @@ def mass_seed(reviews_per_phone=50):
                 "value": max(1, min(5, base + random.randint(-1, 1))),
             }
             
+            # Update the category sums
+            for cat in category_sums:
+                category_sums[cat] += cat_ratings[cat]
+
             avg_rating = sum(cat_ratings.values()) / 5
             total_rating_sum += avg_rating
 
@@ -85,13 +96,19 @@ def mass_seed(reviews_per_phone=50):
                 "userName": f"{random.choice(USERNAMES)}_{random.randint(10, 99)}",
                 "rating": round(avg_rating, 1),
                 "categoryRatings": cat_ratings,
-                "date": (datetime.now() - timedelta(days=random.randint(0, 365))).strftime("%B %d, %Y"),
+                "date": datetime.now() - timedelta(days=random.randint(0, 365)),
                 "title": f"My {phone['name']} Experience",
                 "review": text,
                 "helpful": random.randint(0, 100),
                 "notHelpful": random.randint(0, 20),
                 "sentimentTags": tags
             })
+
+        # Calculates final category averages
+        final_category_averages = {
+            cat: round(category_sums[cat] / reviews_per_phone, 1) 
+            for cat in category_sums
+        }
 
         # Update phone with new aggregates
         phones_collection.update_one(
@@ -100,7 +117,8 @@ def mass_seed(reviews_per_phone=50):
                 "$set": {
                     "reviews": generated_reviews,
                     "totalReviews": reviews_per_phone,
-                    "aggregateRating": round(total_rating_sum / reviews_per_phone, 1)
+                    "aggregateRating": round(total_rating_sum / reviews_per_phone, 1),
+                    "categoryAverages": final_category_averages,
                 }
             }
         )
@@ -109,4 +127,4 @@ def mass_seed(reviews_per_phone=50):
     client.close()
 
 if __name__ == "__main__":
-    mass_seed(reviews_per_phone=100) # Bump this up as high as you want
+    mass_seed(reviews_per_phone=50) # Bump this up as high as you want
