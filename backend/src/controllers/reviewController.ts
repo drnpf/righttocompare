@@ -124,12 +124,7 @@ export const voteOnReview = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: "User not authenticated" });
     }
 
-    const updatedReview = await reviewService.updateReviewVote(
-      phoneId,
-      parseInt(reviewId),
-      userId,
-      voteType
-    );
+    const updatedReview = await reviewService.updateReviewVote(phoneId, parseInt(reviewId), userId, voteType);
 
     if (!updatedReview) {
       return res.status(404).json({ message: "Phone or review not found" });
@@ -142,12 +137,6 @@ export const voteOnReview = async (req: AuthRequest, res: Response) => {
   }
 };
 
-/**
- * Deletes a user's own review.
- * @route DELETE /api/phones/:phoneId/reviews/:reviewId
- * @param req AuthRequest containing phoneId and reviewId params
- * @param res Express Response
- */
 /**
  * Gets a sentiment summary (pros/cons) for a phone based on review text analysis.
  * @route GET /api/phones/:phoneId/reviews/sentiment
@@ -171,6 +160,12 @@ export const getReviewSentiment = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/**
+ * Deletes a user's own review.
+ * @route DELETE /api/phones/:phoneId/reviews/:reviewId
+ * @param req AuthRequest containing phoneId and reviewId params
+ * @param res Express Response
+ */
 export const deleteReview = async (req: AuthRequest, res: Response) => {
   try {
     const { phoneId, reviewId } = req.params;
@@ -180,11 +175,7 @@ export const deleteReview = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: "User not authenticated" });
     }
 
-    const deleted = await reviewService.removeReview(
-      phoneId,
-      parseInt(reviewId),
-      userId
-    );
+    const deleted = await reviewService.removeReview(phoneId, parseInt(reviewId), userId);
 
     if (!deleted) {
       return res.status(404).json({ message: "Review not found" });
