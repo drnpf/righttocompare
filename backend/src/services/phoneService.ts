@@ -199,6 +199,30 @@ export const findPhonePriceSummaryById = async (id: string): Promise<IPriceSumma
   };
 };
 
+export interface ICreatePriceHistoryInput {
+  amount: number;
+  currency?: string;
+  source?: string;
+  raw?: string;
+  recordedAt?: Date;
+}
+
+export const createPhonePriceHistoryEntry = async (
+  id: string,
+  input: ICreatePriceHistoryInput,
+) => {
+  const entry = new PriceHistory({
+    phoneId: id,
+    amount: input.amount,
+    currency: input.currency || "USD",
+    source: input.source || "admin-manual",
+    raw: input.raw || `$${input.amount}`,
+    recordedAt: input.recordedAt || new Date(),
+  });
+
+  return await entry.save();
+};
+
 /**
  * Finds a single phone by its ID. Returns a JSON object.
  * @param id The unique string ID of the phone

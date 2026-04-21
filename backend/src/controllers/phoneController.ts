@@ -330,3 +330,36 @@ export const getPhonePriceSummary = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error fetching price summary" });
   }
 };
+
+export const createPhonePriceHistory = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { amount, currency, source, raw, recordedAt } = req.body;
+
+    const phone = await phoneService.findPhoneById(id);
+    if (!phone) {
+      return res.status(404).json({ message: `Phone with ID '${id}' not found` });
+    }
+
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({ message: "A valid positive price amount is required" });
+    }
+
+    const createdEntry = await phoneService.createPhonePriceHistoryEntry(id, {
+      amount: numericAmount,
+      currency,
+      source,
+      raw,
+      recordedAt: recordedAt ? new Date(recordedAt) : undefined,
+    });
+
+    res.status(201).json({
+      message: "Price history entry created successfully",
+      data: createdEntry,
+    });
+  } catch (error) {
+    console.error(`Error creating price history for phone ${req.params.id}:`, error);
+    res.status(500).json({ message: "Server error creating price history entry" });
+  }
+};
