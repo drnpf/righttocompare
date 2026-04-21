@@ -1,22 +1,9 @@
 import { CategoryRatings } from "../components/MultiRatingInput";
-import { ReviewData } from "../components/ReviewCard";
+import { ReviewData, ReviewsResponse } from "../types/reviewTypes";
+import { SentimentSummary } from "../types/sentimentTypes";
+import { mapJsonToSentimentSummary } from "../utils/mappers/sentimentMappers";
 
 const API_URL = "http://localhost:5001/api/phones"; // CHANGE LATER ON PRODUCTION
-
-export interface ReviewsResponse {
-  reviews: ReviewData[];
-  totalReviews: number;
-  totalPages: number;
-  currentPage: number;
-  aggregateRating: number;
-  categoryAverages: {
-    camera: number;
-    battery: number;
-    design: number;
-    performance: number;
-    value: number;
-  };
-}
 
 /**
  * Fetches reviews for a phone with pagination.
@@ -28,12 +15,10 @@ export interface ReviewsResponse {
 export const getPhoneReviews = async (
   phoneId: string,
   page: number = 1,
-  limit: number = 10
+  limit: number = 10,
 ): Promise<ReviewsResponse | null> => {
   try {
-    const response = await fetch(
-      `${API_URL}/${phoneId}/reviews?page=${page}&limit=${limit}`
-    );
+    const response = await fetch(`${API_URL}/${phoneId}/reviews?page=${page}&limit=${limit}`);
 
     if (response.status === 404) {
       return null;
@@ -64,7 +49,7 @@ export const submitReview = async (
     review: string;
     categoryRatings: CategoryRatings;
   },
-  token: string
+  token: string,
 ): Promise<ReviewData | null> => {
   try {
     const response = await fetch(`${API_URL}/${phoneId}/reviews`, {
@@ -100,20 +85,17 @@ export const voteOnReview = async (
   phoneId: string,
   reviewId: number,
   voteType: "helpful" | "notHelpful",
-  token: string
+  token: string,
 ): Promise<ReviewData | null> => {
   try {
-    const response = await fetch(
-      `${API_URL}/${phoneId}/reviews/${reviewId}/vote`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ voteType }),
-      }
-    );
+    const response = await fetch(`${API_URL}/${phoneId}/reviews/${reviewId}/vote`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ voteType }),
+    });
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -134,21 +116,14 @@ export const voteOnReview = async (
  * @param token Firebase auth token
  * @returns True if deleted successfully
  */
-export const deleteReview = async (
-  phoneId: string,
-  reviewId: number,
-  token: string
-): Promise<boolean> => {
+export const deleteReview = async (phoneId: string, reviewId: number, token: string): Promise<boolean> => {
   try {
-    const response = await fetch(
-      `${API_URL}/${phoneId}/reviews/${reviewId}`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await fetch(`${API_URL}/${phoneId}/reviews/${reviewId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     if (!response.ok) {
       const errorData = await response.json();

@@ -1,48 +1,6 @@
+import { DiscussionResponse, ReplyResponse, DiscussionsListResponse } from "../types/discussionTypes";
+
 const API_URL = "http://localhost:5001/api/discussions"; // CHANGE LATER ON PRODUCTION
-
-export interface DiscussionResponse {
-  _id: string;
-  title: string;
-  content: string;
-  authorId: string;
-  authorName: string;
-  authorAvatar: string;
-  category: string;
-  tags: string[];
-  images: string[];
-  upvotes: number;
-  downvotes: number;
-  upvoters: string[];
-  downvoters: string[];
-  replyCount: number;
-  views: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ReplyResponse {
-  _id: string;
-  discussionId: string;
-  content: string;
-  authorId: string;
-  authorName: string;
-  authorAvatar: string;
-  images: string[];
-  upvotes: number;
-  downvotes: number;
-  upvoters: string[];
-  downvoters: string[];
-  parentReplyId: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface DiscussionsListResponse {
-  discussions: DiscussionResponse[];
-  totalDiscussions: number;
-  totalPages: number;
-  currentPage: number;
-}
 
 /**
  * Fetches paginated discussions with optional filtering and search.
@@ -52,7 +10,7 @@ export const getDiscussions = async (
   limit: number = 20,
   filter: "recent" | "trending" | "popular" = "trending",
   search?: string,
-  categories?: string[]
+  categories?: string[],
 ): Promise<DiscussionsListResponse | null> => {
   try {
     const params = new URLSearchParams({
@@ -85,9 +43,7 @@ export const getDiscussions = async (
 /**
  * Fetches a single discussion by ID (increments view count).
  */
-export const getDiscussion = async (
-  id: string
-): Promise<DiscussionResponse | null> => {
+export const getDiscussion = async (id: string): Promise<DiscussionResponse | null> => {
   try {
     const response = await fetch(`${API_URL}/${id}`);
 
@@ -117,7 +73,7 @@ export const createDiscussion = async (
     tags: string[];
     images: string[];
   },
-  token: string
+  token: string,
 ): Promise<DiscussionResponse | null> => {
   try {
     const response = await fetch(API_URL, {
@@ -147,7 +103,7 @@ export const createDiscussion = async (
 export const voteOnDiscussion = async (
   id: string,
   voteType: "up" | "down",
-  token: string
+  token: string,
 ): Promise<DiscussionResponse | null> => {
   try {
     const response = await fetch(`${API_URL}/${id}/vote`, {
@@ -174,10 +130,7 @@ export const voteOnDiscussion = async (
 /**
  * Deletes a discussion (author only).
  */
-export const deleteDiscussion = async (
-  id: string,
-  token: string
-): Promise<boolean> => {
+export const deleteDiscussion = async (id: string, token: string): Promise<boolean> => {
   try {
     const response = await fetch(`${API_URL}/${id}`, {
       method: "DELETE",
@@ -201,9 +154,7 @@ export const deleteDiscussion = async (
 /**
  * Fetches all replies for a discussion.
  */
-export const getReplies = async (
-  discussionId: string
-): Promise<ReplyResponse[]> => {
+export const getReplies = async (discussionId: string): Promise<ReplyResponse[]> => {
   try {
     const response = await fetch(`${API_URL}/${discussionId}/replies`);
 
@@ -228,7 +179,7 @@ export const createReply = async (
     images: string[];
     parentReplyId?: string;
   },
-  token: string
+  token: string,
 ): Promise<ReplyResponse | null> => {
   try {
     const response = await fetch(`${API_URL}/${discussionId}/replies`, {
@@ -258,7 +209,7 @@ export const createReply = async (
 export const voteOnReply = async (
   replyId: string,
   voteType: "up" | "down",
-  token: string
+  token: string,
 ): Promise<ReplyResponse | null> => {
   try {
     const response = await fetch(`${API_URL}/replies/${replyId}/vote`, {
@@ -285,9 +236,7 @@ export const voteOnReply = async (
 /**
  * Fetches all discussions created by a specific user.
  */
-export const getDiscussionsByUser = async (
-  userId: string
-): Promise<DiscussionResponse[]> => {
+export const getDiscussionsByUser = async (userId: string): Promise<DiscussionResponse[]> => {
   try {
     const response = await fetch(`${API_URL}/user/${userId}`);
 
@@ -305,10 +254,7 @@ export const getDiscussionsByUser = async (
 /**
  * Deletes a reply (author only).
  */
-export const deleteReply = async (
-  replyId: string,
-  token: string
-): Promise<boolean> => {
+export const deleteReply = async (replyId: string, token: string): Promise<boolean> => {
   try {
     const response = await fetch(`${API_URL}/replies/${replyId}`, {
       method: "DELETE",
