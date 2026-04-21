@@ -1,5 +1,6 @@
-import { Smartphone, Camera, Cpu, Battery, HardDrive, RefreshCw, Layers } from "lucide-react";
-import { PhoneData, PhoneCard, PhoneSummary } from "../types/phoneTypes";
+import { Smartphone, Camera, Cpu, Battery, HardDrive, Layers } from "lucide-react";
+import { PhoneData, PhoneCard, PhoneSummary, PhoneSpecification, PhoneCommunity } from "../../types/phoneTypes";
+import { mapJsonToSentimentSummary } from "./sentimentMappers";
 
 /**
  * Maps raw phone data JSON to lightweight PhoneSummary object.
@@ -51,12 +52,12 @@ export const mapJsonToPhoneCard = (dbPhone: any): PhoneCard => {
 };
 
 /**
- * Maps raw phone data JSON to PhoneData object used for the specification page
+ * Maps raw phone data JSON to PhoneSpecification object used for the specification page
  * and comparison page. Contains full specifications of the phone.
  * @param dbPhone The raw phone object from the database
  * @returns The formatted phone data object containing full phone specifications
  */
-export const mapJsonToPhoneData = (dbPhone: any): PhoneData => {
+export const mapJsonToPhoneSpecification = (dbPhone: any): PhoneSpecification => {
   const { specs } = dbPhone;
 
   return {
@@ -116,6 +117,38 @@ export const mapJsonToPhoneData = (dbPhone: any): PhoneData => {
       },
     },
     carrierCompatibility: dbPhone.carrierCompatibility || [],
-    reviews: dbPhone.reviews || [],
+  };
+};
+
+/**
+ * Maps raw phone data JSON to PhoneCommunity object. Handles user reviews
+ * and aggregated of sentiment summary.
+ * @param dbPhone The raw phone JSON object from the database
+ * @returns The community and sentiment data
+ */
+export const mapJsonToPhoneCommunity = (dbPhone: any): PhoneCommunity => {
+  return {
+    // Mapping reviews and validating sentimentTags array
+    reviews: (dbPhone.reviews || []).map((review: any) => ({
+      ...review,
+      sentimentTags: Array.isArray(review.sentimentTags) ? review.sentimentTags : [],
+      date: review.date || "Recent",
+    })),
+
+    // Mapping sentiment summary to frontend SentimentSummary structure
+    sentimentSummary: dbPhone.phone.sentimentSummary ? mapJsonToSentimentSummary(dbPhone.sentimentSummary) : undefined,
+  };
+};
+
+/**
+ * The primary mapper for the full phone data. Contains full specifications and social data
+ * on the phone.
+ * @param dbPhone The raw phone JSON object from the database
+ * @returns The full phone data containing specification and social data (i.e reviews)
+ */
+export const mapJsonToPhoneData = (dbPhone: any): PhoneData => {
+  return {
+    ...mapJsonToPhoneSpecification(dbPhone),
+    ...mapJsonToPhoneCommunity(dbPhone),
   };
 };
