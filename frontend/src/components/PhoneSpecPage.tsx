@@ -76,12 +76,16 @@ import RecentlyViewedPhones from "./RecentlyViewedPhones";
 import SpecTableOfContents from "./SpecTableOfContents";
 import ComparisonCart from "./ComparisonCart";
 import { specTooltips, specGlossary } from "../data/specGlossary";
-import { ReviewForm } from "./ReviewForm";
-import { ReviewCard, ReviewData } from "./ReviewCard";
 import { CategoryRatings } from "./MultiRatingInput";
-import { getPhoneReviews, submitReview, voteOnReview, deleteReview, ReviewsResponse } from "../api/reviewApi";
+import { SentimentSummaryCard } from "./SentimentSummaryCard.tsx";
+import { ReviewForm } from "./ReviewForm";
+import { ReviewCard } from "./ReviewCard";
+import { ReviewData } from "../types/reviewTypes";
+import { getPhoneReviews, submitReview, voteOnReview, deleteReview } from "../api/reviewApi";
 import { PhoneSummary, PhoneData } from "../types/phoneTypes";
 import { getPhoneById, getPhoneSummaries } from "../api/phoneApi";
+import { SentimentSummary } from "../types/sentimentTypes";
+import { getPhoneReviewSentiment } from "../api/reviewApi";
 
 // Category icons mapping - minimalistic uniform color scheme
 const categoryConfig: Record<string, { icon: any }> = {
@@ -152,6 +156,10 @@ export default function PhoneSpecPage({
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // -- Review Sentiment States --
+  const [sentimentSummary, setSentimentSummary] = useState<SentimentSummary | null>(null);
+  const [isLoadingSentiment, setIsLoadingSentiment] = useState(true);
+
   // -- Comparison Cart States --
   const [comparisonData, setComparisonData] = useState<PhoneSummary[]>([]);
   const [showComparisonCart, setShowComparisonCart] = useState(false);
@@ -202,8 +210,8 @@ export default function PhoneSpecPage({
 
   /**
    * SYNC: Phone Reviews
-   * Signal: phoneData change (after data is fetched)
-   * Action: Fills the full specification list with labels from phoneData
+   * Signal: On function call
+   * Action: Fetches reviews and review metadata from backend (i.e. total reviews, aggregate rating)
    */
   const fetchReviews = useCallback(async (targetPhoneId: string, page: number = 1) => {
     setIsLoadingReviews(true);
@@ -227,6 +235,23 @@ export default function PhoneSpecPage({
       setIsLoadingReviews(false);
     }
   }, []);
+
+  /**
+   * SYNC: Phone Review Sentiment Summary
+   * Signal: phoneId change
+   * Action: Fetches the review sentiment summary from backend on current phone
+   */
+  useEffect(() => {
+    const fetchSentiment = async () => {
+      if (!phoneId) return;
+
+      setIsLoadingSentiment(true);
+      const data = await getPhoneReviewSentiment(phoneId);
+      setSentimentSummary(data);
+      setIsLoadingSentiment(false);
+    };
+    fetchSentiment();
+  }, [phoneId]);
 
   /**
    * SYNC: Phone Specifications
@@ -1553,6 +1578,8 @@ export default function PhoneSpecPage({
               )}
             </div>
             <CollapsibleContent>
+              {/* Sentiment Summary */}
+              {sentimentSummary && <SentimentSummaryCard data={sentimentSummary} isLoading={isLoadingSentiment} />}
               {/* Rating Statistics */}
               <div className="mb-8 bg-gradient-to-br from-[#f7f9fc] to-white border-2 border-[#2c3968]/10 rounded-2xl p-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

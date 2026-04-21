@@ -120,8 +120,7 @@ export const mapJsonToPhoneSpecification = (dbPhone: any): PhoneSpecification =>
   };
 };
 
-/**
- * Maps raw phone data JSON to PhoneCommunity object. Handles user reviews
+/** Maps raw phone data JSON to PhoneCommunity object. Handles user reviews
  * and aggregated of sentiment summary.
  * @param dbPhone The raw phone JSON object from the database
  * @returns The community and sentiment data
@@ -134,9 +133,6 @@ export const mapJsonToPhoneCommunity = (dbPhone: any): PhoneCommunity => {
       sentimentTags: Array.isArray(review.sentimentTags) ? review.sentimentTags : [],
       date: review.date || "Recent",
     })),
-
-    // Mapping sentiment summary to frontend SentimentSummary structure
-    sentimentSummary: dbPhone.phone.sentimentSummary ? mapJsonToSentimentSummary(dbPhone.sentimentSummary) : undefined,
   };
 };
 

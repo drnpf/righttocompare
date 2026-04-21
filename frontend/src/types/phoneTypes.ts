@@ -55,7 +55,6 @@ export interface PhoneSpecification extends PhoneCard {
  */
 export interface PhoneCommunity {
   reviews: ReviewData[];
-  sentimentSummary?: SentimentSummary;
 }
 
 /**
