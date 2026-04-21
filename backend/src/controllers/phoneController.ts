@@ -296,3 +296,37 @@ export const deletePhone = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error deleting phone" });
   }
 };
+
+export const getPhonePriceHistory = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const phone = await phoneService.findPhoneById(id);
+    if (!phone) {
+      return res.status(404).json({ message: `Phone with ID '${id}' not found` });
+    }
+
+    const history = await phoneService.findPhonePriceHistoryById(id);
+    res.status(200).json(history);
+  } catch (error) {
+    console.error(`Error fetching price history for phone ${req.params.id}:`, error);
+    res.status(500).json({ message: "Server error fetching price history" });
+  }
+};
+
+export const getPhonePriceSummary = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const phone = await phoneService.findPhoneById(id);
+    if (!phone) {
+      return res.status(404).json({ message: `Phone with ID '${id}' not found` });
+    }
+
+    const summary = await phoneService.findPhonePriceSummaryById(id);
+    res.status(200).json(summary);
+  } catch (error) {
+    console.error(`Error fetching price summary for phone ${req.params.id}:`, error);
+    res.status(500).json({ message: "Server error fetching price summary" });
+  }
+};
