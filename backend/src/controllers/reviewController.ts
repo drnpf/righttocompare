@@ -67,7 +67,14 @@ export const createReview = async (req: AuthRequest, res: Response) => {
 
     // Return the newly created review
     const newReview = updatedPhone.reviews[0];
-    res.status(201).json(newReview);
+    res.status(201).json({
+      review: newReview,
+      meta: {
+        totalReviews: updatedPhone.totalReviews,
+        aggregateRating: updatedPhone.aggregateRating,
+        categoryAverages: updatedPhone.categoryAverages,
+      },
+    });
   } catch (err: any) {
     if (err.message === "User has already reviewed this phone") {
       return res.status(409).json({ message: err.message });
@@ -87,14 +94,24 @@ export const getReviews = async (req: AuthRequest, res: Response) => {
   try {
     const { phoneId } = req.params;
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const rawLimit = parseInt(req.query.limit as string) || 10;
+    const limit = Math.min(rawLimit, 25); // Hard cap of 25 reviews per page
 
-    const result = await reviewService.getReviewsForPhone(phoneId, page, limit);
+    // Parsing and sanitizing sort
+    const allowedSorts: reviewService.ReviewSortType[] = ["newest", "oldest", "helpful"];
+    const sortBy = allowedSorts.includes(req.query.sortBy as reviewService.ReviewSortType)
+      ? (req.query.sortBy as reviewService.ReviewSortType)
+      : "newest";
 
+    // Parsing sentiment filters
+    const sentimentQuery = req.query.sentiment as string;
+    const sentiments = sentimentQuery ? sentimentQuery.split(",") : [];
+    const result = await reviewService.getReviewsForPhone(phoneId, page, limit, { sentiments, sortBy });
+
+    // Searching for phone
     if (!result) {
       return res.status(404).json({ message: "Phone not found" });
     }
-
     res.status(200).json(result);
   } catch (err) {
     console.error("Error fetching reviews:", err);

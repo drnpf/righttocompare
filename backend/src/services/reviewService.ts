@@ -1,5 +1,13 @@
-import Phone, { IPhone, IReview, ICategoryRatings } from "../models/Phone";
+import Phone, { IPhone } from "../models/Phone";
+import { IReview, ICategoryRatings } from "src/models/Review";
 import { analyzeSentiment } from "../utils/sentimentAnalyzer";
+
+export type ReviewSortType = "newest" | "oldest" | "helpful";
+
+export interface ReviewFilterOptions {
+  sentiments?: string[];
+  sortBy?: ReviewSortType;
+}
 
 /**
  * Adds a new review to a phone document.
@@ -15,7 +23,7 @@ export const addReviewToPhone = async (
     categoryRatings: ICategoryRatings;
     title: string;
     review: string;
-  }
+  },
 ): Promise<IPhone | null> => {
   const phone = await Phone.findOne({ id: phoneId });
   if (!phone) return null;
@@ -31,14 +39,11 @@ export const addReviewToPhone = async (
   const overallRating = Number(((camera + battery + design + performance + value) / 5).toFixed(1));
 
   // Generate new review ID
-  const maxId = phone.reviews.length > 0
-    ? Math.max(...phone.reviews.map((r) => r.id))
-    : 0;
+  const maxId = phone.reviews.length > 0 ? Math.max(...phone.reviews.map((r) => r.id)) : 0;
   const newReviewId = maxId + 1;
 
   // Auto-detect sentiment tags from review title + text
-  const sentimentTags = analyzeSentiment(`${reviewData.title} ${reviewData.review}`)
-    .map((t) => t.label);
+  const sentimentTags = analyzeSentiment(`${reviewData.title} ${reviewData.review}`).map((t) => t.label);
 
   const newReview: IReview = {
     id: newReviewId,
@@ -61,6 +66,7 @@ export const addReviewToPhone = async (
   };
 
   phone.reviews.unshift(newReview);
+  recalculatePhoneMetadata(phone);
   await phone.save();
   return phone;
 };
@@ -70,12 +76,14 @@ export const addReviewToPhone = async (
  * @param phoneId The unique string ID of the phone
  * @param page Page number (1-indexed)
  * @param limit Number of reviews per page
+ * @param options Filter and sort options to retrieve phone page by
  * @returns Object with reviews array, pagination info, and aggregate ratings
  */
 export const getReviewsForPhone = async (
   phoneId: string,
   page: number = 1,
-  limit: number = 10
+  limit: number = 10,
+  options: ReviewFilterOptions = {},
 ): Promise<{
   reviews: IReview[];
   totalReviews: number;
@@ -84,51 +92,64 @@ export const getReviewsForPhone = async (
   aggregateRating: number;
   categoryAverages: ICategoryRatings;
 } | null> => {
-  const phone = await Phone.findOne({ id: phoneId });
-  if (!phone) return null;
+  const { sentiments = [], sortBy = "newest" } = options; // Default options
+  const skip = (page - 1) * limit; // # of pages to skip
 
-  const allReviews = phone.reviews;
-  const totalReviews = allReviews.length;
-  const totalPages = Math.ceil(totalReviews / limit);
-  const startIndex = (page - 1) * limit;
-  const reviews = allReviews.slice(startIndex, startIndex + limit);
+  // Defining sort stage
+  const sortStage: any = {};
+  if (sortBy === "newest") sortStage["reviews.date"] = -1;
+  else if (sortBy === "oldest") sortStage["reviews.date"] = 1;
+  else if (sortBy === "helpful") sortStage["reviews.helpful"] = -1;
 
-  // Compute aggregate rating and per-category averages from ALL reviews
-  let aggregateRating = 0;
-  let categoryAverages: ICategoryRatings = { camera: 0, battery: 0, design: 0, performance: 0, value: 0 };
+  // Defining sentiment filter
+  const sentimentMatch = sentiments.length > 0 ? { "reviews.sentimentTags": { $all: sentiments } } : {};
 
-  if (totalReviews > 0) {
-    const totals = allReviews.reduce(
-      (acc, r) => ({
-        camera: acc.camera + r.categoryRatings.camera,
-        battery: acc.battery + r.categoryRatings.battery,
-        design: acc.design + r.categoryRatings.design,
-        performance: acc.performance + r.categoryRatings.performance,
-        value: acc.value + r.categoryRatings.value,
-      }),
-      { camera: 0, battery: 0, design: 0, performance: 0, value: 0 }
-    );
+  // Querying MongoDB for phone
+  const results = await Phone.aggregate([
+    { $match: { id: phoneId } },
+    { $unwind: "$reviews" },
+    { $match: sentimentMatch },
+    { $sort: sortStage },
+    {
+      $facet: {
+        paginatedResults: [{ $skip: skip }, { $limit: limit }, { $replaceRoot: { newRoot: "$reviews" } }],
+        totalCount: [{ $count: "count" }],
+      },
+    },
+  ]);
 
-    categoryAverages = {
-      camera: Number((totals.camera / totalReviews).toFixed(1)),
-      battery: Number((totals.battery / totalReviews).toFixed(1)),
-      design: Number((totals.design / totalReviews).toFixed(1)),
-      performance: Number((totals.performance / totalReviews).toFixed(1)),
-      value: Number((totals.value / totalReviews).toFixed(1)),
+  // If no reviews then fetch for global phone stats
+  if (!results[0] || results[0].paginatedResults.length === 0) {
+    const phone = await Phone.findOne({ id: phoneId }, { aggregateRating: 1, categoryAverages: 1 });
+    if (!phone) return null;
+    return {
+      reviews: [],
+      totalReviews: 0,
+      totalPages: 0,
+      currentPage: page,
+      aggregateRating: phone.aggregateRating,
+      categoryAverages: phone.categoryAverages,
     };
-
-    aggregateRating = Number(
-      ((categoryAverages.camera + categoryAverages.battery + categoryAverages.design + categoryAverages.performance + categoryAverages.value) / 5).toFixed(1)
-    );
   }
+
+  // Getting paginated reviews with all filters/sorts applied
+  const reviews = results[0].paginatedResults;
+  const totalReviews = results[0].totalCount[0]?.count || 0;
+  const phoneStats = await Phone.findOne({ id: phoneId }, { aggregateRating: 1, categoryAverages: 1 });
 
   return {
     reviews,
     totalReviews,
-    totalPages,
+    totalPages: Math.ceil(totalReviews / limit),
     currentPage: page,
-    aggregateRating,
-    categoryAverages,
+    aggregateRating: phoneStats?.aggregateRating || 0,
+    categoryAverages: phoneStats?.categoryAverages || {
+      camera: 0,
+      battery: 0,
+      design: 0,
+      performance: 0,
+      value: 0,
+    },
   };
 };
 
@@ -144,7 +165,7 @@ export const updateReviewVote = async (
   phoneId: string,
   reviewId: number,
   userId: string,
-  voteType: "helpful" | "notHelpful"
+  voteType: "helpful" | "notHelpful",
 ): Promise<IReview | null> => {
   const phone = await Phone.findOne({ id: phoneId });
   if (!phone) return null;
@@ -199,11 +220,7 @@ export const updateReviewVote = async (
  * @param userId The Firebase UID of the user requesting deletion
  * @returns True if deleted, false if not found or not authorized
  */
-export const removeReview = async (
-  phoneId: string,
-  reviewId: number,
-  userId: string
-): Promise<boolean> => {
+export const removeReview = async (phoneId: string, reviewId: number, userId: string): Promise<boolean> => {
   const phone = await Phone.findOne({ id: phoneId });
   if (!phone) return false;
 
@@ -216,6 +233,7 @@ export const removeReview = async (
   }
 
   phone.reviews.splice(reviewIndex, 1);
+  recalculatePhoneMetadata(phone);
   await phone.save();
   return true;
 };
@@ -226,10 +244,7 @@ export const removeReview = async (
  * @param reviewId The ID of the review
  * @returns The review, or null if not found
  */
-export const getReviewById = async (
-  phoneId: string,
-  reviewId: number
-): Promise<IReview | null> => {
+export const getReviewById = async (phoneId: string, reviewId: number): Promise<IReview | null> => {
   const phone = await Phone.findOne({ id: phoneId });
   if (!phone) return null;
 
@@ -242,7 +257,7 @@ export const getReviewById = async (
  * @returns Pros and cons with frequency counts, or null if phone not found
  */
 export const getSentimentSummary = async (
-  phoneId: string
+  phoneId: string,
 ): Promise<{
   pros: { topic: string; count: number }[];
   cons: { topic: string; count: number }[];
@@ -276,4 +291,43 @@ export const getSentimentSummary = async (
     .sort((a, b) => b.count - a.count);
 
   return { pros, cons, totalReviews: phone.reviews.length };
+};
+
+const recalculatePhoneMetadata = (phone: IPhone): void => {
+  const totalReviews = phone.reviews.length;
+  phone.totalReviews = totalReviews;
+
+  // Handling case of 0 reviews
+  if (totalReviews === 0) {
+    phone.aggregateRating = 0;
+    phone.categoryAverages = { camera: 0, battery: 0, design: 0, performance: 0, value: 0 };
+    return;
+  }
+
+  // Calculating totals across all categories
+  const totals = phone.reviews.reduce(
+    (acc, r) => ({
+      camera: acc.camera + r.categoryRatings.camera,
+      battery: acc.battery + r.categoryRatings.battery,
+      design: acc.design + r.categoryRatings.design,
+      performance: acc.performance + r.categoryRatings.performance,
+      value: acc.value + r.categoryRatings.value,
+    }),
+    { camera: 0, battery: 0, design: 0, performance: 0, value: 0 },
+  );
+
+  // Updating averages rounded to 1 decimal place
+  phone.categoryAverages = {
+    camera: Number((totals.camera / totalReviews).toFixed(1)),
+    battery: Number((totals.battery / totalReviews).toFixed(1)),
+    design: Number((totals.design / totalReviews).toFixed(1)),
+    performance: Number((totals.performance / totalReviews).toFixed(1)),
+    value: Number((totals.value / totalReviews).toFixed(1)),
+  };
+
+  // Updating overall aggregate ratings for all categories
+  const avg = phone.categoryAverages;
+  phone.aggregateRating = Number(
+    ((avg.camera + avg.battery + avg.design + avg.performance + avg.value) / 5).toFixed(1),
+  );
 };
