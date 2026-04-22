@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from "mongoose";
+import { ISentimentSummary } from "./Sentiment";
 
 /**
  * Interface for a Discussion document.
@@ -12,6 +13,7 @@ export interface IDiscussion extends Document {
   category: string;
   tags: string[];
   sentimentTags: string[]; // e.g. ["+camera", "-battery", "+performance"]
+  sentimentSummary: ISentimentSummary;
   images: string[];
   upvotes: number;
   downvotes: number;
@@ -56,6 +58,21 @@ const discussionSchema = new Schema<IDiscussion>(
     category: { type: String, default: "Discussion" },
     tags: { type: [String], default: [] },
     sentimentTags: { type: [String], default: [] },
+    sentimentSummary: {
+      pros: [
+        {
+          topic: { type: String },
+          count: { type: Number, default: 0 },
+        },
+      ],
+      cons: [
+        {
+          topic: { type: String },
+          count: { type: Number, default: 0 },
+        },
+      ],
+      totalAnalyzed: { type: Number, default: 0 },
+    },
     images: { type: [String], default: [] },
     upvotes: { type: Number, default: 0 },
     downvotes: { type: Number, default: 0 },
@@ -64,7 +81,7 @@ const discussionSchema = new Schema<IDiscussion>(
     replyCount: { type: Number, default: 0 },
     views: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 /**
@@ -85,7 +102,7 @@ const replySchema = new Schema<IReply>(
     downvoters: { type: [String], default: [] },
     parentReplyId: { type: Schema.Types.ObjectId, ref: "Reply", default: null },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const Discussion = mongoose.model<IDiscussion>("Discussion", discussionSchema);
