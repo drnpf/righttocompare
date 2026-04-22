@@ -258,6 +258,12 @@ export const getSentimentSummary = async (phoneId: string): Promise<ISentimentSu
   return phone.sentimentSummary;
 };
 
+/**
+ * Helper function for recalculating the current phone's review sentiment summary data.
+ * It determines which topics are considered pros and cons and determines how many review
+ * entries are considered pro (or con) for a specific topic.
+ * @param phone The phone to have the sentiment summary recalculated/reanalyzed.
+ */
 const recalculatePhoneMetadata = (phone: IPhone): void => {
   const totalReviews = phone.reviews.length;
   phone.totalReviews = totalReviews;
