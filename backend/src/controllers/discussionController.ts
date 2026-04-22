@@ -65,11 +65,7 @@ export const getThreadSentiment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const sentiment = await discussionService.getThreadSentiment(id);
-
-    if (!sentiment) {
-      return res.status(404).json({ message: "Discussion not found" });
-    }
-
+    if (!sentiment) return res.status(404).json({ message: "Discussion not found" });
     res.status(200).json(sentiment);
   } catch (err) {
     console.error("Error fetching thread sentiment:", err);
