@@ -259,9 +259,7 @@ export default function PhoneSpecPage({
    * Action: Fetches the review sentiment summary from backend on current phone
    */
   useEffect(() => {
-    if (phoneId) {
-      fetchSentiment(phoneId);
-    }
+    if (phoneId) fetchSentiment(phoneId);
   }, [phoneId, fetchSentiment]);
 
   /**
@@ -476,7 +474,6 @@ export default function PhoneSpecPage({
         // Reset list to page 1 to show the new review
         setCurrentPage(1);
         setActiveSentiment([]); // Clear filters to ensure the new review is visible
-
         setShowReviewForm(false);
         toast.success("Review submitted successfully!");
       }

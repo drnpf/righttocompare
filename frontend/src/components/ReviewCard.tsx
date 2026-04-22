@@ -5,6 +5,7 @@ import { StarRating } from "./StarRating";
 import { MultiRatingInput } from "./MultiRatingInput";
 import { useDarkMode } from "./DarkModeContext";
 import { ReviewData } from "../types/reviewTypes";
+import { SentimentPill } from "./SentimentPill";
 
 interface ReviewCardProps {
   review: ReviewData;
@@ -87,6 +88,15 @@ export function ReviewCard({ review, currentUserId, onVote, onDelete, isVoting =
       <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? "text-[#e0e4eb]" : "text-[#1e1e1e]"}`}>
         {review.title}
       </h3>
+
+      {/* Sentiment Tags */}
+      {review.sentimentTags && review.sentimentTags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3 pointer-events-none select-none opacity-90">
+          {review.sentimentTags.map((tag, idx) => (
+            <SentimentPill key={`${review.id}-${tag}-${idx}`} tag={tag as any} readOnly={true} />
+          ))}
+        </div>
+      )}
 
       {/* Review Text */}
       <p className={`mb-4 leading-relaxed ${isDarkMode ? "text-[#a0a8b8]" : "text-[#666]"}`}>{review.review}</p>

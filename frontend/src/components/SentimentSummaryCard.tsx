@@ -168,7 +168,7 @@ export function SentimentSummaryCard({
                   variant="ghost"
                   size="sm"
                   onClick={() => activeFilters.forEach((f) => onPillClick?.(f))}
-                  className="h-7 px-2 text-[10px] uppercase font-bold text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+                  className="h-7 px-2 text-[10px] uppercase font-bold text-red-500 hover:bg-red-50 hover:text-red-600 transition-all cursor-pointer active:scale-95 flex items-center"
                 >
                   <RotateCcw size={12} className="mr-1" />
                   Reset
