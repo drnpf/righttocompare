@@ -1,4 +1,5 @@
 import { DiscussionResponse, ReplyResponse, DiscussionsListResponse } from "../types/discussionTypes";
+import { SentimentSummary } from "../types/sentimentTypes";
 
 const API_URL = "http://localhost:5001/api/discussions"; // CHANGE LATER ON PRODUCTION
 
@@ -272,5 +273,23 @@ export const deleteReply = async (replyId: string, token: string): Promise<boole
   } catch (error) {
     console.error("Error deleting reply:", error);
     throw error;
+  }
+};
+
+/**
+ * Gets the sentiment summary for the discussion thread
+ */
+export const getThreadSentiment = async (discussionId: string): Promise<SentimentSummary> => {
+  try {
+    const response = await fetch(`${API_URL}/${discussionId}/sentiment`);
+    if (!response.ok) throw new Error("Failed to fetch thread sentiment data");
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching thread sentiment", error);
+    return {
+      pros: [],
+      cons: [],
+      totalAnalyzed: 0,
+    };
   }
 };
