@@ -1,48 +1,40 @@
 import { CategoryRatings } from "../components/MultiRatingInput";
-import { ReviewData } from "../components/ReviewCard";
+import { ReviewFilterOptions, ReviewData, ReviewsResponse } from "../types/reviewTypes";
+import { SentimentSummary } from "../types/sentimentTypes";
+import { mapJsonToSentimentSummary } from "../utils/mappers/sentimentMappers";
 
 const API_URL = "http://localhost:5001/api/phones"; // CHANGE LATER ON PRODUCTION
-
-export interface ReviewsResponse {
-  reviews: ReviewData[];
-  totalReviews: number;
-  totalPages: number;
-  currentPage: number;
-  aggregateRating: number;
-  categoryAverages: {
-    camera: number;
-    battery: number;
-    design: number;
-    performance: number;
-    value: number;
-  };
-}
 
 /**
  * Fetches reviews for a phone with pagination.
  * @param phoneId The phone ID (e.g., "galaxy-s24-ultra")
  * @param page Page number (default: 1)
  * @param limit Reviews per page (default: 10)
+ * @param options Filter and sort options (sentiments array, sortBy string)
  * @returns Reviews data with pagination info
  */
 export const getPhoneReviews = async (
   phoneId: string,
   page: number = 1,
-  limit: number = 10
+  limit: number = 10,
+  options: ReviewFilterOptions = {},
 ): Promise<ReviewsResponse | null> => {
   try {
-    const response = await fetch(
-      `${API_URL}/${phoneId}/reviews?page=${page}&limit=${limit}`
-    );
+    // Destructuring options JSON
+    const { sentiments = [], sortBy = "newest" } = options;
 
-    if (response.status === 404) {
-      return null;
-    }
+    // Creating query string
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      sortBy: sortBy,
+    });
+    if (sentiments.length > 0) queryParams.append("sentiment", sentiments.join(","));
+    const response = await fetch(`${API_URL}/${phoneId}/reviews?${queryParams.toString()}`);
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch reviews");
-    }
-
+    // Handles error case
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error("Failed to fetch reviews");
     return await response.json();
   } catch (error) {
     console.error("Error fetching reviews:", error);
@@ -64,7 +56,7 @@ export const submitReview = async (
     review: string;
     categoryRatings: CategoryRatings;
   },
-  token: string
+  token: string,
 ): Promise<ReviewData | null> => {
   try {
     const response = await fetch(`${API_URL}/${phoneId}/reviews`, {
@@ -100,20 +92,17 @@ export const voteOnReview = async (
   phoneId: string,
   reviewId: number,
   voteType: "helpful" | "notHelpful",
-  token: string
+  token: string,
 ): Promise<ReviewData | null> => {
   try {
-    const response = await fetch(
-      `${API_URL}/${phoneId}/reviews/${reviewId}/vote`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ voteType }),
-      }
-    );
+    const response = await fetch(`${API_URL}/${phoneId}/reviews/${reviewId}/vote`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ voteType }),
+    });
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -134,21 +123,14 @@ export const voteOnReview = async (
  * @param token Firebase auth token
  * @returns True if deleted successfully
  */
-export const deleteReview = async (
-  phoneId: string,
-  reviewId: number,
-  token: string
-): Promise<boolean> => {
+export const deleteReview = async (phoneId: string, reviewId: number, token: string): Promise<boolean> => {
   try {
-    const response = await fetch(
-      `${API_URL}/${phoneId}/reviews/${reviewId}`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await fetch(`${API_URL}/${phoneId}/reviews/${reviewId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -159,5 +141,28 @@ export const deleteReview = async (
   } catch (error) {
     console.error("Error deleting review:", error);
     throw error;
+  }
+};
+
+/**
+ * Fetches the aggregate sentiment summary for a phone's review.
+ * @param phoneId The phone ID
+ * @returns Sentiment summary data mapped to SentimentSummary type
+ */
+export const getPhoneReviewSentiment = async (phoneId: string): Promise<SentimentSummary | null> => {
+  try {
+    // Attempting to fetch for review sentiment on specified phone
+    const response = await fetch(`${API_URL}/${phoneId}/reviews/sentiment`);
+
+    // Handling failed fetches
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error("Failed to fetch review sentiment summary");
+
+    // Mapping sentiment to SentimentSummary class
+    const data = await response.json();
+    return mapJsonToSentimentSummary(data);
+  } catch (error) {
+    console.error("Error fetching review sentiment summary:", error);
+    return null;
   }
 };

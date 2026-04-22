@@ -229,7 +229,7 @@ export const createPhonePriceHistoryEntry = async (
  * @returns The resultant phone data JSON object containing full specs.
  */
 export const findPhoneById = async (id: string): Promise<IPhone | null> => {
-  return await Phone.findOne({ id: id }).lean();
+  return await Phone.findOne({ id: id }).select("-reviews").lean();
 };
 
 /**

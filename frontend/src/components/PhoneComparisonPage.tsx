@@ -260,16 +260,10 @@ export default function PhoneComparisonPage({
 
   // Calculate average ratings for each phone
   const phoneRatings = useMemo(() => {
-    return phones.map((phone) => {
-      const reviews = phone.reviews;
-      if (reviews.length === 0) return { overall: 0, count: 0 };
-
-      const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
-      return {
-        overall: totalRating / reviews.length,
-        count: reviews.length,
-      };
-    });
+    return phones.map((phone) => ({
+      overall: phone.aggregateRating ?? 0,
+      count: phone.totalReviews ?? 0,
+    }));
   }, [phones]);
 
   // Get all unique specification categories

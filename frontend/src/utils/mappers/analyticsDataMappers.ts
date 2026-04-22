@@ -1,4 +1,4 @@
-import { PopularComparison } from "../types/analyticsTypes";
+import { PopularComparison } from "../../types/analyticsTypes";
 import { mapJsonToPhoneSummary } from "./phoneDataMappers";
 
 /**

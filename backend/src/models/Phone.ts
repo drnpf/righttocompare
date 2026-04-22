@@ -1,29 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
-
-// Interfaces (for Review and Phone)
-export interface ICategoryRatings {
-  camera: number;
-  battery: number;
-  design: number;
-  performance: number;
-  value: number;
-}
-
-export interface IReview {
-  id: number;
-  userId: string; // Firebase UID
-  userName: string;
-  rating: number; // 1-5 (calculated average from categoryRatings)
-  categoryRatings: ICategoryRatings;
-  date: string;
-  title: string;
-  review: string;
-  sentimentTags: string[]; // e.g. ["+camera", "-battery", "+performance"]
-  helpful: number;
-  notHelpful: number;
-  helpfulVoters: string[]; // User IDs who voted helpful
-  notHelpfulVoters: string[]; // User IDs who voted not helpful
-}
+import { ICategoryRatings, IReview, ISentimentSummary } from "./Review";
 
 export interface IPhoneSummary {
   id: string;
@@ -125,6 +101,14 @@ export interface IPhone extends IPhoneCard, Document {
     notes?: string;
   }[];
   reviews: IReview[];
+
+  // Review metadata
+  totalReviews: number;
+  aggregateRating: number;
+  categoryAverages: ICategoryRatings;
+
+  // Review sentiment metadata
+  sentimentSummary: ISentimentSummary;
 }
 
 // Phone Schema
@@ -138,6 +122,30 @@ const PhoneSchema: Schema = new Schema<IPhone>(
     images: {
       main: { type: String, required: true },
       // If we have front, back, side images we can add those fields here with the image/path
+    },
+    sentimentSummary: {
+      pros: [
+        {
+          topic: { type: String, required: true },
+          count: { type: Number, required: true },
+        },
+      ],
+      cons: [
+        {
+          topic: { type: String, required: true },
+          count: { type: Number, required: true },
+        },
+      ],
+      totalAnalyzed: { type: Number, default: 0 },
+    },
+    totalReviews: { type: Number, default: 0 },
+    aggregateRating: { type: Number, default: 0 },
+    categoryAverages: {
+      camera: { type: Number, default: 0 },
+      battery: { type: Number, default: 0 },
+      design: { type: Number, default: 0 },
+      performance: { type: Number, default: 0 },
+      value: { type: Number, default: 0 },
     },
     specs: {
       display: {
@@ -230,7 +238,7 @@ const PhoneSchema: Schema = new Schema<IPhone>(
           performance: { type: Number, required: true, min: 1, max: 5 },
           value: { type: Number, required: true, min: 1, max: 5 },
         },
-        date: { type: String, required: true },
+        date: { type: Date, required: true },
         title: { type: String, required: true },
         review: { type: String, required: true },
         sentimentTags: { type: [String], default: [] },

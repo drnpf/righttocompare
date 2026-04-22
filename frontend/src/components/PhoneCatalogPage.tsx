@@ -681,10 +681,7 @@ export default function PhoneCatalogPage({
                 We couldn't find any phones matching your search criteria. Try adjusting your filters.
               </p>
               <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setManufacturerFilter("all");
-                }}
+                onClick={handleClearAll}
                 className="px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-lg hover:shadow-lg hover:scale-[1.02] transition-all duration-200"
               >
                 Clear Filters
