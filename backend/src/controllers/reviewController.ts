@@ -73,6 +73,7 @@ export const createReview = async (req: AuthRequest, res: Response) => {
         totalReviews: updatedPhone.totalReviews,
         aggregateRating: updatedPhone.aggregateRating,
         categoryAverages: updatedPhone.categoryAverages,
+        sentimentSummary: updatedPhone.sentimentSummary,
       },
     });
   } catch (err: any) {
@@ -192,13 +193,21 @@ export const deleteReview = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: "User not authenticated" });
     }
 
-    const deleted = await reviewService.removeReview(phoneId, parseInt(reviewId), userId);
+    const updatedPhone = await reviewService.removeReview(phoneId, parseInt(reviewId), userId);
 
-    if (!deleted) {
+    if (!updatedPhone) {
       return res.status(404).json({ message: "Review not found" });
     }
 
-    res.status(200).json({ message: "Review deleted successfully" });
+    res.status(200).json({
+      message: "Review deleted successfully",
+      meta: {
+        totalReviews: updatedPhone.totalReviews,
+        aggregateRating: updatedPhone.aggregateRating,
+        categoryAverages: updatedPhone.categoryAverages,
+        sentimentSummary: updatedPhone.sentimentSummary,
+      },
+    });
   } catch (err: any) {
     if (err.message === "Not authorized to delete this review") {
       return res.status(403).json({ message: err.message });

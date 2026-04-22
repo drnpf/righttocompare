@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
-import { ICategoryRatings, IReview } from "./Review";
+import { ICategoryRatings, IReview, ISentimentSummary } from "./Review";
 
 export interface IPhoneSummary {
   id: string;
@@ -106,6 +106,9 @@ export interface IPhone extends IPhoneCard, Document {
   totalReviews: number;
   aggregateRating: number;
   categoryAverages: ICategoryRatings;
+
+  // Review sentiment metadata
+  sentimentSummary: ISentimentSummary;
 }
 
 // Phone Schema
@@ -119,6 +122,21 @@ const PhoneSchema: Schema = new Schema<IPhone>(
     images: {
       main: { type: String, required: true },
       // If we have front, back, side images we can add those fields here with the image/path
+    },
+    sentimentSummary: {
+      pros: [
+        {
+          topic: { type: String, required: true },
+          count: { type: Number, required: true },
+        },
+      ],
+      cons: [
+        {
+          topic: { type: String, required: true },
+          count: { type: Number, required: true },
+        },
+      ],
+      totalAnalyzed: { type: Number, default: 0 },
     },
     totalReviews: { type: Number, default: 0 },
     aggregateRating: { type: Number, default: 0 },

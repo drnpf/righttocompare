@@ -1,6 +1,7 @@
 import Phone, { IPhone } from "../models/Phone";
-import { IReview, ICategoryRatings } from "src/models/Review";
+import { IReview, ICategoryRatings, ISentimentItem, ISentimentSummary } from "src/models/Review";
 import { analyzeSentiment } from "../utils/sentimentAnalyzer";
+import { getPhoneSummaries } from "src/controllers/phoneController";
 
 export type ReviewSortType = "newest" | "oldest" | "helpful";
 
@@ -87,6 +88,7 @@ export const getReviewsForPhone = async (
   currentPage: number;
   aggregateRating: number;
   categoryAverages: ICategoryRatings;
+  sentimentSummary: ISentimentSummary;
 } | null> => {
   const { sentiments = [], sortBy = "newest" } = options; // Default options
   const skip = (page - 1) * limit; // # of pages to skip
@@ -125,13 +127,17 @@ export const getReviewsForPhone = async (
       currentPage: page,
       aggregateRating: phone.aggregateRating,
       categoryAverages: phone.categoryAverages,
+      sentimentSummary: phone.sentimentSummary || { pros: [], cons: [], totalAnalyzed: 0 },
     };
   }
 
   // Getting paginated reviews with all filters/sorts applied
   const reviews = results[0].paginatedResults;
   const totalReviews = results[0].totalCount[0]?.count || 0;
-  const phoneStats = await Phone.findOne({ id: phoneId }, { aggregateRating: 1, categoryAverages: 1 });
+  const phoneStats = await Phone.findOne(
+    { id: phoneId },
+    { aggregateRating: 1, categoryAverages: 1, sentimentSummary: 1 },
+  ).lean();
 
   return {
     reviews,
@@ -146,6 +152,7 @@ export const getReviewsForPhone = async (
       performance: 0,
       value: 0,
     },
+    sentimentSummary: phoneStats?.sentimentSummary || { pros: [], cons: [], totalAnalyzed: 0 },
   };
 };
 
@@ -216,12 +223,12 @@ export const updateReviewVote = async (
  * @param userId The Firebase UID of the user requesting deletion
  * @returns True if deleted, false if not found or not authorized
  */
-export const removeReview = async (phoneId: string, reviewId: number, userId: string): Promise<boolean> => {
+export const removeReview = async (phoneId: string, reviewId: number, userId: string): Promise<IPhone | null> => {
   const phone = await Phone.findOne({ id: phoneId });
-  if (!phone) return false;
+  if (!phone) return null;
 
   const reviewIndex = phone.reviews.findIndex((r) => r.id === reviewId);
-  if (reviewIndex === -1) return false;
+  if (reviewIndex === -1) return null;
 
   // Check if user owns the review
   if (phone.reviews[reviewIndex].userId !== userId) {
@@ -231,7 +238,7 @@ export const removeReview = async (phoneId: string, reviewId: number, userId: st
   phone.reviews.splice(reviewIndex, 1);
   recalculatePhoneMetadata(phone);
   await phone.save();
-  return true;
+  return phone;
 };
 
 /**
@@ -241,9 +248,8 @@ export const removeReview = async (phoneId: string, reviewId: number, userId: st
  * @returns The review, or null if not found
  */
 export const getReviewById = async (phoneId: string, reviewId: number): Promise<IReview | null> => {
-  const phone = await Phone.findOne({ id: phoneId });
+  const phone = await Phone.findOne({ id: phoneId }).lean();
   if (!phone) return null;
-
   return phone.reviews.find((r) => r.id === reviewId) || null;
 };
 
@@ -252,52 +258,10 @@ export const getReviewById = async (phoneId: string, reviewId: number): Promise<
  * @param phoneId The unique string ID of the phone
  * @returns Pros and cons with frequency counts, or null if phone not found
  */
-export const getSentimentSummary = async (
-  phoneId: string,
-): Promise<{
-  pros: { topic: string; count: number }[];
-  cons: { topic: string; count: number }[];
-  totalReviews: number;
-} | null> => {
-  const phone = await Phone.findOne({ id: phoneId });
+export const getSentimentSummary = async (phoneId: string): Promise<ISentimentSummary | null> => {
+  const phone = await Phone.findOne({ id: phoneId }).select("sentimentSummary").lean();
   if (!phone) return null;
-
-  const proCounts: Record<string, number> = {};
-  const conCounts: Record<string, number> = {};
-  const allTopics = new Set<string>();
-
-  // Getting raw count of all + and - tags and topics
-  for (const review of phone.reviews) {
-    const tags = review.sentimentTags || [];
-    for (const tag of tags) {
-      const isPos = tag.startsWith("+");
-      const topic = tag.slice(1);
-      allTopics.add(topic);
-
-      // Counts + or - topics
-      if (isPos) proCounts[topic] = (proCounts[topic] || 0) + 1;
-      else conCounts[topic] = (conCounts[topic] || 0) + 1;
-    }
-  }
-
-  const pros: { topic: string; count: number }[] = [];
-  const cons: { topic: string; count: number }[] = [];
-
-  allTopics.forEach((topic) => {
-    const pCount = proCounts[topic] || 0;
-    const cCount = conCounts[topic] || 0;
-
-    // The + or - with higher count gets that topic
-    if (pCount > cCount) pros.push({ topic, count: pCount });
-    else if (cCount > pCount) cons.push({ topic, count: cCount });
-
-    // If pCount == cCount then ignore since the topic is controversial
-  });
-  return {
-    pros: pros.sort((a, b) => b.count - a.count),
-    cons: cons.sort((a, b) => b.count - a.count),
-    totalReviews: phone.reviews.length,
-  };
+  return phone.sentimentSummary;
 };
 
 const recalculatePhoneMetadata = (phone: IPhone): void => {
@@ -308,17 +272,18 @@ const recalculatePhoneMetadata = (phone: IPhone): void => {
   if (totalReviews === 0) {
     phone.aggregateRating = 0;
     phone.categoryAverages = { camera: 0, battery: 0, design: 0, performance: 0, value: 0 };
+    phone.sentimentSummary = { pros: [], cons: [], totalAnalyzed: 0 };
     return;
   }
 
   // Calculating totals across all categories
   const totals = phone.reviews.reduce(
     (acc, r) => ({
-      camera: acc.camera + r.categoryRatings.camera,
-      battery: acc.battery + r.categoryRatings.battery,
-      design: acc.design + r.categoryRatings.design,
-      performance: acc.performance + r.categoryRatings.performance,
-      value: acc.value + r.categoryRatings.value,
+      camera: acc.camera + (r.categoryRatings?.camera || 0),
+      battery: acc.battery + (r.categoryRatings?.battery || 0),
+      design: acc.design + (r.categoryRatings?.design || 0),
+      performance: acc.performance + (r.categoryRatings?.performance || 0),
+      value: acc.value + (r.categoryRatings?.value || 0),
     }),
     { camera: 0, battery: 0, design: 0, performance: 0, value: 0 },
   );
@@ -337,4 +302,45 @@ const recalculatePhoneMetadata = (phone: IPhone): void => {
   phone.aggregateRating = Number(
     ((avg.camera + avg.battery + avg.design + avg.performance + avg.value) / 5).toFixed(1),
   );
+
+  // Updating sentiment calculations
+  const DOMINANCE_RATIO = 1.5; // Ratio a topic must dominate in pros/cons to be counted as a pro/con
+  const proCounts: Record<string, number> = {};
+  const conCounts: Record<string, number> = {};
+  const allTopics = new Set<string>();
+
+  // Extracting topics from sentiment tags and counting all pros and cons for each topic
+  for (const review of phone.reviews) {
+    review.sentimentTags?.forEach((tag) => {
+      const isPos = tag.startsWith("+");
+      const topic = tag.slice(1);
+      allTopics.add(topic);
+      if (isPos) proCounts[topic] = (proCounts[topic] || 0) + 1;
+      else conCounts[topic] = (conCounts[topic] || 0) + 1;
+    });
+  }
+
+  const pros: ISentimentItem[] = [];
+  const cons: ISentimentItem[] = [];
+
+  // Checking which topics are pros or cons
+  allTopics.forEach((topic) => {
+    const pCount = proCounts[topic] || 0;
+    const cCount = conCounts[topic] || 0;
+    const ratio = (Math.max(pCount, cCount) + 1) / (Math.min(pCount, cCount) + 1);
+
+    // If pro/con count ratio does not meet dominance ratio then those topics will just count as mixed
+    if (ratio < DOMINANCE_RATIO) return;
+
+    // Categorizing topic as pro or con
+    if (pCount > cCount) pros.push({ topic, count: pCount });
+    else if (cCount > pCount) cons.push({ topic, count: cCount });
+  });
+
+  // Saving filtered results
+  phone.sentimentSummary = {
+    pros: pros.sort((a, b) => b.count - a.count),
+    cons: cons.sort((a, b) => b.count - a.count),
+    totalAnalyzed: totalReviews,
+  };
 };
