@@ -121,6 +121,9 @@ export default function PhoneSpecPage({
   onAddToRecentlyViewed,
   onNavigateToComparison,
 }: PhoneSpecPageProps) {
+  // ------------------------------------------------------------
+  // | HOOKS
+  // ------------------------------------------------------------
   // Routing & User Authentication
   const { phoneId } = useParams<{ phoneId: string }>();
   const navigate = useNavigate();

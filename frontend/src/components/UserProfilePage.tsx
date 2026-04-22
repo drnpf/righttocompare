@@ -1,11 +1,28 @@
 import { useState, useEffect } from "react";
-import { User, Bell, Heart, Settings, ChevronDown, ChevronUp, Save, X, MessageCircle, ThumbsUp, Eye } from "lucide-react";
 import { toast } from "sonner@2.0.3";
+
+// Icons
+import {
+  User,
+  Bell,
+  Heart,
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  Save,
+  X,
+  MessageCircle,
+  ThumbsUp,
+  Eye,
+} from "lucide-react";
+
+// Custom Components & API
 import { phonesData } from "../data/phoneData";
 import { useAuth } from "../context/AuthContext";
 import { AppUser } from "../types/userTypes";
 import { updateUserProfile } from "../api/userApi";
-import { getDiscussionsByUser, DiscussionResponse } from "../api/discussionApi";
+import { getDiscussionsByUser } from "../api/discussionApi";
+import { DiscussionResponse } from "../types/discussionTypes";
 
 interface UserProfile {
   name: string;
@@ -455,14 +472,17 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
                     >
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <h4 className="text-[#2c3968] leading-snug line-clamp-1">{d.title}</h4>
-                        <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">{getTimeAgo(d.createdAt)}</span>
+                        <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
+                          {getTimeAgo(d.createdAt)}
+                        </span>
                       </div>
                       <p className="text-gray-600 text-sm line-clamp-2 mb-3">{d.content}</p>
                       <div className="flex items-center gap-4 text-xs text-gray-400">
                         <span className="px-2 py-0.5 bg-gray-100 rounded-full text-gray-600">{d.category}</span>
                         <span className="flex items-center gap-1">
                           <ThumbsUp size={12} />
-                          {d.upvotes - d.downvotes > 0 ? "+" : ""}{d.upvotes - d.downvotes}
+                          {d.upvotes - d.downvotes > 0 ? "+" : ""}
+                          {d.upvotes - d.downvotes}
                         </span>
                         <span className="flex items-center gap-1">
                           <MessageCircle size={12} />

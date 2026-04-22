@@ -1,17 +1,33 @@
 import { useState, useEffect, useRef } from "react";
-import { ThumbsUp, ThumbsDown, ArrowLeft, MessageCircle, Eye, Send, Image as ImageIcon, X, Flag, CornerDownRight, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner@2.0.3";
+import { useAuth } from "../context/AuthContext";
+
+// Icons
+import {
+  ThumbsUp,
+  ThumbsDown,
+  ArrowLeft,
+  MessageCircle,
+  Eye,
+  Send,
+  Image as ImageIcon,
+  X,
+  Flag,
+  CornerDownRight,
+  Loader2,
+  Trash2,
+} from "lucide-react";
+
+// UI Components
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Badge } from "./ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import { toast } from "sonner@2.0.3";
-import { useAuth } from "../context/AuthContext";
+
+// Custom Components & API
 import {
-  Discussion,
-  Reply,
-  Report,
   getDiscussionsFromStorage,
   saveDiscussionsToStorage,
   getUserVotesFromStorage,
@@ -23,72 +39,32 @@ import {
   getReportsFromStorage,
   saveReportsToStorage,
   getUserReportsFromStorage,
-  saveUserReportsToStorage
-} from "../data/discussionsData";
+  saveUserReportsToStorage,
+} from "../utils/storage/discussionStorage";
+import { Discussion, Reply, Report } from "../types/discussionTypes";
 import * as discussionApi from "../api/discussionApi";
+import { mapApiDiscussion, mapApiReply } from "../utils/mappers/discussionDataMappers";
 
 interface DiscussionDetailPageProps {
   discussionId: string;
   onBack: () => void;
 }
 
-/**
- * Maps an API discussion response to the frontend Discussion interface.
- */
-function mapApiDiscussion(d: discussionApi.DiscussionResponse): Discussion {
-  return {
-    id: d._id,
-    title: d.title,
-    content: d.content,
-    author: d.authorName,
-    authorId: d.authorId,
-    authorAvatar: d.authorAvatar,
-    timestamp: new Date(d.createdAt).getTime(),
-    category: d.category,
-    tags: d.tags,
-    images: d.images,
-    upvotes: d.upvotes,
-    downvotes: d.downvotes,
-    upvoters: d.upvoters,
-    downvoters: d.downvoters,
-    replies: d.replyCount,
-    views: d.views,
-  };
-}
-
-/**
- * Maps an API reply response to the frontend Reply interface.
- */
-function mapApiReply(r: discussionApi.ReplyResponse): Reply {
-  return {
-    id: r._id,
-    discussionId: r.discussionId,
-    content: r.content,
-    author: r.authorName,
-    authorId: r.authorId,
-    authorAvatar: r.authorAvatar,
-    timestamp: new Date(r.createdAt).getTime(),
-    upvotes: r.upvotes,
-    downvotes: r.downvotes,
-    upvoters: r.upvoters,
-    downvoters: r.downvoters,
-    images: r.images,
-    parentReplyId: r.parentReplyId || undefined,
-  };
-}
-
 export default function DiscussionDetailPage({ discussionId, onBack }: DiscussionDetailPageProps) {
+  // ------------------------------------------------------------
+  // | HOOKS
+  // ------------------------------------------------------------
   const { currentUser } = useAuth();
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [replies, setReplies] = useState<Reply[]>([]);
-  const [userVotes, setUserVotes] = useState<Record<string, 'up' | 'down' | null>>({});
-  const [replyVotes, setReplyVotes] = useState<Record<string, 'up' | 'down' | null>>({});
+  const [userVotes, setUserVotes] = useState<Record<string, "up" | "down" | null>>({});
+  const [replyVotes, setReplyVotes] = useState<Record<string, "up" | "down" | null>>({});
   const [newReply, setNewReply] = useState("");
   const [replyImages, setReplyImages] = useState<string[]>([]);
   const replyFileInputRef = useRef<HTMLInputElement>(null);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [reportItemId, setReportItemId] = useState<string>("");
-  const [reportItemType, setReportItemType] = useState<'discussion' | 'reply'>('discussion');
+  const [reportItemType, setReportItemType] = useState<"discussion" | "reply">("discussion");
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [userReports, setUserReports] = useState<Record<string, boolean>>({});
@@ -97,6 +73,9 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [usingApi, setUsingApi] = useState(true);
 
+  // ------------------------------------------------------------
+  // | DATA SYNCHRONIZATION
+  // ------------------------------------------------------------
   // Load data on mount
   useEffect(() => {
     const loadData = async () => {
@@ -115,20 +94,20 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
 
           // Build vote maps from upvoters/downvoters
           if (currentUser) {
-            const dVotes: Record<string, 'up' | 'down' | null> = {};
+            const dVotes: Record<string, "up" | "down" | null> = {};
             if (apiDiscussion.upvoters.includes(currentUser.uid)) {
-              dVotes[discussionId] = 'up';
+              dVotes[discussionId] = "up";
             } else if (apiDiscussion.downvoters.includes(currentUser.uid)) {
-              dVotes[discussionId] = 'down';
+              dVotes[discussionId] = "down";
             }
             setUserVotes(dVotes);
 
-            const rVotes: Record<string, 'up' | 'down' | null> = {};
+            const rVotes: Record<string, "up" | "down" | null> = {};
             apiReplies.forEach((r) => {
               if (r.upvoters.includes(currentUser.uid)) {
-                rVotes[r._id] = 'up';
+                rVotes[r._id] = "up";
               } else if (r.downvoters.includes(currentUser.uid)) {
-                rVotes[r._id] = 'down';
+                rVotes[r._id] = "down";
               }
             });
             setReplyVotes(rVotes);
@@ -144,7 +123,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
         const loadedVotes = getUserVotesFromStorage();
         const loadedReplyVotes = getReplyVotesFromStorage();
 
-        const disc = loadedDiscussions.find(d => d.id === discussionId);
+        const disc = loadedDiscussions.find((d) => d.id === discussionId);
         setDiscussion(disc || null);
         setReplies(loadedReplies);
         setUserVotes(loadedVotes);
@@ -153,8 +132,8 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
 
         // Increment view count in localStorage
         if (disc) {
-          const updatedDiscussions = loadedDiscussions.map(d =>
-            d.id === discussionId ? { ...d, views: d.views + 1 } : d
+          const updatedDiscussions = loadedDiscussions.map((d) =>
+            d.id === discussionId ? { ...d, views: d.views + 1 } : d,
           );
           saveDiscussionsToStorage(updatedDiscussions);
         }
@@ -169,15 +148,18 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
     setUserReports(loadedUserReports);
   }, [discussionId, currentUser]);
 
-  const discussionReplies = replies.filter(r => r.discussionId === discussionId);
-  const topLevelReplies = discussionReplies.filter(r => !r.parentReplyId);
+  // ------------------------------------------------------------
+  // | COMPONENT LOGIC
+  // ------------------------------------------------------------
+  const discussionReplies = replies.filter((r) => r.discussionId === discussionId);
+  const topLevelReplies = discussionReplies.filter((r) => !r.parentReplyId);
 
   const getNestedReplies = (parentId: string): Reply[] => {
-    return discussionReplies.filter(r => r.parentReplyId === parentId);
+    return discussionReplies.filter((r) => r.parentReplyId === parentId);
   };
 
   // Handle voting on discussion
-  const handleVote = async (voteType: 'up' | 'down') => {
+  const handleVote = async (voteType: "up" | "down") => {
     if (!discussion) return;
 
     if (usingApi) {
@@ -191,9 +173,9 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
         if (updated) {
           setDiscussion(mapApiDiscussion(updated));
           if (updated.upvoters.includes(currentUser.uid)) {
-            setUserVotes((prev) => ({ ...prev, [discussionId]: 'up' }));
+            setUserVotes((prev) => ({ ...prev, [discussionId]: "up" }));
           } else if (updated.downvoters.includes(currentUser.uid)) {
-            setUserVotes((prev) => ({ ...prev, [discussionId]: 'down' }));
+            setUserVotes((prev) => ({ ...prev, [discussionId]: "down" }));
           } else {
             setUserVotes((prev) => ({ ...prev, [discussionId]: null }));
           }
@@ -204,23 +186,23 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
     } else {
       // localStorage fallback
       const currentVote = userVotes[discussionId];
-      let newVote: 'up' | 'down' | null = voteType;
+      let newVote: "up" | "down" | null = voteType;
       if (currentVote === voteType) newVote = null;
 
       let upvotes = discussion.upvotes;
       let downvotes = discussion.downvotes;
-      if (currentVote === 'up') upvotes--;
-      if (currentVote === 'down') downvotes--;
-      if (newVote === 'up') upvotes++;
-      if (newVote === 'down') downvotes++;
+      if (currentVote === "up") upvotes--;
+      if (currentVote === "down") downvotes--;
+      if (newVote === "up") upvotes++;
+      if (newVote === "down") downvotes++;
 
       setDiscussion({ ...discussion, upvotes, downvotes });
       const updatedVotes = { ...userVotes, [discussionId]: newVote };
       setUserVotes(updatedVotes);
 
       const loadedDiscussions = getDiscussionsFromStorage();
-      const updatedDiscussions = loadedDiscussions.map(d =>
-        d.id === discussionId ? { ...d, upvotes, downvotes } : d
+      const updatedDiscussions = loadedDiscussions.map((d) =>
+        d.id === discussionId ? { ...d, upvotes, downvotes } : d,
       );
       saveDiscussionsToStorage(updatedDiscussions);
       saveUserVotesToStorage(updatedVotes);
@@ -228,7 +210,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
   };
 
   // Handle voting on replies
-  const handleReplyVote = async (replyId: string, voteType: 'up' | 'down') => {
+  const handleReplyVote = async (replyId: string, voteType: "up" | "down") => {
     if (usingApi) {
       if (!currentUser) {
         toast.error("Please sign in to vote");
@@ -241,9 +223,9 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
           const mapped = mapApiReply(updated);
           setReplies((prev) => prev.map((r) => (r.id === replyId ? mapped : r)));
           if (updated.upvoters.includes(currentUser.uid)) {
-            setReplyVotes((prev) => ({ ...prev, [replyId]: 'up' }));
+            setReplyVotes((prev) => ({ ...prev, [replyId]: "up" }));
           } else if (updated.downvoters.includes(currentUser.uid)) {
-            setReplyVotes((prev) => ({ ...prev, [replyId]: 'down' }));
+            setReplyVotes((prev) => ({ ...prev, [replyId]: "down" }));
           } else {
             setReplyVotes((prev) => ({ ...prev, [replyId]: null }));
           }
@@ -254,17 +236,17 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
     } else {
       // localStorage fallback
       const currentVote = replyVotes[replyId];
-      let newVote: 'up' | 'down' | null = voteType;
+      let newVote: "up" | "down" | null = voteType;
       if (currentVote === voteType) newVote = null;
 
-      const updatedReplies = replies.map(reply => {
+      const updatedReplies = replies.map((reply) => {
         if (reply.id === replyId) {
           let upvotes = reply.upvotes;
           let downvotes = reply.downvotes;
-          if (currentVote === 'up') upvotes--;
-          if (currentVote === 'down') downvotes--;
-          if (newVote === 'up') upvotes++;
-          if (newVote === 'down') downvotes++;
+          if (currentVote === "up") upvotes--;
+          if (currentVote === "down") downvotes--;
+          if (newVote === "up") upvotes++;
+          if (newVote === "down") downvotes++;
           return { ...reply, upvotes, downvotes };
         }
         return reply;
@@ -283,12 +265,12 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach(file => {
-      if (file.type.startsWith('image/') && replyImages.length < 4) {
+    Array.from(files).forEach((file) => {
+      if (file.type.startsWith("image/") && replyImages.length < 4) {
         const reader = new FileReader();
         reader.onload = (event) => {
           if (event.target?.result) {
-            setReplyImages(prev => [...prev, event.target!.result as string]);
+            setReplyImages((prev) => [...prev, event.target!.result as string]);
           }
         };
         reader.readAsDataURL(file);
@@ -296,12 +278,12 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
     });
 
     if (replyFileInputRef.current) {
-      replyFileInputRef.current.value = '';
+      replyFileInputRef.current.value = "";
     }
   };
 
   const handleRemoveReplyImage = (index: number) => {
-    setReplyImages(prev => prev.filter((_, i) => i !== index));
+    setReplyImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Handle submitting a new reply
@@ -324,15 +306,13 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
             images: replyImages,
             parentReplyId: replyingTo?.id,
           },
-          token
+          token,
         );
 
         if (created) {
           const mapped = mapApiReply(created);
           setReplies((prev) => [...prev, mapped]);
-          setDiscussion((prev) =>
-            prev ? { ...prev, replies: prev.replies + 1 } : prev
-          );
+          setDiscussion((prev) => (prev ? { ...prev, replies: prev.replies + 1 } : prev));
           toast.success("Reply posted!");
         }
       } catch {
@@ -352,7 +332,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
         upvotes: 0,
         downvotes: 0,
         images: replyImages.length > 0 ? replyImages : undefined,
-        parentReplyId: replyingTo?.id
+        parentReplyId: replyingTo?.id,
       };
 
       const updatedReplies = [...replies, reply];
@@ -360,12 +340,10 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
       saveRepliesToStorage(updatedReplies);
 
       if (!replyingTo) {
-        setDiscussion((prev) =>
-          prev ? { ...prev, replies: prev.replies + 1 } : prev
-        );
+        setDiscussion((prev) => (prev ? { ...prev, replies: prev.replies + 1 } : prev));
         const loadedDiscussions = getDiscussionsFromStorage();
-        const updatedDiscussions = loadedDiscussions.map(disc =>
-          disc.id === discussionId ? { ...disc, replies: disc.replies + 1 } : disc
+        const updatedDiscussions = loadedDiscussions.map((disc) =>
+          disc.id === discussionId ? { ...disc, replies: disc.replies + 1 } : disc,
         );
         saveDiscussionsToStorage(updatedDiscussions);
       }
@@ -386,9 +364,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
         const token = await currentUser.firebaseUser.getIdToken();
         await discussionApi.deleteReply(replyId, token);
         setReplies((prev) => prev.filter((r) => r.id !== replyId));
-        setDiscussion((prev) =>
-          prev ? { ...prev, replies: Math.max(0, prev.replies - 1) } : prev
-        );
+        setDiscussion((prev) => (prev ? { ...prev, replies: Math.max(0, prev.replies - 1) } : prev));
         toast.success("Reply deleted!");
       } catch {
         toast.error("Failed to delete reply");
@@ -398,7 +374,10 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
 
   const handleReplyToReply = (reply: Reply) => {
     setReplyingTo(reply);
-    window.scrollTo({ top: document.querySelector('#reply-section')?.getBoundingClientRect().top! + window.scrollY - 100, behavior: 'smooth' });
+    window.scrollTo({
+      top: document.querySelector("#reply-section")?.getBoundingClientRect().top! + window.scrollY - 100,
+      behavior: "smooth",
+    });
   };
 
   const handleCancelReplyTo = () => {
@@ -406,7 +385,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
   };
 
   // Report handling
-  const handleOpenReportDialog = (itemId: string, itemType: 'discussion' | 'reply') => {
+  const handleOpenReportDialog = (itemId: string, itemType: "discussion" | "reply") => {
     setReportItemId(itemId);
     setReportItemType(itemType);
     setReportReason("");
@@ -424,7 +403,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
       reason: reportReason,
       details: reportDetails || undefined,
       reportedBy: currentUser?.displayName || "You",
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     const reports = getReportsFromStorage();
@@ -460,6 +439,9 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
     const isNested = depth > 0;
     const isOwnReply = currentUser && reply.authorId === currentUser.uid;
 
+    // ------------------------------------------------------------
+    // | UI SECTION
+    // ------------------------------------------------------------
     return (
       <div key={reply.id} className={isNested ? "ml-12 mt-4" : ""}>
         <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
@@ -467,24 +449,27 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
             {/* Vote Section */}
             <div className="flex flex-col items-center gap-2 min-w-[50px]">
               <button
-                onClick={() => handleReplyVote(reply.id, 'up')}
+                onClick={() => handleReplyVote(reply.id, "up")}
                 className={`p-2 rounded-lg transition-all duration-200 ${
-                  replyVote === 'up'
-                    ? 'bg-[#2c3968] text-white'
-                    : 'bg-[#f0f2f5] text-[#666] hover:bg-[#2c3968] hover:text-white'
+                  replyVote === "up"
+                    ? "bg-[#2c3968] text-white"
+                    : "bg-[#f0f2f5] text-[#666] hover:bg-[#2c3968] hover:text-white"
                 }`}
               >
                 <ThumbsUp className="w-4 h-4" />
               </button>
-              <span className={`text-sm ${replyNetScore > 0 ? 'text-[#2c3968]' : replyNetScore < 0 ? 'text-red-500' : 'text-[#666]'}`}>
-                {replyNetScore > 0 ? '+' : ''}{replyNetScore}
+              <span
+                className={`text-sm ${replyNetScore > 0 ? "text-[#2c3968]" : replyNetScore < 0 ? "text-red-500" : "text-[#666]"}`}
+              >
+                {replyNetScore > 0 ? "+" : ""}
+                {replyNetScore}
               </span>
               <button
-                onClick={() => handleReplyVote(reply.id, 'down')}
+                onClick={() => handleReplyVote(reply.id, "down")}
                 className={`p-2 rounded-lg transition-all duration-200 ${
-                  replyVote === 'down'
-                    ? 'bg-red-500 text-white'
-                    : 'bg-[#f0f2f5] text-[#666] hover:bg-red-500 hover:text-white'
+                  replyVote === "down"
+                    ? "bg-red-500 text-white"
+                    : "bg-[#f0f2f5] text-[#666] hover:bg-red-500 hover:text-white"
                 }`}
               >
                 <ThumbsDown className="w-4 h-4" />
@@ -494,51 +479,51 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
             {/* Reply Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-3">
-                <img
-                  src={reply.authorAvatar}
-                  alt={reply.author}
-                  className="w-10 h-10 rounded-full bg-[#f0f2f5]"
-                />
+                <img src={reply.authorAvatar} alt={reply.author} className="w-10 h-10 rounded-full bg-[#f0f2f5]" />
                 <div className="flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[#2c3968]">{reply.author}</span>
                     <span className="text-[#999]">•</span>
                     <span className="text-[#999] text-sm">{getTimeAgo(reply.timestamp)}</span>
-                    {reply.parentReplyId && depth === 0 && (() => {
-                      const parentReply = discussionReplies.find(r => r.id === reply.parentReplyId);
-                      if (parentReply) {
-                        return (
-                          <>
-                            <span className="text-[#999]">•</span>
-                            <span className="text-[#2c3968] text-sm flex items-center gap-1">
-                              <CornerDownRight className="w-3 h-3" />
-                              replying to {parentReply.author}
-                            </span>
-                          </>
-                        );
-                      }
-                    })()}
+                    {reply.parentReplyId &&
+                      depth === 0 &&
+                      (() => {
+                        const parentReply = discussionReplies.find((r) => r.id === reply.parentReplyId);
+                        if (parentReply) {
+                          return (
+                            <>
+                              <span className="text-[#999]">•</span>
+                              <span className="text-[#2c3968] text-sm flex items-center gap-1">
+                                <CornerDownRight className="w-3 h-3" />
+                                replying to {parentReply.author}
+                              </span>
+                            </>
+                          );
+                        }
+                      })()}
                   </div>
                 </div>
               </div>
-              <p className="text-[#333] whitespace-pre-wrap leading-relaxed mb-3">
-                {reply.content}
-              </p>
+              <p className="text-[#333] whitespace-pre-wrap leading-relaxed mb-3">{reply.content}</p>
 
               {/* Reply Images */}
               {reply.images && reply.images.length > 0 && (
-                <div className={`grid gap-2 mb-3 ${
-                  reply.images.length === 1 ? 'grid-cols-1' :
-                  reply.images.length === 2 ? 'grid-cols-2' :
-                  'grid-cols-2 md:grid-cols-3'
-                }`}>
+                <div
+                  className={`grid gap-2 mb-3 ${
+                    reply.images.length === 1
+                      ? "grid-cols-1"
+                      : reply.images.length === 2
+                        ? "grid-cols-2"
+                        : "grid-cols-2 md:grid-cols-3"
+                  }`}
+                >
                   {reply.images.map((img, idx) => (
                     <img
                       key={idx}
                       src={img}
                       alt={`Reply image ${idx + 1}`}
                       className="w-full h-auto rounded-lg border border-[#e0e0e0] cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => window.open(img, '_blank')}
+                      onClick={() => window.open(img, "_blank")}
                     />
                   ))}
                 </div>
@@ -558,7 +543,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                   </Button>
                   {nestedReplies.length > 0 && (
                     <span className="text-sm text-[#999]">
-                      {nestedReplies.length} {nestedReplies.length === 1 ? 'reply' : 'replies'}
+                      {nestedReplies.length} {nestedReplies.length === 1 ? "reply" : "replies"}
                     </span>
                   )}
                 </div>
@@ -577,12 +562,12 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleOpenReportDialog(reply.id, 'reply')}
+                    onClick={() => handleOpenReportDialog(reply.id, "reply")}
                     disabled={userReports[reply.id]}
-                    className={`text-xs ${userReports[reply.id] ? 'text-red-400' : 'text-[#999] hover:text-red-500'}`}
+                    className={`text-xs ${userReports[reply.id] ? "text-red-400" : "text-[#999] hover:text-red-500"}`}
                   >
                     <Flag className="w-3.5 h-3.5 mr-1" />
-                    {userReports[reply.id] ? 'Reported' : 'Report'}
+                    {userReports[reply.id] ? "Reported" : "Report"}
                   </Button>
                 </div>
               </div>
@@ -663,24 +648,27 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
             {/* Vote Section */}
             <div className="flex flex-col items-center gap-3 min-w-[70px]">
               <button
-                onClick={() => handleVote('up')}
+                onClick={() => handleVote("up")}
                 className={`p-3 rounded-xl transition-all duration-200 ${
-                  userVote === 'up'
-                    ? 'bg-[#2c3968] text-white shadow-lg'
-                    : 'bg-[#f0f2f5] text-[#666] hover:bg-[#2c3968] hover:text-white'
+                  userVote === "up"
+                    ? "bg-[#2c3968] text-white shadow-lg"
+                    : "bg-[#f0f2f5] text-[#666] hover:bg-[#2c3968] hover:text-white"
                 }`}
               >
                 <ThumbsUp className="w-6 h-6" />
               </button>
-              <span className={`text-xl ${netScore > 0 ? 'text-[#2c3968]' : netScore < 0 ? 'text-red-500' : 'text-[#666]'}`}>
-                {netScore > 0 ? '+' : ''}{netScore}
+              <span
+                className={`text-xl ${netScore > 0 ? "text-[#2c3968]" : netScore < 0 ? "text-red-500" : "text-[#666]"}`}
+              >
+                {netScore > 0 ? "+" : ""}
+                {netScore}
               </span>
               <button
-                onClick={() => handleVote('down')}
+                onClick={() => handleVote("down")}
                 className={`p-3 rounded-xl transition-all duration-200 ${
-                  userVote === 'down'
-                    ? 'bg-red-500 text-white shadow-lg'
-                    : 'bg-[#f0f2f5] text-[#666] hover:bg-red-500 hover:text-white'
+                  userVote === "down"
+                    ? "bg-red-500 text-white shadow-lg"
+                    : "bg-[#f0f2f5] text-[#666] hover:bg-red-500 hover:text-white"
                 }`}
               >
                 <ThumbsDown className="w-6 h-6" />
@@ -722,24 +710,26 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
               <h1 className="text-[#2c3968] mb-4">{discussion.title}</h1>
 
               {/* Content */}
-              <div className="text-[#333] mb-4 whitespace-pre-wrap leading-relaxed">
-                {discussion.content}
-              </div>
+              <div className="text-[#333] mb-4 whitespace-pre-wrap leading-relaxed">{discussion.content}</div>
 
               {/* Images */}
               {discussion.images && discussion.images.length > 0 && (
-                <div className={`grid gap-3 mb-4 ${
-                  discussion.images.length === 1 ? 'grid-cols-1' :
-                  discussion.images.length === 2 ? 'grid-cols-2' :
-                  'grid-cols-2 md:grid-cols-3'
-                }`}>
+                <div
+                  className={`grid gap-3 mb-4 ${
+                    discussion.images.length === 1
+                      ? "grid-cols-1"
+                      : discussion.images.length === 2
+                        ? "grid-cols-2"
+                        : "grid-cols-2 md:grid-cols-3"
+                  }`}
+                >
                   {discussion.images.map((img, idx) => (
                     <img
                       key={idx}
                       src={img}
                       alt={`Discussion image ${idx + 1}`}
                       className="w-full h-auto rounded-lg border border-[#e0e0e0] cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => window.open(img, '_blank')}
+                      onClick={() => window.open(img, "_blank")}
                     />
                   ))}
                 </div>
@@ -750,10 +740,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                 {discussion.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {discussion.tags.map((tag, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1.5 bg-[#f0f2f5] text-[#2c3968] text-sm rounded-full"
-                      >
+                      <span key={idx} className="px-3 py-1.5 bg-[#f0f2f5] text-[#2c3968] text-sm rounded-full">
                         {tag}
                       </span>
                     ))}
@@ -762,12 +749,12 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleOpenReportDialog(discussion.id, 'discussion')}
+                  onClick={() => handleOpenReportDialog(discussion.id, "discussion")}
                   disabled={userReports[discussion.id]}
-                  className={`ml-auto ${userReports[discussion.id] ? 'text-red-400' : 'text-[#999] hover:text-red-500'}`}
+                  className={`ml-auto ${userReports[discussion.id] ? "text-red-400" : "text-[#999] hover:text-red-500"}`}
                 >
                   <Flag className="w-4 h-4 mr-1.5" />
-                  {userReports[discussion.id] ? 'Reported' : 'Report'}
+                  {userReports[discussion.id] ? "Reported" : "Report"}
                 </Button>
               </div>
             </div>
@@ -776,9 +763,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
 
         {/* Reply Section */}
         <div id="reply-section" className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-          <h3 className="text-[#2c3968] mb-4">
-            {replyingTo ? `Replying to ${replyingTo.author}` : 'Add a Reply'}
-          </h3>
+          <h3 className="text-[#2c3968] mb-4">{replyingTo ? `Replying to ${replyingTo.author}` : "Add a Reply"}</h3>
 
           {!currentUser ? (
             <p className="text-[#666] text-center py-4">Please sign in to reply.</p>
@@ -788,19 +773,10 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                 <div className="mb-4 p-4 bg-[#f0f2f5] rounded-lg border-l-4 border-[#2c3968]">
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2">
-                      <img
-                        src={replyingTo.authorAvatar}
-                        alt={replyingTo.author}
-                        className="w-8 h-8 rounded-full"
-                      />
+                      <img src={replyingTo.authorAvatar} alt={replyingTo.author} className="w-8 h-8 rounded-full" />
                       <span className="text-[#2c3968]">{replyingTo.author}</span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleCancelReplyTo}
-                      className="h-auto p-1"
-                    >
+                    <Button variant="ghost" size="sm" onClick={handleCancelReplyTo} className="h-auto p-1">
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
@@ -815,7 +791,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                       <span className="text-amber-500">Minimum 10 characters</span>
                     )}
                   </span>
-                  <span className={`text-xs ${newReply.length > 2000 ? 'text-red-500' : 'text-[#999]'}`}>
+                  <span className={`text-xs ${newReply.length > 2000 ? "text-red-500" : "text-[#999]"}`}>
                     {newReply.length}/2000
                   </span>
                 </div>
@@ -897,7 +873,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
         {/* Replies List */}
         <div className="space-y-4">
           <h3 className="text-[#2c3968] mb-4">
-            {topLevelReplies.length} {topLevelReplies.length === 1 ? 'Reply' : 'Replies'}
+            {topLevelReplies.length} {topLevelReplies.length === 1 ? "Reply" : "Replies"}
           </h3>
 
           {topLevelReplies.length === 0 ? (
@@ -919,7 +895,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
       <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Report {reportItemType === 'discussion' ? 'Discussion' : 'Reply'}</DialogTitle>
+            <DialogTitle>Report {reportItemType === "discussion" ? "Discussion" : "Reply"}</DialogTitle>
             <DialogDescription>
               Help us keep the community safe by reporting content that violates our guidelines.
             </DialogDescription>
@@ -930,23 +906,33 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
               <RadioGroup value={reportReason} onValueChange={setReportReason} className="mt-3 space-y-2">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="spam" id="spam" />
-                  <Label htmlFor="spam" className="cursor-pointer">Spam or misleading</Label>
+                  <Label htmlFor="spam" className="cursor-pointer">
+                    Spam or misleading
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="harassment" id="harassment" />
-                  <Label htmlFor="harassment" className="cursor-pointer">Harassment or hate speech</Label>
+                  <Label htmlFor="harassment" className="cursor-pointer">
+                    Harassment or hate speech
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="inappropriate" id="inappropriate" />
-                  <Label htmlFor="inappropriate" className="cursor-pointer">Inappropriate content</Label>
+                  <Label htmlFor="inappropriate" className="cursor-pointer">
+                    Inappropriate content
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="misinformation" id="misinformation" />
-                  <Label htmlFor="misinformation" className="cursor-pointer">Misinformation</Label>
+                  <Label htmlFor="misinformation" className="cursor-pointer">
+                    Misinformation
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="other" id="other" />
-                  <Label htmlFor="other" className="cursor-pointer">Other</Label>
+                  <Label htmlFor="other" className="cursor-pointer">
+                    Other
+                  </Label>
                 </div>
               </RadioGroup>
             </div>
@@ -964,11 +950,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
               <Button variant="outline" onClick={() => setIsReportDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleSubmitReport}
-                disabled={!reportReason}
-                className="bg-red-500 hover:bg-red-600"
-              >
+              <Button onClick={handleSubmitReport} disabled={!reportReason} className="bg-red-500 hover:bg-red-600">
                 Submit Report
               </Button>
             </div>
