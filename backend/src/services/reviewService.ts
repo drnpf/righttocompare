@@ -87,7 +87,6 @@ export const getReviewsForPhone = async (
   currentPage: number;
   aggregateRating: number;
   categoryAverages: ICategoryRatings;
-  sentimentSummary: ISentimentSummary;
 } | null> => {
   const { sentiments = [], sortBy = "newest" } = options; // Default options
   const skip = (page - 1) * limit; // # of pages to skip
@@ -117,7 +116,7 @@ export const getReviewsForPhone = async (
 
   // If no reviews then fetch for global phone stats
   if (!results[0] || results[0].paginatedResults.length === 0) {
-    const phone = await Phone.findOne({ id: phoneId }, { aggregateRating: 1, categoryAverages: 1 });
+    const phone = await Phone.findOne({ id: phoneId }, { aggregateRating: 1, categoryAverages: 1 }).lean();
     if (!phone) return null;
     return {
       reviews: [],
@@ -126,17 +125,13 @@ export const getReviewsForPhone = async (
       currentPage: page,
       aggregateRating: phone.aggregateRating,
       categoryAverages: phone.categoryAverages,
-      sentimentSummary: phone.sentimentSummary || { pros: [], cons: [], totalAnalyzed: 0 },
     };
   }
 
   // Getting paginated reviews with all filters/sorts applied
   const reviews = results[0].paginatedResults;
   const totalReviews = results[0].totalCount[0]?.count || 0;
-  const phoneStats = await Phone.findOne(
-    { id: phoneId },
-    { aggregateRating: 1, categoryAverages: 1, sentimentSummary: 1 },
-  ).lean();
+  const phoneStats = await Phone.findOne({ id: phoneId }, { aggregateRating: 1, categoryAverages: 1 }).lean();
 
   return {
     reviews,
@@ -151,7 +146,6 @@ export const getReviewsForPhone = async (
       performance: 0,
       value: 0,
     },
-    sentimentSummary: phoneStats?.sentimentSummary || { pros: [], cons: [], totalAnalyzed: 0 },
   };
 };
 
