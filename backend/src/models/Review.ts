@@ -22,14 +22,3 @@ export interface IReview {
   helpfulVoters: string[]; // User IDs who voted helpful
   notHelpfulVoters: string[]; // User IDs who voted not helpful
 }
-
-export interface ISentimentItem {
-  topic: string;
-  count: number;
-}
-
-export interface ISentimentSummary {
-  pros: ISentimentItem[];
-  cons: ISentimentItem[];
-  totalAnalyzed: number;
-}

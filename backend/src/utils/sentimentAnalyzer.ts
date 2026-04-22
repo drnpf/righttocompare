@@ -1,19 +1,4 @@
-/**
- * Keyword-based sentiment analyzer for phone reviews and discussions.
- * Scans text for phone-related topics and classifies them as positive or negative.
- * Returns sentiment tags like "+camera", "-battery", "+performance".
- */
-export interface SentimentTag {
-  topic: string;
-  sentiment: "positive" | "negative";
-  label: string; // e.g. "+camera" or "-battery"
-}
-
-export interface SentimentSummary {
-  pros: { topic: string; count: number }[];
-  cons: { topic: string; count: number }[];
-  totalAnalyzed: number;
-}
+import { ISentimentTag, ISentimentSummary } from "src/models/Sentiment";
 
 // Topic keywords grouped by phone spec category
 const TOPIC_KEYWORDS: Record<string, string[]> = {
@@ -271,9 +256,9 @@ const QUESTION_STARTERS = [
 /**
  * Analyzes text and returns sentiment tags for detected topics.
  */
-export function analyzeSentiment(text: string): SentimentTag[] {
+export function analyzeSentiment(text: string): ISentimentTag[] {
   const lowerText = text.toLowerCase();
-  const tags: SentimentTag[] = [];
+  const tags: ISentimentTag[] = [];
   const detectedTopics = new Set<string>();
 
   // Split text into clauses for more accurate per-topic sentiment
@@ -348,7 +333,7 @@ export function analyzeSentiment(text: string): SentimentTag[] {
  * Aggregates sentiment tags from multiple texts into a pros/cons summary.
  * Returns the most frequently mentioned positive and negative topics.
  */
-export function aggregateSentiment(tagSets: SentimentTag[][]): SentimentSummary {
+export function aggregateSentiment(tagSets: ISentimentTag[][]): ISentimentSummary {
   const proCounts: Record<string, number> = {};
   const conCounts: Record<string, number> = {};
 
