@@ -1,5 +1,5 @@
 import { PopularComparison } from "../types/analyticsTypes";
-import { mapJsonToPopularComparison } from "../utils/analyticsDataMappers";
+import { mapJsonToPopularComparison } from "../utils/mappers/analyticsDataMappers";
 import { getClientId } from "../utils/clientId";
 
 const API_URL = "http://localhost:5001/api/analytics"; // CHANGE LATER ON PRODUCTION
