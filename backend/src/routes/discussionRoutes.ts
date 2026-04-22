@@ -11,6 +11,7 @@ import {
   createReply,
   voteOnReply,
   deleteReply,
+  getThreadSentiment,
 } from "../controllers/discussionController";
 import { protect } from "../middleware/authMiddleware";
 
@@ -28,6 +29,12 @@ router.get("/", getDiscussions);
  * @route GET /api/discussions/sentiment
  */
 router.get("/sentiment", getCommunitySentiment);
+
+/**
+ * Get the sentiment summary for a specific discussion thread
+ * @route GET /api/discussions/:id/sentiment
+ */
+router.get("/:id/sentiment", getThreadSentiment);
 
 /**
  * Get all discussions by a specific user

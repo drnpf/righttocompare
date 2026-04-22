@@ -58,6 +58,26 @@ export const getCommunitySentiment = async (req: AuthRequest, res: Response) => 
 };
 
 /**
+ * Gets the specific sentiment summary for a single discussion thread.
+ * @route GET /api/discussions/:id/sentiment
+ */
+export const getThreadSentiment = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const sentiment = await discussionService.getThreadSentiment(id);
+
+    if (!sentiment) {
+      return res.status(404).json({ message: "Discussion not found" });
+    }
+
+    res.status(200).json(sentiment);
+  } catch (err) {
+    console.error("Error fetching thread sentiment:", err);
+    res.status(500).json({ message: "Server error fetching thread sentiment" });
+  }
+};
+
+/**
  * Gets paginated discussions with filtering and search.
  * @route GET /api/discussions
  */
@@ -70,13 +90,7 @@ export const getDiscussions = async (req: AuthRequest, res: Response) => {
     const categoriesParam = req.query.categories as string | undefined;
     const categories = categoriesParam ? categoriesParam.split(",") : undefined;
 
-    const result = await discussionService.getDiscussions(
-      page,
-      limit,
-      filter,
-      search,
-      categories
-    );
+    const result = await discussionService.getDiscussions(page, limit, filter, search, categories);
 
     res.status(200).json(result);
   } catch (err) {
