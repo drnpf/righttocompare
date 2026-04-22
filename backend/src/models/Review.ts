@@ -32,5 +32,4 @@ export interface ISentimentSummary {
   pros: ISentimentItem[];
   cons: ISentimentItem[];
   totalAnalyzed: number;
-  lastUpdated?: Date;
 }

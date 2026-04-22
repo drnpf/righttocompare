@@ -1,7 +1,6 @@
 import Phone, { IPhone } from "../models/Phone";
 import { IReview, ICategoryRatings, ISentimentItem, ISentimentSummary } from "src/models/Review";
 import { analyzeSentiment } from "../utils/sentimentAnalyzer";
-import { getPhoneSummaries } from "src/controllers/phoneController";
 
 export type ReviewSortType = "newest" | "oldest" | "helpful";
 
