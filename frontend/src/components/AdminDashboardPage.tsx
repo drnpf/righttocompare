@@ -10,11 +10,12 @@ import {
   CheckCircle,
   XCircle,
   MessageSquare,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner@2.0.3";
 import AdminChatbotLogsView from "./AdminChatbotLogsView";
 
-type AdminView = "dashboard" | "manual" | "scraping" | "chatbot";
+type AdminView = "dashboard" | "manual" | "scraping" | "chatbot" | "priceTracking";
 
 interface ScrapingJob {
   id: string;
@@ -90,6 +91,11 @@ export default function AdminDashboardPage() {
   const [scrapeLimit, setScrapeLimit] = useState(5);
   const [isScrapingRunning, setIsScrapingRunning] = useState(false);
 
+  const [pricePhoneId, setPricePhoneId] = useState("");
+  const [priceAmount, setPriceAmount] = useState("");
+  const [priceCurrency, setPriceCurrency] = useState("USD");
+  const [isSubmittingPrice, setIsSubmittingPrice] = useState(false);
+
   const handleInputChange = (field: keyof PhoneSpecForm, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -163,8 +169,7 @@ export default function AdminDashboardPage() {
       const totalSeconds = Math.max(1, Math.round(elapsedMs / 1000));
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = totalSeconds % 60;
-      const duration =
-        minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+      const duration = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 
       const phonesFound =
         typeof data.totalInserted === "number" ? data.totalInserted : 0;
@@ -179,21 +184,19 @@ export default function AdminDashboardPage() {
               duration,
               output: data.output || "",
             }
-            : job
-        )
+            : job,
+        ),
       );
 
       toast.success(
-        `Scraping completed! Inserted ${phonesFound} phone${phonesFound === 1 ? "" : "s"
-        }.`
+        `Scraping completed! Inserted ${phonesFound} phone${phonesFound === 1 ? "" : "s"}.`,
       );
     } catch (error: any) {
       const elapsedMs = Date.now() - startedAt;
       const totalSeconds = Math.max(1, Math.round(elapsedMs / 1000));
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = totalSeconds % 60;
-      const duration =
-        minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+      const duration = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 
       setScrapingJobs((prev) =>
         prev.map((job) =>
@@ -204,13 +207,60 @@ export default function AdminDashboardPage() {
               duration,
               error: error.message || "Scraper failed",
             }
-            : job
-        )
+            : job,
+        ),
       );
 
       toast.error(error.message || "Scraping failed");
     } finally {
       setIsScrapingRunning(false);
+    }
+  };
+
+  const handleInsertPriceHistory = async () => {
+    const trimmedPhoneId = pricePhoneId.trim();
+    const numericAmount = Number(priceAmount);
+
+    if (!trimmedPhoneId) {
+      toast.error("Please enter a phone ID");
+      return;
+    }
+
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      toast.error("Please enter a valid positive price");
+      return;
+    }
+
+    setIsSubmittingPrice(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/phones/${trimmedPhoneId}/price-history`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: numericAmount,
+          currency: priceCurrency || "USD",
+          source: "admin-manual",
+          raw: `$${numericAmount}`,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to insert price history");
+      }
+
+      toast.success(`Inserted new price snapshot for ${trimmedPhoneId}`);
+      setPricePhoneId("");
+      setPriceAmount("");
+      setPriceCurrency("USD");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to insert price history");
+    } finally {
+      setIsSubmittingPrice(false);
     }
   };
 
@@ -252,6 +302,17 @@ export default function AdminDashboardPage() {
         >
           <Globe size={20} />
           <span>Web Scraping</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentView("priceTracking")}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${currentView === "priceTracking"
+              ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white shadow-md"
+              : "text-[#666] hover:bg-[#f7f7f7] hover:text-[#2c3968]"
+            }`}
+        >
+          <DollarSign size={20} />
+          <span>Price Tracking</span>
         </button>
 
         <button
@@ -715,8 +776,10 @@ export default function AdminDashboardPage() {
             <strong className="text-[#1e1e1e]">Note:</strong> This runs your backend GSMArena scraper and upserts results into MongoDB staging.
           </p>
           <p className="text-[#999]">
-            • Current destination: <code>test.scrape_output</code><br />
-            • Recommended use: scrape newest phones by brand<br />
+            • Current destination: <code>test.scrape_output</code>
+            <br />
+            • Recommended use: scrape newest phones by brand
+            <br />
             • Current parameters sent: brand, limit, maxPages=3, poolMult=5
           </p>
         </div>
@@ -811,6 +874,86 @@ export default function AdminDashboardPage() {
     </div>
   );
 
+  const renderPriceTracking = () => (
+    <div>
+      <div className="mb-8">
+        <h1 className="text-[#2c3968] mb-2">Price Tracking</h1>
+        <p className="text-[#666]">
+          Manually insert a new price snapshot for a phone to test tracking and alerts
+        </p>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-6">
+        <h3 className="text-[#2c3968] mb-4">Insert Price Snapshot</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block mb-2 text-[#1e1e1e]">Phone ID</label>
+            <input
+              type="text"
+              value={pricePhoneId}
+              onChange={(e) => setPricePhoneId(e.target.value)}
+              placeholder="e.g., samsung-x1-pro"
+              disabled={isSubmittingPrice}
+              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-[#1e1e1e]">Price</label>
+            <input
+              type="number"
+              min={1}
+              step="0.01"
+              value={priceAmount}
+              onChange={(e) => setPriceAmount(e.target.value)}
+              placeholder="e.g., 749"
+              disabled={isSubmittingPrice}
+              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-[#1e1e1e]">Currency</label>
+            <input
+              type="text"
+              value={priceCurrency}
+              onChange={(e) => setPriceCurrency(e.target.value.toUpperCase())}
+              placeholder="USD"
+              disabled={isSubmittingPrice}
+              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="mt-6 flex gap-4">
+          <button
+            onClick={handleInsertPriceHistory}
+            disabled={isSubmittingPrice}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <DollarSign size={20} />
+            {isSubmittingPrice ? "Inserting..." : "Insert Price Snapshot"}
+          </button>
+        </div>
+
+        <div className="mt-6 p-4 bg-[#f7f7f7] rounded-lg">
+          <p className="text-[#666] mb-2">
+            <strong className="text-[#1e1e1e]">Use case:</strong> Insert a new manual price point to
+            test the phone detail chart, summary cards, and future alert behavior.
+          </p>
+          <p className="text-[#999]">
+            • Endpoint used: <code>POST /api/phones/:id/price-history</code>
+            <br />
+            • Source recorded: <code>admin-manual</code>
+            <br />
+            • Best for simulating price drops without rerunning the scraper
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex min-h-[calc(100vh-140px)] bg-[#f7f7f7]">
       {renderSidebar()}
@@ -820,6 +963,7 @@ export default function AdminDashboardPage() {
           {currentView === "dashboard" && renderDashboard()}
           {currentView === "manual" && renderManualSpecs()}
           {currentView === "scraping" && renderWebScraping()}
+          {currentView === "priceTracking" && renderPriceTracking()}
           {currentView === "chatbot" && <AdminChatbotLogsView />}
         </div>
       </div>

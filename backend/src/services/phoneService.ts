@@ -1,4 +1,5 @@
 import Phone, { IPhone, IPhoneSummary, IPhoneCard } from "../models/Phone";
+import PriceHistory from "../models/PriceHistory";
 
 /**
  * Projection for the PhoneSummary view. Only has essential fields for catalog grid and comparison cart
@@ -122,6 +123,106 @@ export const findPhonePage = async (
   return { phones, total };
 };
 
+export interface IPriceHistoryPoint {
+  month: string;
+  price: number;
+  recordedAt: Date;
+}
+
+export interface IPriceSummary {
+  phoneId: string;
+  currency: string;
+  latestPrice: number | null;
+  oldestPrice: number | null;
+  changeAmount: number | null;
+  changePercent: number | null;
+  lowestPrice: number | null;
+  lowestPriceMonth: string | null;
+  latestRecordedAt: Date | null;
+}
+
+const formatMonth = (date: Date): string => {
+  return date.toLocaleString("en-US", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+};
+
+export const findPhonePriceHistoryById = async (id: string): Promise<IPriceHistoryPoint[]> => {
+  const rows = await PriceHistory.find({ phoneId: id }).sort({ recordedAt: 1 }).lean();
+
+  return rows.map((row) => ({
+    month: formatMonth(new Date(row.recordedAt)),
+    price: row.amount,
+    recordedAt: new Date(row.recordedAt),
+  }));
+};
+
+export const findPhonePriceSummaryById = async (id: string): Promise<IPriceSummary> => {
+  const rows = await PriceHistory.find({ phoneId: id }).sort({ recordedAt: 1 }).lean();
+
+  if (!rows.length) {
+    return {
+      phoneId: id,
+      currency: "USD",
+      latestPrice: null,
+      oldestPrice: null,
+      changeAmount: null,
+      changePercent: null,
+      lowestPrice: null,
+      lowestPriceMonth: null,
+      latestRecordedAt: null,
+    };
+  }
+
+  const oldest = rows[0];
+  const latest = rows[rows.length - 1];
+
+  const prices = rows.map((r) => r.amount);
+  const minPrice = Math.min(...prices);
+  const minRow = rows.find((r) => r.amount === minPrice) || null;
+
+  const changeAmount = latest.amount - oldest.amount;
+  const changePercent = oldest.amount !== 0 ? (changeAmount / oldest.amount) * 100 : null;
+
+  return {
+    phoneId: id,
+    currency: latest.currency || "USD",
+    latestPrice: latest.amount,
+    oldestPrice: oldest.amount,
+    changeAmount,
+    changePercent,
+    lowestPrice: minPrice,
+    lowestPriceMonth: minRow ? formatMonth(new Date(minRow.recordedAt)) : null,
+    latestRecordedAt: new Date(latest.recordedAt),
+  };
+};
+
+export interface ICreatePriceHistoryInput {
+  amount: number;
+  currency?: string;
+  source?: string;
+  raw?: string;
+  recordedAt?: Date;
+}
+
+export const createPhonePriceHistoryEntry = async (
+  id: string,
+  input: ICreatePriceHistoryInput,
+) => {
+  const entry = new PriceHistory({
+    phoneId: id,
+    amount: input.amount,
+    currency: input.currency || "USD",
+    source: input.source || "admin-manual",
+    raw: input.raw || `$${input.amount}`,
+    recordedAt: input.recordedAt || new Date(),
+  });
+
+  return await entry.save();
+};
+
 /**
  * Finds a single phone by its ID. Returns a JSON object.
  * @param id The unique string ID of the phone
@@ -217,3 +318,5 @@ export const deletePhoneById = async (id: string): Promise<boolean> => {
   const result = await Phone.findOneAndDelete({ id: id });
   return !!result; // Returns true if document was found and deleted
 };
+
+

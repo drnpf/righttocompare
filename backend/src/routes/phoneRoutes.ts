@@ -35,6 +35,24 @@ router.get("/summary/:id", phoneController.getPhoneSummaryById);
 router.get("/card/:id", phoneController.getPhoneCardById);
 
 /**
+ * Get price history for a single phone by ID
+ * @route GET /api/phones/:id/price-history
+ */
+router.get("/:id/price-history", phoneController.getPhonePriceHistory);
+
+/**
+ * Create a price history entry for a single phone by ID
+ * @route POST /api/phones/:id/price-history
+ */
+router.post("/:id/price-history", phoneController.createPhonePriceHistory);
+
+/**
+ * Get price summary for a single phone by ID
+ * @route GET /api/phones/:id/price-summary
+ */
+router.get("/:id/price-summary", phoneController.getPhonePriceSummary);
+
+/**
  * Get a single phone by ID
  * @route GET /api/phones/:id
  */
