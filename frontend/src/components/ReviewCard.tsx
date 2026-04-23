@@ -28,6 +28,13 @@ export function ReviewCard({ review, currentUserId, onVote, onDelete, isVoting =
   const { isDarkMode } = useDarkMode();
   const [showCategoryRatings, setShowCategoryRatings] = useState(false);
 
+  // Sorting tags by pros first then cons (alphabetical in each group)
+  const sortedTags = [...(review.sentimentTags || [])].sort((a, b) => {
+    if (a.startsWith("+") && b.startsWith("-")) return -1;
+    if (a.startsWith("-") && b.startsWith("+")) return 1;
+    return a.localeCompare(b);
+  });
+
   const hasVotedHelpful = currentUserId && review.helpfulVoters?.includes(currentUserId);
   const hasVotedNotHelpful = currentUserId && review.notHelpfulVoters?.includes(currentUserId);
   const isOwnReview = currentUserId && review.userId === currentUserId;
@@ -90,9 +97,9 @@ export function ReviewCard({ review, currentUserId, onVote, onDelete, isVoting =
       </h3>
 
       {/* Sentiment Tags */}
-      {review.sentimentTags && review.sentimentTags.length > 0 && (
+      {sortedTags && sortedTags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3 pointer-events-none select-none opacity-90">
-          {review.sentimentTags.map((tag, idx) => (
+          {sortedTags.map((tag, idx) => (
             <SentimentPill key={`${review.id}-${tag}-${idx}`} tag={tag as any} readOnly={true} />
           ))}
         </div>
