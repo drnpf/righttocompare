@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { toast } from "sonner@2.0.3";
 import { useAuth } from "../context/AuthContext";
 
@@ -146,6 +146,40 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
       setIsLoading(false);
     }
   }, [filter, searchQuery, selectedCategories, activeSentimentFilters, currentUser]);
+
+  // Determines the available sentiment tags to filter by as discussions are filtered
+  const liveSentiment = useMemo(() => {
+    const summary: SentimentSummary = {
+      pros: [],
+      cons: [],
+      totalAnalyzed: discussions.length,
+    };
+
+    if (discussions.length === 0) return summary;
+
+    const prosMap: Record<string, number> = {};
+    const consMap: Record<string, number> = {};
+
+    discussions.forEach((disc) => {
+      disc.sentimentTags?.forEach((tag) => {
+        const topic = tag.slice(1);
+        if (tag.startsWith("+")) {
+          prosMap[topic] = (prosMap[topic] || 0) + 1;
+        } else if (tag.startsWith("-")) {
+          consMap[topic] = (consMap[topic] || 0) + 1;
+        }
+      });
+    });
+
+    summary.pros = Object.entries(prosMap)
+      .map(([topic, count]) => ({ topic, count }))
+      .sort((a, b) => b.count - a.count);
+    summary.cons = Object.entries(consMap)
+      .map(([topic, count]) => ({ topic, count }))
+      .sort((a, b) => b.count - a.count);
+
+    return summary;
+  }, [discussions]);
 
   // Load discussions on mount and when filters change
   useEffect(() => {
@@ -723,7 +757,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
       {/* Community Sentiment Summary */}
       <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 mt-8">
         <SentimentSummaryCard
-          data={communitySentiment}
+          data={liveSentiment}
           isLoading={isLoading}
           sourceType="community"
           activeFilters={activeSentimentFilters}
