@@ -5,6 +5,10 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import random
 
+"""
+Example command of running script:
+    python3 populate_phone_database.py --numPhones 50 --clear
+"""
 
 # Loading environment variables from .env file
 load_dotenv()

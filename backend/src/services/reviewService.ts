@@ -1,6 +1,7 @@
 import Phone, { IPhone } from "../models/Phone";
-import { IReview, ICategoryRatings, ISentimentItem, ISentimentSummary } from "src/models/Review";
+import { IReview, ICategoryRatings } from "src/models/Review";
 import { analyzeSentiment } from "../utils/sentimentAnalyzer";
+import { ISentimentItem, ISentimentSummary } from "src/models/Sentiment";
 
 export type ReviewSortType = "newest" | "oldest" | "helpful";
 
@@ -62,7 +63,7 @@ export const addReviewToPhone = async (
   };
 
   phone.reviews.unshift(newReview);
-  recalculatePhoneMetadata(phone);
+  recalculateSentimentData(phone);
   await phone.save();
   return phone;
 };
@@ -229,7 +230,7 @@ export const removeReview = async (phoneId: string, reviewId: number, userId: st
   }
 
   phone.reviews.splice(reviewIndex, 1);
-  recalculatePhoneMetadata(phone);
+  recalculateSentimentData(phone);
   await phone.save();
   return phone;
 };
@@ -257,7 +258,13 @@ export const getSentimentSummary = async (phoneId: string): Promise<ISentimentSu
   return phone.sentimentSummary;
 };
 
-const recalculatePhoneMetadata = (phone: IPhone): void => {
+/**
+ * Helper function for recalculating the current phone's review sentiment summary data.
+ * It determines which topics are considered pros and cons and determines how many review
+ * entries are considered pro (or con) for a specific topic.
+ * @param phone The phone to have the sentiment summary recalculated/reanalyzed.
+ */
+const recalculateSentimentData = (phone: IPhone): void => {
   const totalReviews = phone.reviews.length;
   phone.totalReviews = totalReviews;
 

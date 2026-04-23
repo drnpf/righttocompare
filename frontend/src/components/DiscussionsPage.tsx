@@ -1,5 +1,27 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { ThumbsUp, ThumbsDown, MessageCircle, Eye, Plus, TrendingUp, Clock, Flame, Search, Image as ImageIcon, X, Flag, CornerDownRight, Loader2, Trash2 } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { toast } from "sonner@2.0.3";
+import { useAuth } from "../context/AuthContext";
+
+// Icons
+import {
+  ThumbsUp,
+  ThumbsDown,
+  MessageCircle,
+  Eye,
+  Plus,
+  TrendingUp,
+  Clock,
+  Flame,
+  Search,
+  Image as ImageIcon,
+  X,
+  Flag,
+  CornerDownRight,
+  Loader2,
+  Trash2,
+} from "lucide-react";
+
+// UI Components
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Input } from "./ui/input";
@@ -8,11 +30,9 @@ import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { toast } from "sonner@2.0.3";
-import { useAuth } from "../context/AuthContext";
+
+// Custom Components & API
 import {
-  Discussion,
-  Report,
   getDiscussionsFromStorage,
   saveDiscussionsToStorage,
   getUserVotesFromStorage,
@@ -20,76 +40,67 @@ import {
   getReportsFromStorage,
   saveReportsToStorage,
   getUserReportsFromStorage,
-  saveUserReportsToStorage
-} from "../data/discussionsData";
+  saveUserReportsToStorage,
+} from "../utils/storage/discussionStorage";
+import { Discussion, Report } from "../types/discussionTypes";
 import * as discussionApi from "../api/discussionApi";
+import { mapApiDiscussion } from "../utils/mappers/discussionDataMappers";
+import { SentimentSummary } from "../types/sentimentTypes";
+import { SentimentPill } from "./SentimentPill";
+import { SentimentSummaryCard } from "./SentimentSummaryCard";
 
 type FilterType = "recent" | "trending" | "popular";
 
-const DISCUSSION_CATEGORIES = [
-  "Discussion",
-  "Question",
-  "Review",
-  "Comparison",
-  "Help",
-  "News",
-  "Other",
-] as const;
+const DISCUSSION_CATEGORIES = ["Discussion", "Question", "Review", "Comparison", "Help", "News", "Other"] as const;
 
 interface DiscussionsPageProps {
   onNavigate?: (phoneId: string) => void;
   onViewDiscussion?: (discussionId: string) => void;
 }
 
-/**
- * Maps an API discussion response to the frontend Discussion interface.
- */
-function mapApiDiscussion(d: discussionApi.DiscussionResponse): Discussion {
-  return {
-    id: d._id,
-    title: d.title,
-    content: d.content,
-    author: d.authorName,
-    authorId: d.authorId,
-    authorAvatar: d.authorAvatar,
-    timestamp: new Date(d.createdAt).getTime(),
-    category: d.category,
-    tags: d.tags,
-    images: d.images,
-    upvotes: d.upvotes,
-    downvotes: d.downvotes,
-    upvoters: d.upvoters,
-    downvoters: d.downvoters,
-    replies: d.replyCount,
-    views: d.views,
-  };
-}
-
 export default function DiscussionsPage({ onNavigate, onViewDiscussion }: DiscussionsPageProps) {
+  // ------------------------------------------------------------
+  // | HOOKS
+  // ------------------------------------------------------------
   const { currentUser } = useAuth();
+
+  // Discussion Interaction
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
-  const [userVotes, setUserVotes] = useState<Record<string, 'up' | 'down' | null>>({});
+  const [userVotes, setUserVotes] = useState<Record<string, "up" | "down" | null>>({});
+
+  // -- Searching & Filtering --
   const [filter, setFilter] = useState<FilterType>("trending");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeSentimentFilters, setActiveSentimentFilters] = useState<string[]>([]);
+
+  // -- Post Creation --
   const [isCreating, setIsCreating] = useState(false);
   const [usingApi, setUsingApi] = useState(true);
   const [newPost, setNewPost] = useState({
     title: "",
     content: "",
     category: "Discussion",
-    tags: ""
+    tags: "",
   });
   const [newPostImages, setNewPostImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // -- Reporting --
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [reportItemId, setReportItemId] = useState<string>("");
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [userReports, setUserReports] = useState<Record<string, boolean>>({});
 
+  // -- Discussion Sentiment --
+  const [communitySentiment, setCommunitySentiment] = useState<SentimentSummary | null>(null);
+
+  // ------------------------------------------------------------
+  // | DATA SYNCHRONIZATION
+  // ------------------------------------------------------------
   // Fetch discussions from API with localStorage fallback
   const fetchDiscussions = useCallback(async () => {
     setIsLoading(true);
@@ -99,7 +110,8 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
         100,
         filter,
         searchQuery || undefined,
-        selectedCategories.length > 0 ? selectedCategories : undefined
+        selectedCategories.length > 0 ? selectedCategories : undefined,
+        activeSentimentFilters,
       );
 
       if (result && result.discussions.length >= 0) {
@@ -109,12 +121,12 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
 
         // Build user votes from upvoters/downvoters arrays
         if (currentUser) {
-          const votes: Record<string, 'up' | 'down' | null> = {};
+          const votes: Record<string, "up" | "down" | null> = {};
           mapped.forEach((d) => {
             if (d.upvoters?.includes(currentUser.uid)) {
-              votes[d.id] = 'up';
+              votes[d.id] = "up";
             } else if (d.downvoters?.includes(currentUser.uid)) {
-              votes[d.id] = 'down';
+              votes[d.id] = "down";
             }
           });
           setUserVotes(votes);
@@ -133,7 +145,41 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
     } finally {
       setIsLoading(false);
     }
-  }, [filter, searchQuery, selectedCategories, currentUser]);
+  }, [filter, searchQuery, selectedCategories, activeSentimentFilters, currentUser]);
+
+  // Determines the available sentiment tags to filter by as discussions are filtered
+  const liveSentiment = useMemo(() => {
+    const summary: SentimentSummary = {
+      pros: [],
+      cons: [],
+      totalAnalyzed: discussions.length,
+    };
+
+    if (discussions.length === 0) return summary;
+
+    const prosMap: Record<string, number> = {};
+    const consMap: Record<string, number> = {};
+
+    discussions.forEach((disc) => {
+      disc.sentimentTags?.forEach((tag) => {
+        const topic = tag.slice(1);
+        if (tag.startsWith("+")) {
+          prosMap[topic] = (prosMap[topic] || 0) + 1;
+        } else if (tag.startsWith("-")) {
+          consMap[topic] = (consMap[topic] || 0) + 1;
+        }
+      });
+    });
+
+    summary.pros = Object.entries(prosMap)
+      .map(([topic, count]) => ({ topic, count }))
+      .sort((a, b) => b.count - a.count);
+    summary.cons = Object.entries(consMap)
+      .map(([topic, count]) => ({ topic, count }))
+      .sort((a, b) => b.count - a.count);
+
+    return summary;
+  }, [discussions]);
 
   // Load discussions on mount and when filters change
   useEffect(() => {
@@ -146,11 +192,19 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
     setUserReports(loadedUserReports);
   }, []);
 
+  // Fetching community sentiment
+  useEffect(() => {
+    discussionApi.getCommunitySentiment().then(setCommunitySentiment);
+  }, []);
+
+  // ------------------------------------------------------------
+  // | COMPONENT LOGIC
+  // ------------------------------------------------------------
   // Get all unique categories from discussions
-  const allCategories = Array.from(new Set(discussions.map(d => d.category))).sort();
+  const allCategories = Array.from(new Set(discussions.map((d) => d.category))).sort();
 
   // Handle voting
-  const handleVote = async (discussionId: string, voteType: 'up' | 'down') => {
+  const handleVote = async (discussionId: string, voteType: "up" | "down") => {
     if (usingApi) {
       if (!currentUser) {
         toast.error("Please sign in to vote");
@@ -161,14 +215,12 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
         const updated = await discussionApi.voteOnDiscussion(discussionId, voteType, token);
         if (updated) {
           const mapped = mapApiDiscussion(updated);
-          setDiscussions((prev) =>
-            prev.map((d) => (d.id === discussionId ? mapped : d))
-          );
+          setDiscussions((prev) => prev.map((d) => (d.id === discussionId ? mapped : d)));
           // Update local vote tracking
           if (updated.upvoters.includes(currentUser.uid)) {
-            setUserVotes((prev) => ({ ...prev, [discussionId]: 'up' }));
+            setUserVotes((prev) => ({ ...prev, [discussionId]: "up" }));
           } else if (updated.downvoters.includes(currentUser.uid)) {
-            setUserVotes((prev) => ({ ...prev, [discussionId]: 'down' }));
+            setUserVotes((prev) => ({ ...prev, [discussionId]: "down" }));
           } else {
             setUserVotes((prev) => ({ ...prev, [discussionId]: null }));
           }
@@ -179,20 +231,20 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
     } else {
       // localStorage fallback
       const currentVote = userVotes[discussionId];
-      let newVote: 'up' | 'down' | null = voteType;
+      let newVote: "up" | "down" | null = voteType;
 
       if (currentVote === voteType) {
         newVote = null;
       }
 
-      const updatedDiscussions = discussions.map(disc => {
+      const updatedDiscussions = discussions.map((disc) => {
         if (disc.id === discussionId) {
           let upvotes = disc.upvotes;
           let downvotes = disc.downvotes;
-          if (currentVote === 'up') upvotes--;
-          if (currentVote === 'down') downvotes--;
-          if (newVote === 'up') upvotes++;
-          if (newVote === 'down') downvotes++;
+          if (currentVote === "up") upvotes--;
+          if (currentVote === "down") downvotes--;
+          if (newVote === "up") upvotes++;
+          if (newVote === "down") downvotes++;
           return { ...disc, upvotes, downvotes };
         }
         return disc;
@@ -211,12 +263,12 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach(file => {
-      if (file.type.startsWith('image/') && newPostImages.length < 4) {
+    Array.from(files).forEach((file) => {
+      if (file.type.startsWith("image/") && newPostImages.length < 4) {
         const reader = new FileReader();
         reader.onload = (event) => {
           if (event.target?.result) {
-            setNewPostImages(prev => [...prev, event.target!.result as string]);
+            setNewPostImages((prev) => [...prev, event.target!.result as string]);
           }
         };
         reader.readAsDataURL(file);
@@ -224,12 +276,12 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
     });
 
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
   const handleRemoveImage = (index: number) => {
-    setNewPostImages(prev => prev.filter((_, i) => i !== index));
+    setNewPostImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Handle creating new post
@@ -250,10 +302,13 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
             title: newPost.title,
             content: newPost.content,
             category: newPost.category,
-            tags: newPost.tags.split(",").map(tag => tag.trim()).filter(tag => tag),
+            tags: newPost.tags
+              .split(",")
+              .map((tag) => tag.trim())
+              .filter((tag) => tag),
             images: newPostImages,
           },
-          token
+          token,
         );
 
         if (created) {
@@ -276,12 +331,16 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
         authorAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.displayName || "You"}`,
         timestamp: Date.now(),
         category: newPost.category,
-        tags: newPost.tags.split(",").map(tag => tag.trim()).filter(tag => tag),
+        tags: newPost.tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag),
         upvotes: 0,
         downvotes: 0,
         replies: 0,
         views: 0,
-        images: newPostImages.length > 0 ? newPostImages : undefined
+        images: newPostImages.length > 0 ? newPostImages : undefined,
+        sentimentTags: [],
       };
 
       const updatedDiscussions = [newDiscussion, ...discussions];
@@ -326,11 +385,11 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
     const report: Report = {
       id: `report_${Date.now()}`,
       itemId: reportItemId,
-      itemType: 'discussion',
+      itemType: "discussion",
       reason: reportReason,
       details: reportDetails || undefined,
       reportedBy: currentUser?.displayName || "You",
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     const reports = getReportsFromStorage();
@@ -347,12 +406,15 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
     toast.success("Report submitted. Thank you!");
   };
 
+  // Handles filtering discussions by sentiment
+  const handleSentimentFilter = (tag: string) => {
+    setActiveSentimentFilters((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  };
+
   // Toggle category filter
   const toggleCategory = (category: string) => {
-    setSelectedCategories(prev =>
-      prev.includes(category)
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
+    setSelectedCategories((prev) =>
+      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category],
     );
   };
 
@@ -363,25 +425,42 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
     let filtered = [...discussions];
 
     if (selectedCategories.length > 0) {
-      filtered = filtered.filter(disc => selectedCategories.includes(disc.category));
+      filtered = filtered.filter((disc) => selectedCategories.includes(disc.category));
     }
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(disc =>
-        disc.title.toLowerCase().includes(query) ||
-        disc.content.toLowerCase().includes(query) ||
-        disc.tags.some(tag => tag.toLowerCase().includes(query))
+      filtered = filtered.filter(
+        (disc) =>
+          disc.title.toLowerCase().includes(query) ||
+          disc.content.toLowerCase().includes(query) ||
+          disc.tags.some((tag) => tag.toLowerCase().includes(query)),
       );
     }
 
+    // Filtering by sentiment tags
+    if (activeSentimentFilters.length > 0) {
+      filtered = filtered.filter((disc) => {
+        return activeSentimentFilters.every((filterTag) => disc.sentimentTags.includes(filterTag));
+      });
+    }
+
+    // Sorting methods
     switch (filter) {
       case "recent":
         return filtered.sort((a, b) => b.timestamp - a.timestamp);
       case "trending":
         return filtered.sort((a, b) => {
-          const aScore = (a.upvotes - a.downvotes) * 2 + a.replies * 1.5 + a.views * 0.1 - (Date.now() - a.timestamp) / (1000 * 60 * 60 * 24);
-          const bScore = (b.upvotes - b.downvotes) * 2 + b.replies * 1.5 + b.views * 0.1 - (Date.now() - b.timestamp) / (1000 * 60 * 60 * 24);
+          const aScore =
+            (a.upvotes - a.downvotes) * 2 +
+            a.replies * 1.5 +
+            a.views * 0.1 -
+            (Date.now() - a.timestamp) / (1000 * 60 * 60 * 24);
+          const bScore =
+            (b.upvotes - b.downvotes) * 2 +
+            b.replies * 1.5 +
+            b.views * 0.1 -
+            (Date.now() - b.timestamp) / (1000 * 60 * 60 * 24);
           return bScore - aScore;
         });
       case "popular":
@@ -408,6 +487,9 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
     return `${Math.floor(seconds / 604800)}w ago`;
   };
 
+  // ------------------------------------------------------------
+  // | UI SECTION
+  // ------------------------------------------------------------
   return (
     <div className="min-h-screen bg-[#f7f7f7] pb-12">
       {/* Header Section */}
@@ -422,16 +504,21 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
               <h1 className="text-white mb-3">Community Discussions</h1>
-              <p className="text-white/80 text-lg">Share your thoughts, ask questions, and connect with the community</p>
+              <p className="text-white/80 text-lg">
+                Share your thoughts, ask questions, and connect with the community
+              </p>
             </div>
 
-            <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
-              if (!open) {
-                setNewPost({ title: "", content: "", category: "Discussion", tags: "" });
-                setNewPostImages([]);
-              }
-              setIsCreateDialogOpen(open);
-            }}>
+            <Dialog
+              open={isCreateDialogOpen}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setNewPost({ title: "", content: "", category: "Discussion", tags: "" });
+                  setNewPostImages([]);
+                }
+                setIsCreateDialogOpen(open);
+              }}
+            >
               <DialogTrigger asChild>
                 <Button className="bg-white text-[#2c3968] hover:bg-white/90 shadow-lg self-start md:self-auto">
                   <Plus className="w-5 h-5 mr-2" />
@@ -441,9 +528,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Create New Discussion</DialogTitle>
-                  <DialogDescription>
-                    Start a new conversation with the community
-                  </DialogDescription>
+                  <DialogDescription>Start a new conversation with the community</DialogDescription>
                 </DialogHeader>
                 {!currentUser ? (
                   <p className="text-center text-[#666] py-8">Please sign in to create a discussion.</p>
@@ -452,7 +537,9 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
                         <Label htmlFor="title">Title</Label>
-                        <span className={`text-xs ${newPost.title.length > 100 ? 'text-red-500' : newPost.title.length < 5 && newPost.title.length > 0 ? 'text-amber-500' : 'text-[#999]'}`}>
+                        <span
+                          className={`text-xs ${newPost.title.length > 100 ? "text-red-500" : newPost.title.length < 5 && newPost.title.length > 0 ? "text-amber-500" : "text-[#999]"}`}
+                        >
                           {newPost.title.length}/100
                         </span>
                       </div>
@@ -469,7 +556,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
                         <Label htmlFor="content">Content</Label>
-                        <span className={`text-xs ${newPost.content.length > 5000 ? 'text-red-500' : 'text-[#999]'}`}>
+                        <span className={`text-xs ${newPost.content.length > 5000 ? "text-red-500" : "text-[#999]"}`}>
                           {newPost.content.length}/5000
                         </span>
                       </div>
@@ -482,7 +569,9 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                       />
                     </div>
                     <div>
-                      <Label htmlFor="category" className="mb-1.5 block">Category</Label>
+                      <Label htmlFor="category" className="mb-1.5 block">
+                        Category
+                      </Label>
                       <Select
                         value={newPost.category}
                         onValueChange={(value) => setNewPost({ ...newPost, category: value })}
@@ -492,7 +581,9 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                         </SelectTrigger>
                         <SelectContent>
                           {DISCUSSION_CATEGORIES.map((cat) => (
-                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            <SelectItem key={cat} value={cat}>
+                              {cat}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -557,7 +648,9 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                       </Button>
                       <Button
                         onClick={handleCreatePost}
-                        disabled={!newPost.title.trim() || newPost.title.length < 5 || !newPost.content.trim() || isCreating}
+                        disabled={
+                          !newPost.title.trim() || newPost.title.length < 5 || !newPost.content.trim() || isCreating
+                        }
                         className="bg-[#2c3968] hover:bg-[#1e2547]"
                       >
                         {isCreating ? (
@@ -631,7 +724,9 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedCategories([])}
-                  className={selectedCategories.length === 0 ? "bg-[#2c3968] text-white hover:bg-[#1e2547] hover:text-white" : ""}
+                  className={
+                    selectedCategories.length === 0 ? "bg-[#2c3968] text-white hover:bg-[#1e2547] hover:text-white" : ""
+                  }
                 >
                   All
                 </Button>
@@ -641,11 +736,15 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                     variant="outline"
                     size="sm"
                     onClick={() => toggleCategory(category)}
-                    className={selectedCategories.includes(category) ? "bg-[#2c3968] text-white hover:bg-[#1e2547] hover:text-white" : ""}
+                    className={
+                      selectedCategories.includes(category)
+                        ? "bg-[#2c3968] text-white hover:bg-[#1e2547] hover:text-white"
+                        : ""
+                    }
                   >
                     {category}
                     <span className="ml-2 text-xs opacity-70">
-                      ({discussions.filter(d => d.category === category).length})
+                      ({discussions.filter((d) => d.category === category).length})
                     </span>
                   </Button>
                 ))}
@@ -655,169 +754,207 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
         </div>
       </div>
 
+      {/* Community Sentiment Summary */}
+      <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 mt-8">
+        <SentimentSummaryCard
+          data={liveSentiment}
+          isLoading={isLoading && discussions.length === 0}
+          sourceType="community"
+          activeFilters={activeSentimentFilters}
+          onPillClick={handleSentimentFilter}
+          isCollapsible={true}
+          defaultExpanded={true}
+          matchedCount={filteredDiscussions.length}
+        />
+      </div>
+
       {/* Discussion List */}
       <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 mt-8">
-        <div className="space-y-4">
-          {isLoading ? (
-            <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
-              <Loader2 className="w-8 h-8 text-[#2c3968] mx-auto mb-4 animate-spin" />
-              <p className="text-[#666]">Loading discussions...</p>
-            </div>
-          ) : filteredDiscussions.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
-              <MessageCircle className="w-16 h-16 text-[#ccc] mx-auto mb-4" />
-              <h3 className="text-[#2c3968] mb-2">No discussions found</h3>
-              <p className="text-[#666]">
-                {searchQuery ? "Try adjusting your search query" : "Be the first to start a discussion!"}
-              </p>
-            </div>
-          ) : (
-            filteredDiscussions.map((discussion) => {
-              const userVote = userVotes[discussion.id];
-              const netScore = discussion.upvotes - discussion.downvotes;
-              const isOwnDiscussion = currentUser && discussion.authorId === currentUser.uid;
+        <div className="relative">
+          {/* Progress Bar */}
+          <div className="absolute top-0 left-0 right-0 h-0.5 z-40 overflow-hidden">
+            <div
+              className={`h-full bg-[#2c3968] transition-all duration-500 ${isLoading ? "w-1/2 animate-infinite-loading" : "w-0 opacity-0"}`}
+            />
+          </div>
+          <div
+            className={`space-y-4 transition-all duration-300 ${isLoading ? "opacity-60 grayscale-[20%] pointer-events-none" : "opacity-100"}`}
+          >
+            {/* INITIAL LOAD ONLY: Show skeleton if we have nothing in discussions list*/}
+            {isLoading && discussions.length === 0 ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-32 w-full bg-white animate-pulse rounded-2xl border border-gray-100" />
+                ))}
+              </div>
+            ) : filteredDiscussions.length === 0 ? (
+              <div className="bg-white rounded-2xl shadow-sm p-12 text-center border-2 border-dashed border-gray-200">
+                <MessageCircle className="w-12 h-12 text-[#ccc] mx-auto mb-4" />
+                <p className="text-[#666] font-medium">No discussions match your current filters.</p>
+              </div>
+            ) : (
+              filteredDiscussions.map((discussion) => {
+                const userVote = userVotes[discussion.id];
+                const netScore = discussion.upvotes - discussion.downvotes;
+                const isOwnDiscussion = currentUser && discussion.authorId === currentUser.uid;
+                const sortedTags = [...(discussion.sentimentTags || [])].sort((a, b) => {
+                  if (a.startsWith("+") && b.startsWith("-")) return -1;
+                  if (a.startsWith("-") && b.startsWith("+")) return 1;
+                  return a.localeCompare(b); // Alphabetical within groups
+                });
 
-              return (
-                <div
-                  key={discussion.id}
-                  className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-transparent hover:border-[#2c3968]/10"
-                >
-                  <div className="flex gap-4 p-6">
-                    {/* Vote Section */}
-                    <div className="flex flex-col items-center gap-2 min-w-[60px]">
-                      <button
-                        onClick={() => handleVote(discussion.id, 'up')}
-                        className={`p-2 rounded-lg transition-all duration-200 ${
-                          userVote === 'up'
-                            ? 'bg-[#2c3968] text-white'
-                            : 'bg-[#f0f2f5] text-[#666] hover:bg-[#2c3968] hover:text-white'
-                        }`}
-                      >
-                        <ThumbsUp className="w-5 h-5" />
-                      </button>
-                      <span className={`font-semibold ${netScore > 0 ? 'text-[#2c3968]' : netScore < 0 ? 'text-red-500' : 'text-[#666]'}`}>
-                        {netScore > 0 ? '+' : ''}{netScore}
-                      </span>
-                      <button
-                        onClick={() => handleVote(discussion.id, 'down')}
-                        className={`p-2 rounded-lg transition-all duration-200 ${
-                          userVote === 'down'
-                            ? 'bg-red-500 text-white'
-                            : 'bg-[#f0f2f5] text-[#666] hover:bg-red-500 hover:text-white'
-                        }`}
-                      >
-                        <ThumbsDown className="w-5 h-5" />
-                      </button>
-                    </div>
-
-                    {/* Content Section */}
-                    <div className="flex-1 min-w-0">
-                      {/* Header */}
-                      <div className="flex items-start gap-3 mb-3">
-                        <img
-                          src={discussion.authorAvatar}
-                          alt={discussion.author}
-                          className="w-10 h-10 rounded-full bg-[#f0f2f5]"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[#2c3968]">{discussion.author}</span>
-                            <span className="text-[#999]">•</span>
-                            <span className="text-[#999] text-sm">{getTimeAgo(discussion.timestamp)}</span>
-                            <Badge variant="outline" className="ml-auto">
-                              {discussion.category}
-                            </Badge>
-                          </div>
-                        </div>
+                return (
+                  <div
+                    key={discussion.id}
+                    className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-transparent hover:border-[#2c3968]/10"
+                  >
+                    <div className="flex gap-4 p-6">
+                      {/* Vote Section */}
+                      <div className="flex flex-col items-center gap-2 min-w-[60px]">
+                        <button
+                          onClick={() => handleVote(discussion.id, "up")}
+                          className={`p-2 rounded-lg transition-all duration-200 ${
+                            userVote === "up"
+                              ? "bg-[#2c3968] text-white"
+                              : "bg-[#f0f2f5] text-[#666] hover:bg-[#2c3968] hover:text-white"
+                          }`}
+                        >
+                          <ThumbsUp className="w-5 h-5" />
+                        </button>
+                        <span
+                          className={`font-semibold ${netScore > 0 ? "text-[#2c3968]" : netScore < 0 ? "text-red-500" : "text-[#666]"}`}
+                        >
+                          {netScore > 0 ? "+" : ""}
+                          {netScore}
+                        </span>
+                        <button
+                          onClick={() => handleVote(discussion.id, "down")}
+                          className={`p-2 rounded-lg transition-all duration-200 ${
+                            userVote === "down"
+                              ? "bg-red-500 text-white"
+                              : "bg-[#f0f2f5] text-[#666] hover:bg-red-500 hover:text-white"
+                          }`}
+                        >
+                          <ThumbsDown className="w-5 h-5" />
+                        </button>
                       </div>
 
-                      {/* Title */}
-                      <h3
-                        className="text-[#2c3968] mb-2 cursor-pointer hover:text-[#1e2547] transition-colors"
-                        onClick={() => onViewDiscussion?.(discussion.id)}
-                      >
-                        {discussion.title}
-                      </h3>
+                      {/* Content Section */}
+                      <div className="flex-1 min-w-0">
+                        {/* Header */}
+                        <div className="flex items-start gap-3 mb-3">
+                          <img
+                            src={discussion.authorAvatar}
+                            alt={discussion.author}
+                            className="w-10 h-10 rounded-full bg-[#f0f2f5]"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[#2c3968]">{discussion.author}</span>
+                              <span className="text-[#999]">•</span>
+                              <span className="text-[#999] text-sm">{getTimeAgo(discussion.timestamp)}</span>
+                              <Badge variant="outline" className="ml-auto">
+                                {discussion.category}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
 
-                      {/* Content Preview */}
-                      <p className="text-[#666] mb-3 line-clamp-2">
-                        {discussion.content}
-                      </p>
+                        {/* Title */}
+                        <h3
+                          className="text-[#2c3968] mb-2 cursor-pointer hover:text-[#1e2547] transition-colors"
+                          onClick={() => onViewDiscussion?.(discussion.id)}
+                        >
+                          {discussion.title}
+                        </h3>
 
-                      {/* Tags */}
-                      {discussion.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {discussion.tags.map((tag, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2.5 py-1 bg-[#f0f2f5] text-[#2c3968] text-xs rounded-full hover:bg-[#2c3968] hover:text-white transition-colors cursor-pointer"
+                        {/* Content Preview */}
+                        <p className="text-[#666] mb-3 line-clamp-2">{discussion.content}</p>
+
+                        {/* Sentiment Specific Tags */}
+                        {sortedTags && sortedTags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mb-3">
+                            {sortedTags.map((tag, idx) => (
+                              <SentimentPill key={`sent-${idx}`} tag={tag} readOnly={true} />
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Tags */}
+                        {discussion.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {discussion.tags.map((tag, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2.5 py-1 bg-[#f0f2f5] text-[#2c3968] text-xs rounded-full hover:bg-[#2c3968] hover:text-white transition-colors cursor-pointer"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Stats and Actions */}
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                          <div className="flex items-center gap-4 text-sm text-[#999]">
+                            <div className="flex items-center gap-1.5">
+                              <MessageCircle className="w-4 h-4" />
+                              <span>{discussion.replies} replies</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Eye className="w-4 h-4" />
+                              <span>{discussion.views.toLocaleString()} views</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onViewDiscussion?.(discussion.id);
+                              }}
+                              className="text-[#2c3968] hover:bg-[#2c3968] hover:text-white border-[#2c3968]/20"
                             >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Stats and Actions */}
-                      <div className="flex items-center justify-between gap-4 flex-wrap">
-                        <div className="flex items-center gap-4 text-sm text-[#999]">
-                          <div className="flex items-center gap-1.5">
-                            <MessageCircle className="w-4 h-4" />
-                            <span>{discussion.replies} replies</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Eye className="w-4 h-4" />
-                            <span>{discussion.views.toLocaleString()} views</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onViewDiscussion?.(discussion.id);
-                            }}
-                            className="text-[#2c3968] hover:bg-[#2c3968] hover:text-white border-[#2c3968]/20"
-                          >
-                            <CornerDownRight className="w-4 h-4 mr-1.5" />
-                            Reply
-                          </Button>
-                          {isOwnDiscussion && usingApi && (
+                              <CornerDownRight className="w-4 h-4 mr-1.5" />
+                              Reply
+                            </Button>
+                            {isOwnDiscussion && usingApi && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteDiscussion(discussion.id);
+                                }}
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                                Delete
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteDiscussion(discussion.id);
+                                handleOpenReportDialog(discussion.id);
                               }}
-                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                              disabled={userReports[discussion.id]}
+                              className={`text-xs ${userReports[discussion.id] ? "text-red-400" : "text-[#999] hover:text-red-500"}`}
                             >
-                              <Trash2 className="w-3.5 h-3.5 mr-1" />
-                              Delete
+                              <Flag className="w-3.5 h-3.5 mr-1" />
+                              {userReports[discussion.id] ? "Reported" : "Report"}
                             </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenReportDialog(discussion.id);
-                            }}
-                            disabled={userReports[discussion.id]}
-                            className={`text-xs ${userReports[discussion.id] ? 'text-red-400' : 'text-[#999] hover:text-red-500'}`}
-                          >
-                            <Flag className="w-3.5 h-3.5 mr-1" />
-                            {userReports[discussion.id] ? 'Reported' : 'Report'}
-                          </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })
-          )}
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
 
@@ -836,23 +973,33 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
               <RadioGroup value={reportReason} onValueChange={setReportReason} className="mt-3 space-y-2">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="spam" id="spam" />
-                  <Label htmlFor="spam" className="cursor-pointer">Spam or misleading</Label>
+                  <Label htmlFor="spam" className="cursor-pointer">
+                    Spam or misleading
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="harassment" id="harassment" />
-                  <Label htmlFor="harassment" className="cursor-pointer">Harassment or hate speech</Label>
+                  <Label htmlFor="harassment" className="cursor-pointer">
+                    Harassment or hate speech
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="inappropriate" id="inappropriate" />
-                  <Label htmlFor="inappropriate" className="cursor-pointer">Inappropriate content</Label>
+                  <Label htmlFor="inappropriate" className="cursor-pointer">
+                    Inappropriate content
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="misinformation" id="misinformation" />
-                  <Label htmlFor="misinformation" className="cursor-pointer">Misinformation</Label>
+                  <Label htmlFor="misinformation" className="cursor-pointer">
+                    Misinformation
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="other" id="other" />
-                  <Label htmlFor="other" className="cursor-pointer">Other</Label>
+                  <Label htmlFor="other" className="cursor-pointer">
+                    Other
+                  </Label>
                 </div>
               </RadioGroup>
             </div>
@@ -870,11 +1017,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
               <Button variant="outline" onClick={() => setIsReportDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleSubmitReport}
-                disabled={!reportReason}
-                className="bg-red-500 hover:bg-red-600"
-              >
+              <Button onClick={handleSubmitReport} disabled={!reportReason} className="bg-red-500 hover:bg-red-600">
                 Submit Report
               </Button>
             </div>

@@ -121,6 +121,9 @@ export default function PhoneSpecPage({
   onAddToRecentlyViewed,
   onNavigateToComparison,
 }: PhoneSpecPageProps) {
+  // ------------------------------------------------------------
+  // | HOOKS
+  // ------------------------------------------------------------
   // Routing & User Authentication
   const { phoneId } = useParams<{ phoneId: string }>();
   const navigate = useNavigate();
@@ -252,6 +255,45 @@ export default function PhoneSpecPage({
       setIsLoadingSentiment(false);
     }
   }, []);
+
+  /**
+   * SYNC: Live Review Sentiment Tracking
+   * Signal: reviews list or filteredTotal changes
+   * Action: Recalculates sentiment summary (pros/cons) based on the
+   * reviews currently in state.
+   */
+  const liveSentiment = useMemo(() => {
+    const summary: SentimentSummary = {
+      pros: [],
+      cons: [],
+      totalAnalyzed: filteredTotal, // Anchor to the actual count from the backend
+    };
+
+    if (reviews.length === 0) return summary;
+
+    const prosMap: Record<string, number> = {};
+    const consMap: Record<string, number> = {};
+
+    reviews.forEach((review) => {
+      review.sentimentTags?.forEach((tag) => {
+        const topic = tag.slice(1);
+        if (tag.startsWith("+")) {
+          prosMap[topic] = (prosMap[topic] || 0) + 1;
+        } else if (tag.startsWith("-")) {
+          consMap[topic] = (consMap[topic] || 0) + 1;
+        }
+      });
+    });
+
+    summary.pros = Object.entries(prosMap)
+      .map(([topic, count]) => ({ topic, count }))
+      .sort((a, b) => b.count - a.count);
+    summary.cons = Object.entries(consMap)
+      .map(([topic, count]) => ({ topic, count }))
+      .sort((a, b) => b.count - a.count);
+
+    return summary;
+  }, [reviews, filteredTotal]);
 
   /**
    * SYNC: Phone Review Sentiment Summary
@@ -1628,10 +1670,12 @@ export default function PhoneSpecPage({
               {/* Sentiment Summary (Pros/Cons + Filtering) */}
               {sentimentSummary && (
                 <SentimentSummaryCard
-                  data={sentimentSummary}
+                  data={liveSentiment}
                   isLoading={isLoadingSentiment}
                   activeFilters={activeSentiment}
                   onPillClick={handleSentimentClick}
+                  isCollapsible={true}
+                  defaultExpanded={true}
                   matchedCount={filteredTotal}
                 />
               )}
