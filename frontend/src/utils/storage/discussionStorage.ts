@@ -1,5 +1,4 @@
 import { Discussion, Reply, Report } from "../../types/discussionTypes";
-import { initialDiscussions, initialReplies } from "../../data/discussionsData";
 
 // ------------------------------------------------------------
 // | DISCUSSION
@@ -8,9 +7,9 @@ import { initialDiscussions, initialReplies } from "../../data/discussionsData";
 export const getDiscussionsFromStorage = (): Discussion[] => {
   try {
     const stored = localStorage.getItem("discussions");
-    return stored ? JSON.parse(stored) : initialDiscussions;
+    return stored ? JSON.parse(stored) : [];
   } catch {
-    return initialDiscussions;
+    return [];
   }
 };
 
@@ -42,14 +41,13 @@ export const saveUserVotesToStorage = (votes: Record<string, "up" | "down" | nul
 // ------------------------------------------------------------
 // | REPLY
 // ------------------------------------------------------------
-
 // Replies storage helpers
 export const getRepliesFromStorage = (): Reply[] => {
   try {
     const stored = localStorage.getItem("discussionReplies");
-    return stored ? JSON.parse(stored) : initialReplies;
+    return stored ? JSON.parse(stored) : [];
   } catch {
-    return initialReplies;
+    return [];
   }
 };
 
