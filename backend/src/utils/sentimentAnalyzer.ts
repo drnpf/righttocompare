@@ -143,6 +143,9 @@ const TOPIC_KEYWORDS: Record<string, string[]> = {
     "backorder",
     "warehouse",
   ],
+  connectivity: ["5g", "wifi", "reception", "signal", "bluetooth", "hotspot", "remote", "antenna"],
+  security: ["face id", "fingerprint", "biometric", "privacy", "encryption", "secure", "knox", "vault"],
+  gaming: ["fps", "thermal", "heat", "overheating", "throttling", "gpu", "cooling", "refresh rate"],
   updates: ["beta", "firmware", "patch", "security update", "one ui", "ios version", "download", "installing"],
   support: ["warranty", "repair", "customer service", "support", "rma", "refurbished", "replacement"],
 };
@@ -188,6 +191,13 @@ const POSITIVE_SIGNALS = [
   "vivid",
   "comfortable",
   "durable",
+  "clutch",
+  "beast",
+  "fire",
+  "goat",
+  "goated",
+  "daily driver",
+  "no-brainer",
 ];
 
 const NEGATIVE_SIGNALS = [
@@ -235,7 +245,15 @@ const NEGATIVE_SIGNALS = [
   "underwhelming",
   "regret",
   "avoid",
+  "trash",
+  "garbage",
+  "mid",
+  "dealbreaker",
+  "skip",
+  "littered with",
 ];
+
+const NEGATORS = ["not", "no", "isnt", "wasnt", "arent", "cannot", "hardly", "barely", "lacks", "neither"];
 
 const QUESTION_STARTERS = [
   "is",
@@ -259,7 +277,6 @@ const QUESTION_STARTERS = [
 export function analyzeSentiment(text: string): ISentimentTag[] {
   const lowerText = text.toLowerCase();
   const tags: ISentimentTag[] = [];
-  const detectedTopics = new Set<string>();
 
   // Split text into clauses for more accurate per-topic sentiment
   const clauses = lowerText
@@ -271,7 +288,6 @@ export function analyzeSentiment(text: string): ISentimentTag[] {
     const relevantClauses = clauses.filter((clauses) => keywords.some((kw) => clauses.includes(kw)));
 
     if (relevantClauses.length === 0) continue;
-    if (detectedTopics.has(topic)) continue;
 
     // Count positive and negative signals in those clauses
     let positiveCount = 0;
@@ -287,14 +303,14 @@ export function analyzeSentiment(text: string): ISentimentTag[] {
       // Getting a list of words in clause and removing all punctuation
       const cleanWords = trimmedClause.replace(/[^\w\s]/g, "").split(/\s+/);
 
-      // Checking for positive signals
+      // Checking for POSITIVE SIGNALS
       for (const word of POSITIVE_SIGNALS) {
-        // Handles case if negating word appears (i.e. not, no, etc.)
+        // Handles case if negating word appears
         if (trimmedClause.includes(word)) {
           const index = cleanWords.indexOf(word);
 
           // Negating words before a positive signal = negative sentiment
-          if (index > 0 && ["not", "no", "isnt", "wasnt"].includes(cleanWords[index - 1])) {
+          if (index > 0 && NEGATORS.includes(cleanWords[index - 1])) {
             negativeCount++;
           } else {
             positiveCount++;
@@ -302,14 +318,14 @@ export function analyzeSentiment(text: string): ISentimentTag[] {
         }
       }
 
-      // Checking for negative signals
+      // Checking for NEGATIVE SIGNALS
       for (const word of NEGATIVE_SIGNALS) {
-        // Handles case if negating word appears (i.e. not, no, etc.)
+        // Handles case if negating word appears
         if (trimmedClause.includes(word)) {
           const index = cleanWords.indexOf(word);
 
           // Negating words before a negative signal = positive sentiment
-          if (index > 0 && ["not", "no", "isnt", "wasnt"].includes(cleanWords[index - 1])) {
+          if (index > 0 && NEGATORS.includes(cleanWords[index - 1])) {
             positiveCount++;
           } else {
             negativeCount++;
@@ -318,12 +334,11 @@ export function analyzeSentiment(text: string): ISentimentTag[] {
       }
     }
 
-    // Determine sentiment for this topic
-    if (positiveCount > 0 || negativeCount > 0) {
-      const sentiment = positiveCount >= negativeCount ? "positive" : "negative";
-      const label = `${sentiment === "positive" ? "+" : "-"}${topic}`;
-      tags.push({ topic, sentiment, label });
-      detectedTopics.add(topic);
+    // Determine sentiment for this topic; if positive=negative does not add
+    if (positiveCount > negativeCount) {
+      tags.push({ topic, sentiment: "positive", label: `+${topic}` });
+    } else if (positiveCount < negativeCount) {
+      tags.push({ topic, sentiment: "negative", label: `-${topic}` });
     }
   }
   return tags;
