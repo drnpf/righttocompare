@@ -204,7 +204,6 @@ export function SentimentSummaryCard({
           </div>
         </div>
 
-        {/* Toggle Button - only shows if isCollapsible is true */}
         {isCollapsible && (
           <Button
             variant="ghost"
@@ -216,59 +215,60 @@ export function SentimentSummaryCard({
         )}
       </div>
 
-      {/* --- 2. THE CONTENT (DYNAMICALLY RENDERED) --- */}
       {(isExpanded || !isCollapsible) && (
         <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
-          {/* --- ACTIVE FILTERS BAR --- */}
-          <div
-            className={`flex items-center px-4 py-3 mb-6 rounded-xl transition-all duration-300 min-h-[58px] ${
-              activeFilters.length > 0
-                ? isDarkMode
-                  ? "bg-gray-900/40 border-dashed border-2 border-gray-700"
-                  : "bg-gray-50 border-dashed border-2 border-gray-200"
-                : "border-2 border-transparent bg-transparent"
-            }`}
-          >
-            {activeFilters.length > 0 ? (
-              <div className="flex flex-wrap items-center justify-between w-full gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-bold uppercase opacity-50">Filtered By:</span>
-                  <div className="flex flex-wrap gap-2">
-                    {activeFilters.map((tag) => (
-                      <SentimentPill key={tag} tag={tag as any} isActive={true} onClick={onPillClick} />
-                    ))}
+          {/* Active Filter Bar (hidden on discussion thread page) */}
+          {sourceType !== "discussions" && (
+            <div
+              className={`flex items-center px-4 py-3 mb-6 rounded-xl transition-all duration-300 min-h-[58px] ${
+                activeFilters.length > 0
+                  ? isDarkMode
+                    ? "bg-gray-900/40 border-dashed border-2 border-gray-700"
+                    : "bg-gray-50 border-dashed border-2 border-gray-200"
+                  : "border-2 border-transparent bg-transparent"
+              }`}
+            >
+              {activeFilters.length > 0 ? (
+                <div className="flex flex-wrap items-center justify-between w-full gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-bold uppercase opacity-50">Filtered By:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {activeFilters.map((tag) => (
+                        <SentimentPill key={tag} tag={tag as any} isActive={true} onClick={onPillClick} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-[10px] font-bold py-1 px-2 rounded bg-[#2c3968]/10 text-[#2c3968] dark:bg-[#4a7cf6]/20 dark:text-[#4a7cf6]">
+                      {matchedCount} Matches
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => activeFilters.forEach((f) => onPillClick?.(f))}
+                      className="text-[10px] uppercase font-bold text-red-500"
+                    >
+                      <RotateCcw size={12} className="mr-1" /> Reset
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-[10px] font-bold py-1 px-2 rounded bg-[#2c3968]/10 text-[#2c3968] dark:bg-[#4a7cf6]/20 dark:text-[#4a7cf6]">
-                    {matchedCount} Matches
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => activeFilters.forEach((f) => onPillClick?.(f))}
-                    className="text-[10px] uppercase font-bold text-red-500"
-                  >
-                    <RotateCcw size={12} className="mr-1" /> Reset
-                  </Button>
+              ) : (
+                <div className="flex items-center gap-2 text-[10px] font-bold uppercase opacity-20 tracking-widest">
+                  <Search size={14} />
+                  <span>Select sentiments below to filter</span>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-[10px] font-bold uppercase opacity-20 tracking-widest">
-                <Search size={14} />
-                <span>Select sentiments below to filter</span>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
-          {/* --- THE VERDICT --- */}
+          {/* Verdict */}
           {rawVerdict && (
             <div
-              className={`mb-8 p-5 rounded-xl border-l-4 ${
+              className={`p-5 rounded-xl border-l-4 ${
                 isDarkMode
                   ? "bg-[#1e2533] border-[#4a7cf6] text-gray-300"
                   : "bg-[#f0f4ff] border-[#2c3968] text-[#2c3968]"
-              }`}
+              } ${sourceType !== "discussions" ? "mb-8" : ""}`} // Add margin only if grid follows
             >
               <div className="flex items-center gap-2 mb-2">
                 <span className={isDarkMode ? "text-[#4a7cf6]" : "text-[#2c3968]"}>{cardConfig.icon}</span>
@@ -280,44 +280,44 @@ export function SentimentSummaryCard({
             </div>
           )}
 
-          {/* --- PROS & CONS GRID --- */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Pros */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                <TrendingUp size={16} />
-                <span className="text-xs font-bold uppercase">Community Loves</span>
+          {/* Pros and Cons Pills (hidden on discussion thread page) */}
+          {sourceType !== "discussions" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                  <TrendingUp size={16} />
+                  <span className="text-xs font-bold uppercase">Community Loves</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {visiblePros.length > 0 ? (
+                    visiblePros.map((p, idx) => (
+                      <SentimentPill key={`pro-${idx}`} tag={`+${p.topic}`} count={p.count} onClick={onPillClick} />
+                    ))
+                  ) : (
+                    <p className="text-[10px] text-gray-400 italic">No more pros to select.</p>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {visiblePros.length > 0 ? (
-                  visiblePros.map((p, idx) => (
-                    <SentimentPill key={`pro-${idx}`} tag={`+${p.topic}`} count={p.count} onClick={onPillClick} />
-                  ))
-                ) : (
-                  <p className="text-[10px] text-gray-400 italic">No more pros to select.</p>
-                )}
-              </div>
-            </div>
 
-            {/* Cons */}
-            <div
-              className={`space-y-4 pt-6 md:pt-0 md:pl-8 md:border-l ${isDarkMode ? "border-gray-800" : "border-gray-100"}`}
-            >
-              <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                <TrendingDown size={16} />
-                <span className="text-xs font-bold uppercase">Pain Points</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {visibleCons.length > 0 ? (
-                  visibleCons.map((c, idx) => (
-                    <SentimentPill key={`con-${idx}`} tag={`-${c.topic}`} count={c.count} onClick={onPillClick} />
-                  ))
-                ) : (
-                  <p className="text-[10px] text-gray-400 italic">No more pain points to select.</p>
-                )}
+              <div
+                className={`space-y-4 pt-6 md:pt-0 md:pl-8 md:border-l ${isDarkMode ? "border-gray-800" : "border-gray-100"}`}
+              >
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                  <TrendingDown size={16} />
+                  <span className="text-xs font-bold uppercase">Pain Points</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {visibleCons.length > 0 ? (
+                    visibleCons.map((c, idx) => (
+                      <SentimentPill key={`con-${idx}`} tag={`-${c.topic}`} count={c.count} onClick={onPillClick} />
+                    ))
+                  ) : (
+                    <p className="text-[10px] text-gray-400 italic">No more pain points to select.</p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

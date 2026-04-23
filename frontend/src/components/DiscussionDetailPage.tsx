@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { toast } from "sonner@2.0.3";
 import { useAuth } from "../context/AuthContext";
 
@@ -44,6 +44,8 @@ import {
 import { Discussion, Reply, Report } from "../types/discussionTypes";
 import * as discussionApi from "../api/discussionApi";
 import { mapApiDiscussion, mapApiReply } from "../utils/mappers/discussionDataMappers";
+import { SentimentSummary } from "../types/sentimentTypes";
+import { SentimentSummaryCard } from "./SentimentSummaryCard";
 
 interface DiscussionDetailPageProps {
   discussionId: string;
@@ -76,6 +78,59 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
   // ------------------------------------------------------------
   // | DATA SYNCHRONIZATION
   // ------------------------------------------------------------
+  /**
+   * SYNC: Sorted OP Sentiment Tags
+   * Signal: discussion.sentimentTags changes
+   * Action: Groups the original post tags by pros then cons
+   */
+  const sortedDiscussionTags = useMemo(() => {
+    return [...(discussion?.sentimentTags || [])].sort((a, b) => {
+      if (a.startsWith("+") && b.startsWith("-")) return -1;
+      if (a.startsWith("-") && b.startsWith("+")) return 1;
+      return a.localeCompare(b);
+    });
+  }, [discussion?.sentimentTags]);
+
+  /**
+   * SYNC: Live Thread Sentiment Tracking
+   * Signal: discussion or replies list changes
+   * Action: Aggregates tags from the original post and all replies
+   * to generate a thread verdict.
+   */
+  const liveThreadSentiment = useMemo(() => {
+    const summary: SentimentSummary = {
+      pros: [],
+      cons: [],
+      totalAnalyzed: replies.length,
+    };
+
+    if (!discussion) return summary;
+
+    const prosMap: Record<string, number> = {};
+    const consMap: Record<string, number> = {};
+
+    // Combine OP tags and all reply tags into big pool
+    const allTags = [...(discussion.sentimentTags || []), ...replies.flatMap((r) => r.sentimentTags || [])];
+
+    allTags.forEach((tag) => {
+      const topic = tag.slice(1);
+      if (tag.startsWith("+")) {
+        prosMap[topic] = (prosMap[topic] || 0) + 1;
+      } else if (tag.startsWith("-")) {
+        consMap[topic] = (consMap[topic] || 0) + 1;
+      }
+    });
+
+    summary.pros = Object.entries(prosMap)
+      .map(([topic, count]) => ({ topic, count }))
+      .sort((a, b) => b.count - a.count);
+    summary.cons = Object.entries(consMap)
+      .map(([topic, count]) => ({ topic, count }))
+      .sort((a, b) => b.count - a.count);
+
+    return summary;
+  }, [discussion, replies]);
+
   // Load data on mount
   useEffect(() => {
     const loadData = async () => {
@@ -759,6 +814,16 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Sentiment Summary Card v*/}
+        <div className="mb-8">
+          <SentimentSummaryCard
+            data={liveThreadSentiment}
+            sourceType="discussions"
+            isCollapsible={true}
+            defaultExpanded={true}
+          />
         </div>
 
         {/* Reply Section */}
