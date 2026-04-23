@@ -336,7 +336,9 @@ export const getCommunitySentiment = async (): Promise<ISentimentSummary> => {
     ...discussions.map((d) => parseTags(d.sentimentTags)),
     ...replies.map((r) => parseTags(r.sentimentTags)),
   ];
-  return aggregateSentiment(allTagSets);
+  const summary = aggregateSentiment(allTagSets);
+  summary.totalAnalyzed = discussions.length; // Set total analyzed to number of discussions
+  return summary;
 };
 
 /**
@@ -353,5 +355,7 @@ export const getThreadSentiment = async (discussionId: string): Promise<ISentime
   // Fetching tags from discussion thread and replies into an aggregated set
   const opTags = parseTags(discussion.sentimentTags);
   const replyTagSets = replies.map((r) => parseTags(r.sentimentTags));
-  return aggregateSentiment([opTags, ...replyTagSets]);
+  const summary = aggregateSentiment([opTags, ...replyTagSets]);
+  summary.totalAnalyzed = replies.length; // Set total analyzed to number of discussions
+  return summary;
 };
