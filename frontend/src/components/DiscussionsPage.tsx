@@ -45,6 +45,9 @@ import {
 import { Discussion, Report } from "../types/discussionTypes";
 import * as discussionApi from "../api/discussionApi";
 import { mapApiDiscussion } from "../utils/mappers/discussionDataMappers";
+import { SentimentSummary } from "../types/sentimentTypes";
+import { SentimentPill } from "./SentimentPill";
+import { SentimentSummaryCard } from "./SentimentSummaryCard";
 
 type FilterType = "recent" | "trending" | "popular";
 
@@ -60,13 +63,20 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
   // | HOOKS
   // ------------------------------------------------------------
   const { currentUser } = useAuth();
+
+  // Discussion Interaction
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const [userVotes, setUserVotes] = useState<Record<string, "up" | "down" | null>>({});
+
+  // -- Searching & Filtering --
   const [filter, setFilter] = useState<FilterType>("trending");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeSentimentFilters, setActiveSentimentFilters] = useState<string[]>([]);
+
+  // -- Post Creation --
   const [isCreating, setIsCreating] = useState(false);
   const [usingApi, setUsingApi] = useState(true);
   const [newPost, setNewPost] = useState({
@@ -77,11 +87,16 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
   });
   const [newPostImages, setNewPostImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // -- Reporting --
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [reportItemId, setReportItemId] = useState<string>("");
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [userReports, setUserReports] = useState<Record<string, boolean>>({});
+
+  // -- Discussion Sentiment --
+  const [communitySentiment, setCommunitySentiment] = useState<SentimentSummary | null>(null);
 
   // ------------------------------------------------------------
   // | DATA SYNCHRONIZATION
@@ -140,6 +155,11 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
   useEffect(() => {
     const loadedUserReports = getUserReportsFromStorage();
     setUserReports(loadedUserReports);
+  }, []);
+
+  // Fetching community sentiment
+  useEffect(() => {
+    discussionApi.getCommunitySentiment().then(setCommunitySentiment);
   }, []);
 
   // ------------------------------------------------------------
@@ -285,6 +305,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
         replies: 0,
         views: 0,
         images: newPostImages.length > 0 ? newPostImages : undefined,
+        sentimentTags: [],
       };
 
       const updatedDiscussions = [newDiscussion, ...discussions];
@@ -350,6 +371,11 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
     toast.success("Report submitted. Thank you!");
   };
 
+  // Handles filtering discussions by sentiment
+  const handleSentimentFilter = (tag: string) => {
+    setActiveSentimentFilters((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  };
+
   // Toggle category filter
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
@@ -377,6 +403,14 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
       );
     }
 
+    // Filtering by sentiment tags
+    if (activeSentimentFilters.length > 0) {
+      filtered = filtered.filter((disc) => {
+        activeSentimentFilters.every((filterTag) => disc.sentimentTags.includes(filterTag));
+      });
+    }
+
+    // Sorting methods
     switch (filter) {
       case "recent":
         return filtered.sort((a, b) => b.timestamp - a.timestamp);
@@ -685,6 +719,20 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
         </div>
       </div>
 
+      {/* Community Sentiment Summary */}
+      <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 mt-8">
+        <SentimentSummaryCard
+          data={communitySentiment}
+          isLoading={isLoading}
+          sourceType="community"
+          activeFilters={activeSentimentFilters}
+          onPillClick={handleSentimentFilter}
+          isCollapsible={true}
+          defaultExpanded={true}
+          matchedCount={filteredDiscussions.length}
+        />
+      </div>
+
       {/* Discussion List */}
       <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 mt-8">
         <div className="space-y-4">
@@ -774,6 +822,15 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
 
                       {/* Content Preview */}
                       <p className="text-[#666] mb-3 line-clamp-2">{discussion.content}</p>
+
+                      {/* Sentiment Specific Tags */}
+                      {discussion.sentimentTags && discussion.sentimentTags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {discussion.sentimentTags.map((tag, idx) => (
+                            <SentimentPill key={`sent-${idx}`} tag={tag} readOnly={true} />
+                          ))}
+                        </div>
+                      )}
 
                       {/* Tags */}
                       {discussion.tags.length > 0 && (

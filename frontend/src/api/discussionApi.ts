@@ -12,6 +12,7 @@ export const getDiscussions = async (
   filter: "recent" | "trending" | "popular" = "trending",
   search?: string,
   categories?: string[],
+  sentimentTags?: string[],
 ): Promise<DiscussionsListResponse | null> => {
   try {
     const params = new URLSearchParams({
@@ -20,20 +21,14 @@ export const getDiscussions = async (
       filter,
     });
 
-    if (search && search.trim()) {
-      params.append("search", search.trim());
-    }
+    // Adding URL parameters
+    if (search && search.trim()) params.append("search", search.trim());
+    if (categories && categories.length > 0) categories.forEach((cat) => params.append("categories", cat));
+    if (sentimentTags && sentimentTags.length > 0) sentimentTags.forEach((tag) => params.append("sentimentTags", tag));
 
-    if (categories && categories.length > 0) {
-      params.append("categories", categories.join(","));
-    }
-
+    // Fetching for discussion page
     const response = await fetch(`${API_URL}?${params}`);
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch discussions");
-    }
-
+    if (!response.ok) throw new Error("Failed to fetch discussions");
     return await response.json();
   } catch (error) {
     console.error("Error fetching discussions:", error);
