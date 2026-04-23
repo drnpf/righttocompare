@@ -20,6 +20,7 @@ export const mapApiDiscussion = (d: DiscussionResponse): Discussion => {
     downvoters: d.downvoters,
     replies: d.replyCount,
     views: d.views,
+    sentimentTags: d.sentimentTags || [],
   };
 };
 
@@ -41,5 +42,6 @@ export const mapApiReply = (r: ReplyResponse): Reply => {
     downvoters: r.downvoters,
     images: r.images,
     parentReplyId: r.parentReplyId || undefined,
+    sentimentTags: r.sentimentTags || [],
   };
 };
