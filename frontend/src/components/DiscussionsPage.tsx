@@ -789,6 +789,11 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
               const userVote = userVotes[discussion.id];
               const netScore = discussion.upvotes - discussion.downvotes;
               const isOwnDiscussion = currentUser && discussion.authorId === currentUser.uid;
+              const sortedTags = [...(discussion.sentimentTags || [])].sort((a, b) => {
+                if (a.startsWith("+") && b.startsWith("-")) return -1;
+                if (a.startsWith("-") && b.startsWith("+")) return 1;
+                return a.localeCompare(b); // Alphabetical within groups
+              });
 
               return (
                 <div
@@ -859,9 +864,9 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                       <p className="text-[#666] mb-3 line-clamp-2">{discussion.content}</p>
 
                       {/* Sentiment Specific Tags */}
-                      {discussion.sentimentTags && discussion.sentimentTags.length > 0 && (
+                      {sortedTags && sortedTags.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mb-3">
-                          {discussion.sentimentTags.map((tag, idx) => (
+                          {sortedTags.map((tag, idx) => (
                             <SentimentPill key={`sent-${idx}`} tag={tag} readOnly={true} />
                           ))}
                         </div>
