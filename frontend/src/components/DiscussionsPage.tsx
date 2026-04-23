@@ -111,6 +111,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
         filter,
         searchQuery || undefined,
         selectedCategories.length > 0 ? selectedCategories : undefined,
+        activeSentimentFilters,
       );
 
       if (result && result.discussions.length >= 0) {
@@ -144,7 +145,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
     } finally {
       setIsLoading(false);
     }
-  }, [filter, searchQuery, selectedCategories, currentUser]);
+  }, [filter, searchQuery, selectedCategories, activeSentimentFilters, currentUser]);
 
   // Load discussions on mount and when filters change
   useEffect(() => {
@@ -406,7 +407,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
     // Filtering by sentiment tags
     if (activeSentimentFilters.length > 0) {
       filtered = filtered.filter((disc) => {
-        activeSentimentFilters.every((filterTag) => disc.sentimentTags.includes(filterTag));
+        return activeSentimentFilters.every((filterTag) => disc.sentimentTags.includes(filterTag));
       });
     }
 

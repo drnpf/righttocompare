@@ -55,9 +55,9 @@ const discussionSchema = new Schema<IDiscussion>(
     authorId: { type: String, required: true },
     authorName: { type: String, required: true },
     authorAvatar: { type: String, default: "" },
-    category: { type: String, default: "Discussion" },
+    category: { type: String, default: "Discussion", index: true },
     tags: { type: [String], default: [] },
-    sentimentTags: { type: [String], default: [] },
+    sentimentTags: { type: [String], default: [], index: true },
     sentimentSummary: {
       pros: [
         {
@@ -95,7 +95,7 @@ const replySchema = new Schema<IReply>(
     authorName: { type: String, required: true },
     authorAvatar: { type: String, default: "" },
     images: { type: [String], default: [] },
-    sentimentTags: { type: [String], default: [] },
+    sentimentTags: { type: [String], default: [], index: true },
     upvotes: { type: Number, default: 0 },
     downvotes: { type: Number, default: 0 },
     upvoters: { type: [String], default: [] },

@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/authMiddleware";
 import * as discussionService from "../services/discussionService";
+import { analyzeSentiment } from "../utils/sentimentAnalyzer";
 
 /**
  * Creates a new discussion.
@@ -25,6 +26,10 @@ export const createDiscussion = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: "User not authenticated" });
     }
 
+    // Analyzing sentiment tags before saving
+    const sentimentResults = analyzeSentiment(content);
+    const sentimentTags = sentimentResults.map((t) => t.label);
+
     const discussion = await discussionService.createDiscussion({
       authorId: userId,
       authorName: userName,
@@ -33,6 +38,7 @@ export const createDiscussion = async (req: AuthRequest, res: Response) => {
       content: content.trim(),
       category: category || "Discussion",
       tags: Array.isArray(tags) ? tags : [],
+      sentimentTags: sentimentTags,
       images: Array.isArray(images) ? images : [],
     });
 
@@ -79,14 +85,22 @@ export const getThreadSentiment = async (req: AuthRequest, res: Response) => {
  */
 export const getDiscussions = async (req: AuthRequest, res: Response) => {
   try {
+    // Parsing URL for arguments
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const filter = (req.query.filter as "recent" | "trending" | "popular") || "trending";
     const search = req.query.search as string | undefined;
-    const categoriesParam = req.query.categories as string | undefined;
-    const categories = categoriesParam ? categoriesParam.split(",") : undefined;
 
-    const result = await discussionService.getDiscussions(page, limit, filter, search, categories);
+    // Helper function to parse multiple URL parameters
+    const parseQueryParam = (param: any) => {
+      if (!param) return undefined;
+      return Array.isArray(param) ? (param as string[]) : (param as string).split(",");
+    };
+    const categories = parseQueryParam(req.query.categories);
+    const sentimentTags = parseQueryParam(req.query.sentimentTags);
+
+    // Fetching for discussion page with filters applied
+    const result = await discussionService.getDiscussions(page, limit, filter, search, categories, sentimentTags);
 
     res.status(200).json(result);
   } catch (err) {
@@ -226,12 +240,17 @@ export const createReply = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: "User not authenticated" });
     }
 
+    // Analyzing sentiment tags before saving
+    const sentimentResults = analyzeSentiment(content);
+    const sentimentTags = sentimentResults.map((t) => t.label);
+
     const reply = await discussionService.addReply({
       discussionId: id,
       authorId: userId,
       authorName: userName,
       authorAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName)}`,
       content: content.trim(),
+      sentimentTags,
       images: Array.isArray(images) ? images : [],
       parentReplyId: parentReplyId || undefined,
     });

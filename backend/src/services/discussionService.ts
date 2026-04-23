@@ -24,6 +24,7 @@ export const createDiscussion = async (data: {
   content: string;
   category: string;
   tags: string[];
+  sentimentTags: string[];
   images: string[];
 }): Promise<IDiscussion> => {
   // Auto-detect sentiment tags from title + content
@@ -59,6 +60,7 @@ export const getDiscussions = async (
   filter: "recent" | "trending" | "popular" = "trending",
   search?: string,
   categories?: string[],
+  sentimentTags?: string[],
 ): Promise<{
   discussions: IDiscussion[];
   totalDiscussions: number;
@@ -68,13 +70,20 @@ export const getDiscussions = async (
   // Build query
   const query: any = {};
 
+  // Searching logic
   if (search && search.trim()) {
     const searchRegex = new RegExp(search.trim(), "i");
     query.$or = [{ title: searchRegex }, { content: searchRegex }, { tags: searchRegex }];
   }
 
+  // Category filtering
   if (categories && categories.length > 0) {
     query.category = { $in: categories };
+  }
+
+  // Sentiment tag filtering
+  if (sentimentTags && sentimentTags.length > 0) {
+    query.sentimentTags = { $all: sentimentTags };
   }
 
   // Build sort
@@ -207,6 +216,7 @@ export const addReply = async (data: {
   authorName: string;
   authorAvatar: string;
   content: string;
+  sentimentTags: string[];
   images: string[];
   parentReplyId?: string;
 }): Promise<IReply> => {
