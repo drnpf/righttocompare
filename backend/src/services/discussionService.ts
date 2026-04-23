@@ -1,6 +1,6 @@
 import { Discussion, Reply, IDiscussion, IReply } from "../models/Discussion";
+import { ISentimentSummary, ISentimentTag } from "../models/Sentiment";
 import { aggregateSentiment, analyzeSentiment } from "../utils/sentimentAnalyzer";
-import { ISentimentSummary, ISentimentTag } from "src/models/Sentiment";
 
 /**
  * Helper function that converts string tags to ISentimentTag items

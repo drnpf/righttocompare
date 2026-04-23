@@ -1,7 +1,7 @@
 import Phone, { IPhone } from "../models/Phone";
-import { IReview, ICategoryRatings } from "src/models/Review";
+import { IReview, ICategoryRatings } from "../models/Review";
 import { analyzeSentiment } from "../utils/sentimentAnalyzer";
-import { ISentimentItem, ISentimentSummary } from "src/models/Sentiment";
+import { ISentimentItem, ISentimentSummary } from "../models/Sentiment";
 
 export type ReviewSortType = "newest" | "oldest" | "helpful";
 
