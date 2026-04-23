@@ -10,6 +10,7 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
+# Add new discussions here; this script was already ran with these discussion scenarios so it will make duplicates
 SCENARIOS = [
     {
         "discussion": {
@@ -46,7 +47,7 @@ def seed_community():
     
     for scenario in SCENARIOS:
         try:
-            # 1. Create Discussion
+            # Creating discussion
             disc_response = requests.post(
                 BASE_URL, 
                 headers=HEADERS, 
@@ -62,7 +63,7 @@ def seed_community():
             print(f"\nTHREAD: {discussion.get('title')} (ID: {disc_id})")
             print(f"   Generated Tags: {discussion.get('sentimentTags')}")
 
-            # 2. Create Replies
+            # Creating replies
             reply_url = f"{BASE_URL}/{disc_id}/replies"
             for reply_text in scenario["replies"]:
                 reply_payload = {"content": reply_text}
