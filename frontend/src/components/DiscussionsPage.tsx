@@ -758,7 +758,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
       <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 mt-8">
         <SentimentSummaryCard
           data={liveSentiment}
-          isLoading={isLoading}
+          isLoading={isLoading && discussions.length === 0}
           sourceType="community"
           activeFilters={activeSentimentFilters}
           onPillClick={handleSentimentFilter}
@@ -770,182 +770,191 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
 
       {/* Discussion List */}
       <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 mt-8">
-        <div className="space-y-4">
-          {isLoading ? (
-            <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
-              <Loader2 className="w-8 h-8 text-[#2c3968] mx-auto mb-4 animate-spin" />
-              <p className="text-[#666]">Loading discussions...</p>
-            </div>
-          ) : filteredDiscussions.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
-              <MessageCircle className="w-16 h-16 text-[#ccc] mx-auto mb-4" />
-              <h3 className="text-[#2c3968] mb-2">No discussions found</h3>
-              <p className="text-[#666]">
-                {searchQuery ? "Try adjusting your search query" : "Be the first to start a discussion!"}
-              </p>
-            </div>
-          ) : (
-            filteredDiscussions.map((discussion) => {
-              const userVote = userVotes[discussion.id];
-              const netScore = discussion.upvotes - discussion.downvotes;
-              const isOwnDiscussion = currentUser && discussion.authorId === currentUser.uid;
-              const sortedTags = [...(discussion.sentimentTags || [])].sort((a, b) => {
-                if (a.startsWith("+") && b.startsWith("-")) return -1;
-                if (a.startsWith("-") && b.startsWith("+")) return 1;
-                return a.localeCompare(b); // Alphabetical within groups
-              });
+        <div className="relative">
+          {/* Progress Bar */}
+          <div className="absolute top-0 left-0 right-0 h-0.5 z-40 overflow-hidden">
+            <div
+              className={`h-full bg-[#2c3968] transition-all duration-500 ${isLoading ? "w-1/2 animate-infinite-loading" : "w-0 opacity-0"}`}
+            />
+          </div>
+          <div
+            className={`space-y-4 transition-all duration-300 ${isLoading ? "opacity-60 grayscale-[20%] pointer-events-none" : "opacity-100"}`}
+          >
+            {/* INITIAL LOAD ONLY: Show skeleton if we have nothing in discussions list*/}
+            {isLoading && discussions.length === 0 ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-32 w-full bg-white animate-pulse rounded-2xl border border-gray-100" />
+                ))}
+              </div>
+            ) : filteredDiscussions.length === 0 ? (
+              <div className="bg-white rounded-2xl shadow-sm p-12 text-center border-2 border-dashed border-gray-200">
+                <MessageCircle className="w-12 h-12 text-[#ccc] mx-auto mb-4" />
+                <p className="text-[#666] font-medium">No discussions match your current filters.</p>
+              </div>
+            ) : (
+              filteredDiscussions.map((discussion) => {
+                const userVote = userVotes[discussion.id];
+                const netScore = discussion.upvotes - discussion.downvotes;
+                const isOwnDiscussion = currentUser && discussion.authorId === currentUser.uid;
+                const sortedTags = [...(discussion.sentimentTags || [])].sort((a, b) => {
+                  if (a.startsWith("+") && b.startsWith("-")) return -1;
+                  if (a.startsWith("-") && b.startsWith("+")) return 1;
+                  return a.localeCompare(b); // Alphabetical within groups
+                });
 
-              return (
-                <div
-                  key={discussion.id}
-                  className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-transparent hover:border-[#2c3968]/10"
-                >
-                  <div className="flex gap-4 p-6">
-                    {/* Vote Section */}
-                    <div className="flex flex-col items-center gap-2 min-w-[60px]">
-                      <button
-                        onClick={() => handleVote(discussion.id, "up")}
-                        className={`p-2 rounded-lg transition-all duration-200 ${
-                          userVote === "up"
-                            ? "bg-[#2c3968] text-white"
-                            : "bg-[#f0f2f5] text-[#666] hover:bg-[#2c3968] hover:text-white"
-                        }`}
-                      >
-                        <ThumbsUp className="w-5 h-5" />
-                      </button>
-                      <span
-                        className={`font-semibold ${netScore > 0 ? "text-[#2c3968]" : netScore < 0 ? "text-red-500" : "text-[#666]"}`}
-                      >
-                        {netScore > 0 ? "+" : ""}
-                        {netScore}
-                      </span>
-                      <button
-                        onClick={() => handleVote(discussion.id, "down")}
-                        className={`p-2 rounded-lg transition-all duration-200 ${
-                          userVote === "down"
-                            ? "bg-red-500 text-white"
-                            : "bg-[#f0f2f5] text-[#666] hover:bg-red-500 hover:text-white"
-                        }`}
-                      >
-                        <ThumbsDown className="w-5 h-5" />
-                      </button>
-                    </div>
-
-                    {/* Content Section */}
-                    <div className="flex-1 min-w-0">
-                      {/* Header */}
-                      <div className="flex items-start gap-3 mb-3">
-                        <img
-                          src={discussion.authorAvatar}
-                          alt={discussion.author}
-                          className="w-10 h-10 rounded-full bg-[#f0f2f5]"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[#2c3968]">{discussion.author}</span>
-                            <span className="text-[#999]">•</span>
-                            <span className="text-[#999] text-sm">{getTimeAgo(discussion.timestamp)}</span>
-                            <Badge variant="outline" className="ml-auto">
-                              {discussion.category}
-                            </Badge>
-                          </div>
-                        </div>
+                return (
+                  <div
+                    key={discussion.id}
+                    className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-transparent hover:border-[#2c3968]/10"
+                  >
+                    <div className="flex gap-4 p-6">
+                      {/* Vote Section */}
+                      <div className="flex flex-col items-center gap-2 min-w-[60px]">
+                        <button
+                          onClick={() => handleVote(discussion.id, "up")}
+                          className={`p-2 rounded-lg transition-all duration-200 ${
+                            userVote === "up"
+                              ? "bg-[#2c3968] text-white"
+                              : "bg-[#f0f2f5] text-[#666] hover:bg-[#2c3968] hover:text-white"
+                          }`}
+                        >
+                          <ThumbsUp className="w-5 h-5" />
+                        </button>
+                        <span
+                          className={`font-semibold ${netScore > 0 ? "text-[#2c3968]" : netScore < 0 ? "text-red-500" : "text-[#666]"}`}
+                        >
+                          {netScore > 0 ? "+" : ""}
+                          {netScore}
+                        </span>
+                        <button
+                          onClick={() => handleVote(discussion.id, "down")}
+                          className={`p-2 rounded-lg transition-all duration-200 ${
+                            userVote === "down"
+                              ? "bg-red-500 text-white"
+                              : "bg-[#f0f2f5] text-[#666] hover:bg-red-500 hover:text-white"
+                          }`}
+                        >
+                          <ThumbsDown className="w-5 h-5" />
+                        </button>
                       </div>
 
-                      {/* Title */}
-                      <h3
-                        className="text-[#2c3968] mb-2 cursor-pointer hover:text-[#1e2547] transition-colors"
-                        onClick={() => onViewDiscussion?.(discussion.id)}
-                      >
-                        {discussion.title}
-                      </h3>
-
-                      {/* Content Preview */}
-                      <p className="text-[#666] mb-3 line-clamp-2">{discussion.content}</p>
-
-                      {/* Sentiment Specific Tags */}
-                      {sortedTags && sortedTags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-3">
-                          {sortedTags.map((tag, idx) => (
-                            <SentimentPill key={`sent-${idx}`} tag={tag} readOnly={true} />
-                          ))}
+                      {/* Content Section */}
+                      <div className="flex-1 min-w-0">
+                        {/* Header */}
+                        <div className="flex items-start gap-3 mb-3">
+                          <img
+                            src={discussion.authorAvatar}
+                            alt={discussion.author}
+                            className="w-10 h-10 rounded-full bg-[#f0f2f5]"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[#2c3968]">{discussion.author}</span>
+                              <span className="text-[#999]">•</span>
+                              <span className="text-[#999] text-sm">{getTimeAgo(discussion.timestamp)}</span>
+                              <Badge variant="outline" className="ml-auto">
+                                {discussion.category}
+                              </Badge>
+                            </div>
+                          </div>
                         </div>
-                      )}
 
-                      {/* Tags */}
-                      {discussion.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {discussion.tags.map((tag, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2.5 py-1 bg-[#f0f2f5] text-[#2c3968] text-xs rounded-full hover:bg-[#2c3968] hover:text-white transition-colors cursor-pointer"
+                        {/* Title */}
+                        <h3
+                          className="text-[#2c3968] mb-2 cursor-pointer hover:text-[#1e2547] transition-colors"
+                          onClick={() => onViewDiscussion?.(discussion.id)}
+                        >
+                          {discussion.title}
+                        </h3>
+
+                        {/* Content Preview */}
+                        <p className="text-[#666] mb-3 line-clamp-2">{discussion.content}</p>
+
+                        {/* Sentiment Specific Tags */}
+                        {sortedTags && sortedTags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mb-3">
+                            {sortedTags.map((tag, idx) => (
+                              <SentimentPill key={`sent-${idx}`} tag={tag} readOnly={true} />
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Tags */}
+                        {discussion.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {discussion.tags.map((tag, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2.5 py-1 bg-[#f0f2f5] text-[#2c3968] text-xs rounded-full hover:bg-[#2c3968] hover:text-white transition-colors cursor-pointer"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Stats and Actions */}
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                          <div className="flex items-center gap-4 text-sm text-[#999]">
+                            <div className="flex items-center gap-1.5">
+                              <MessageCircle className="w-4 h-4" />
+                              <span>{discussion.replies} replies</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Eye className="w-4 h-4" />
+                              <span>{discussion.views.toLocaleString()} views</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onViewDiscussion?.(discussion.id);
+                              }}
+                              className="text-[#2c3968] hover:bg-[#2c3968] hover:text-white border-[#2c3968]/20"
                             >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Stats and Actions */}
-                      <div className="flex items-center justify-between gap-4 flex-wrap">
-                        <div className="flex items-center gap-4 text-sm text-[#999]">
-                          <div className="flex items-center gap-1.5">
-                            <MessageCircle className="w-4 h-4" />
-                            <span>{discussion.replies} replies</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Eye className="w-4 h-4" />
-                            <span>{discussion.views.toLocaleString()} views</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onViewDiscussion?.(discussion.id);
-                            }}
-                            className="text-[#2c3968] hover:bg-[#2c3968] hover:text-white border-[#2c3968]/20"
-                          >
-                            <CornerDownRight className="w-4 h-4 mr-1.5" />
-                            Reply
-                          </Button>
-                          {isOwnDiscussion && usingApi && (
+                              <CornerDownRight className="w-4 h-4 mr-1.5" />
+                              Reply
+                            </Button>
+                            {isOwnDiscussion && usingApi && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteDiscussion(discussion.id);
+                                }}
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                                Delete
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteDiscussion(discussion.id);
+                                handleOpenReportDialog(discussion.id);
                               }}
-                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                              disabled={userReports[discussion.id]}
+                              className={`text-xs ${userReports[discussion.id] ? "text-red-400" : "text-[#999] hover:text-red-500"}`}
                             >
-                              <Trash2 className="w-3.5 h-3.5 mr-1" />
-                              Delete
+                              <Flag className="w-3.5 h-3.5 mr-1" />
+                              {userReports[discussion.id] ? "Reported" : "Report"}
                             </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenReportDialog(discussion.id);
-                            }}
-                            disabled={userReports[discussion.id]}
-                            className={`text-xs ${userReports[discussion.id] ? "text-red-400" : "text-[#999] hover:text-red-500"}`}
-                          >
-                            <Flag className="w-3.5 h-3.5 mr-1" />
-                            {userReports[discussion.id] ? "Reported" : "Report"}
-                          </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })
-          )}
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
 
