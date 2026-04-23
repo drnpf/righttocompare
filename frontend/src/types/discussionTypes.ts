@@ -91,6 +91,7 @@ export interface Reply {
   downvoters?: string[];
   images?: string[]; // Base64 encoded images
   parentReplyId?: string; // For threaded replies
+  sentimentTags: SentimentTag[];
 }
 
 /**
@@ -113,4 +114,5 @@ export interface Discussion {
   downvoters?: string[];
   replies: number;
   views: number;
+  sentimentTags: SentimentTag[];
 }
