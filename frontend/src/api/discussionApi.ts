@@ -285,7 +285,26 @@ export const getThreadSentiment = async (discussionId: string): Promise<Sentimen
     if (!response.ok) throw new Error("Failed to fetch thread sentiment data");
     return await response.json();
   } catch (error) {
-    console.error("Error fetching thread sentiment", error);
+    console.error("Error fetching discussion thread sentiment", error);
+    return {
+      pros: [],
+      cons: [],
+      totalAnalyzed: 0,
+    };
+  }
+};
+
+/**
+ * Fetches community sentiment, aggregated from all discussions and replies.
+ */
+export const getCommunitySentiment = async (category?: string): Promise<SentimentSummary> => {
+  try {
+    const url = category ? `${API_URL}/sentiment?category=${encodeURIComponent(category)}` : `${API_URL}/sentiment`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Failed to fetch thread sentiment data");
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching discussion community sentiment", error);
     return {
       pros: [],
       cons: [],
