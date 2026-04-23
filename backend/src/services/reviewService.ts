@@ -63,7 +63,7 @@ export const addReviewToPhone = async (
   };
 
   phone.reviews.unshift(newReview);
-  recalculatePhoneMetadata(phone);
+  recalculateSentimentData(phone);
   await phone.save();
   return phone;
 };
@@ -230,7 +230,7 @@ export const removeReview = async (phoneId: string, reviewId: number, userId: st
   }
 
   phone.reviews.splice(reviewIndex, 1);
-  recalculatePhoneMetadata(phone);
+  recalculateSentimentData(phone);
   await phone.save();
   return phone;
 };
@@ -264,7 +264,7 @@ export const getSentimentSummary = async (phoneId: string): Promise<ISentimentSu
  * entries are considered pro (or con) for a specific topic.
  * @param phone The phone to have the sentiment summary recalculated/reanalyzed.
  */
-const recalculatePhoneMetadata = (phone: IPhone): void => {
+const recalculateSentimentData = (phone: IPhone): void => {
   const totalReviews = phone.reviews.length;
   phone.totalReviews = totalReviews;
 
