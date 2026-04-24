@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/authMiddleware";
 import * as reviewService from "../services/reviewService";
+import Phone from "src/models/Phone";
 
 /**
  * Creates a new review for a phone.
@@ -53,27 +54,27 @@ export const createReview = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: "User not authenticated" });
     }
 
-    const updatedPhone = await reviewService.addReviewToPhone(phoneId, {
+    // Adding review for the specified phone
+    const savedReview = await reviewService.addReviewToPhone(phoneId, {
       userId,
       userName,
       categoryRatings,
       title,
       review,
     });
+    if (!savedReview) return res.status(404).json({ message: "Phone not found" });
 
-    if (!updatedPhone) {
-      return res.status(404).json({ message: "Phone not found" });
-    }
+    // Fetches updated phone metadata
+    const updatedPhone = await Phone.findOne({ id: phoneId }).lean();
 
-    // Return the newly created review
-    const newReview = updatedPhone.reviews[0];
+    // Returning review and updated review/rating metadata
     res.status(201).json({
-      review: newReview,
+      review: savedReview,
       meta: {
-        totalReviews: updatedPhone.totalReviews,
-        aggregateRating: updatedPhone.aggregateRating,
-        categoryAverages: updatedPhone.categoryAverages,
-        sentimentSummary: updatedPhone.sentimentSummary,
+        totalReviews: updatedPhone?.totalReviews,
+        aggregateRating: updatedPhone?.aggregateRating,
+        categoryAverages: updatedPhone?.categoryAverages,
+        sentimentSummary: updatedPhone?.sentimentSummary,
       },
     });
   } catch (err: any) {
@@ -128,9 +129,9 @@ export const getReviews = async (req: AuthRequest, res: Response) => {
  */
 export const voteOnReview = async (req: AuthRequest, res: Response) => {
   try {
-    const { phoneId, reviewId } = req.params;
-    const { voteType } = req.body;
+    const { reviewId } = req.params;
 
+    const { voteType } = req.body;
     if (!voteType || !["helpful", "notHelpful"].includes(voteType)) {
       return res.status(400).json({
         message: "Invalid voteType. Must be 'helpful' or 'notHelpful'",
@@ -138,16 +139,10 @@ export const voteOnReview = async (req: AuthRequest, res: Response) => {
     }
 
     const userId = req.user?.uid;
-    if (!userId) {
-      return res.status(401).json({ message: "User not authenticated" });
-    }
+    if (!userId) return res.status(401).json({ message: "User not authenticated" });
 
-    const updatedReview = await reviewService.updateReviewVote(phoneId, parseInt(reviewId), userId, voteType);
-
-    if (!updatedReview) {
-      return res.status(404).json({ message: "Phone or review not found" });
-    }
-
+    const updatedReview = await reviewService.updateReviewVote(reviewId, userId, voteType);
+    if (!updatedReview) return res.status(404).json({ message: "Phone or review not found" });
     res.status(200).json(updatedReview);
   } catch (err) {
     console.error("Error voting on review:", err);
@@ -165,12 +160,9 @@ export const getReviewSentiment = async (req: AuthRequest, res: Response) => {
   try {
     const { phoneId } = req.params;
 
+    // Getting sentiment
     const result = await reviewService.getSentimentSummary(phoneId);
-
-    if (!result) {
-      return res.status(404).json({ message: "Phone not found" });
-    }
-
+    if (!result) return res.status(404).json({ message: "Phone not found" });
     res.status(200).json(result);
   } catch (err) {
     console.error("Error fetching sentiment summary:", err);
@@ -189,23 +181,22 @@ export const deleteReview = async (req: AuthRequest, res: Response) => {
     const { phoneId, reviewId } = req.params;
 
     const userId = req.user?.uid;
-    if (!userId) {
-      return res.status(401).json({ message: "User not authenticated" });
-    }
+    if (!userId) return res.status(401).json({ message: "User not authenticated" });
 
-    const updatedPhone = await reviewService.removeReview(phoneId, parseInt(reviewId), userId);
+    // Attempting to remove review
+    const success = await reviewService.removeReview(reviewId, userId);
+    if (!success) return res.status(404).json({ message: "Review not found" });
 
-    if (!updatedPhone) {
-      return res.status(404).json({ message: "Review not found" });
-    }
+    // Fetches updated phone metadata
+    const updatedPhone = await Phone.findOne({ id: phoneId }).lean();
 
     res.status(200).json({
       message: "Review deleted successfully",
       meta: {
-        totalReviews: updatedPhone.totalReviews,
-        aggregateRating: updatedPhone.aggregateRating,
-        categoryAverages: updatedPhone.categoryAverages,
-        sentimentSummary: updatedPhone.sentimentSummary,
+        totalReviews: updatedPhone?.totalReviews,
+        aggregateRating: updatedPhone?.aggregateRating,
+        categoryAverages: updatedPhone?.categoryAverages,
+        sentimentSummary: updatedPhone?.sentimentSummary,
       },
     });
   } catch (err: any) {
