@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
-import { ICategoryRatings, IReview } from "./Review";
+import { ICategoryRatings } from "./Review";
 import { ISentimentSummary } from "./Sentiment";
 
 export interface IPhoneSummary {
