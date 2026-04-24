@@ -107,7 +107,7 @@ export const getDiscussions = async (
   const totalPages = Math.ceil(totalDiscussions / limit);
   const skip = (page - 1) * limit;
 
-  const discussions = await Discussion.find(query).sort(sort).skip(skip).limit(limit);
+  const discussions = await Discussion.find(query).sort(sort).skip(skip).limit(limit).lean();
 
   return {
     discussions,
@@ -121,7 +121,7 @@ export const getDiscussions = async (
  * Retrieves all discussions created by a specific user, sorted newest first.
  */
 export const getDiscussionsByUser = async (authorId: string): Promise<IDiscussion[]> => {
-  return Discussion.find({ authorId }).sort({ createdAt: -1 });
+  return Discussion.find({ authorId }).sort({ createdAt: -1 }).lean();
 };
 
 /**
@@ -138,7 +138,6 @@ export const getDiscussionById = async (
     discussion.views += 1;
     await discussion.save();
   }
-
   return discussion;
 };
 
@@ -185,7 +184,6 @@ export const voteOnDiscussion = async (
       discussion.downvotes += 1;
     }
   }
-
   await discussion.save();
   return discussion;
 };
@@ -254,7 +252,7 @@ export const addReply = async (data: {
  * Retrieves all replies for a discussion.
  */
 export const getRepliesForDiscussion = async (discussionId: string): Promise<IReply[]> => {
-  return Reply.find({ discussionId }).sort({ createdAt: 1 });
+  return Reply.find({ discussionId }).sort({ createdAt: 1 }).lean();
 };
 
 /**
@@ -328,8 +326,8 @@ export const deleteReply = async (replyId: string, userId: string): Promise<bool
  * Aggregates sentiment tags to show community-wide pros/cons.
  */
 export const getCommunitySentiment = async (): Promise<ISentimentSummary> => {
-  const discussions = await Discussion.find({}, { sentimentTags: 1 });
-  const replies = await Reply.find({}, { sentimentTags: 1 });
+  const discussions = await Discussion.find({}, { sentimentTags: 1 }).lean();
+  const replies = await Reply.find({}, { sentimentTags: 1 }).lean();
 
   // Getting all sentiment tags from discussions and replies
   const allTagSets = [
@@ -347,7 +345,7 @@ export const getCommunitySentiment = async (): Promise<ISentimentSummary> => {
  */
 export const getThreadSentiment = async (discussionId: string): Promise<ISentimentSummary | null> => {
   // Getting discussion thread sentiment tags
-  const discussion = await Discussion.findById(discussionId, { sentimentTags: 1 });
+  const discussion = await Discussion.findById(discussionId, { sentimentTags: 1 }).lean();
   if (!discussion) return null;
 
   const replies = await Reply.find({ discussionId }, { sentimentTags: 1 });
