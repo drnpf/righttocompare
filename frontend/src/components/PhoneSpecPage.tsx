@@ -231,6 +231,19 @@ export default function PhoneSpecPage({
         setReviews(response.reviews);
         setFilteredTotal(response.totalReviews);
         setTotalPages(response.totalPages);
+
+        // Syncing UI to update phone stats whenever phone reviews are fetched
+        setPhoneData((prev) =>
+          prev
+            ? {
+                ...prev,
+                totalReviews: response.totalReviews,
+                aggregateRating: response.aggregateRating,
+                categoryAverages: response.categoryAverages,
+                sentimentSummary: response.sentimentSummary,
+              }
+            : null,
+        );
       }
     } catch (error) {
       console.error("Failed to fetch reviews:", error);
@@ -470,7 +483,7 @@ export default function PhoneSpecPage({
   };
 
   // Handle voting on reviews via API
-  const handleVoteOnReview = async (reviewId: number, voteType: "helpful" | "notHelpful") => {
+  const handleVoteOnReview = async (reviewId: string, voteType: "helpful" | "notHelpful") => {
     if (!currentUser?.firebaseUser) {
       toast.error("Please sign in to vote on reviews");
       return;
@@ -479,9 +492,9 @@ export default function PhoneSpecPage({
     setIsVoting(true);
     try {
       const token = await currentUser.firebaseUser.getIdToken();
-      const updatedReview = await voteOnReview(phoneData.id, reviewId, voteType, token);
+      const updatedReview = await voteOnReview(phoneData!.id, reviewId, voteType, token);
       if (updatedReview) {
-        setReviews((prev) => prev.map((r) => (r.id === reviewId ? updatedReview : r)));
+        setReviews((prev) => prev.map((r) => (r._id === reviewId ? updatedReview : r)));
 
         // Fetches for reviews if a review was liked and the sort method is based on most helpful
         if (sortBy === "helpful") fetchReviews(phoneId!, currentPage, sortBy, activeSentiment);
@@ -505,13 +518,12 @@ export default function PhoneSpecPage({
       const token = await currentUser.firebaseUser.getIdToken();
       const result = await submitReview(phoneData!.id, data, token);
 
-      if (result) {
-        //  Refetch phone specs to get updated categoryAverages and aggregateRating
-        const updatedPhone = await getPhoneById(phoneData!.id);
-        if (updatedPhone) setPhoneData(updatedPhone);
+      if (result && result.review) {
+        setPhoneData((prev) => (prev ? { ...prev, ...result.meta } : null));
 
-        // Reanalyzing sentiment on adding new review
-        fetchSentiment(phoneData!.id);
+        // Getting the newly added review from metadata
+        const newReview = result.review;
+        setReviews((prev) => [newReview, ...prev]);
 
         // Reset list to page 1 to show the new review
         setCurrentPage(1);
@@ -527,24 +539,19 @@ export default function PhoneSpecPage({
   };
 
   // Handle deleting a review
-  const handleDeleteReview = async (reviewId: number) => {
+  const handleDeleteReview = async (reviewId: string) => {
     if (!currentUser?.firebaseUser) return;
 
     try {
       const token = await currentUser.firebaseUser.getIdToken();
-      await deleteReview(phoneData!.id, reviewId, token);
+      const result = await deleteReview(phoneData!.id, reviewId, token);
 
-      // Refetch phone specs to sync the consesus category ratings bars
-      const updatedPhone = await getPhoneById(phoneData!.id);
-      if (updatedPhone) setPhoneData(updatedPhone);
-
-      // Reanalyzing sentiment on adding new review
-      fetchSentiment(phoneData!.id);
-
-      // Refetch current review page
-      fetchReviews(phoneId!, currentPage, sortBy, activeSentiment);
-
-      toast.success("Review deleted successfully");
+      if (result) {
+        // Syncing phone stats and removing phone from local list
+        setPhoneData((prev) => (prev ? { ...prev, ...result.meta } : null));
+        setReviews((prev) => prev.filter((r) => r._id !== reviewId));
+        toast.success("Review deleted successfully");
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to delete review");
     }
@@ -1798,7 +1805,7 @@ export default function PhoneSpecPage({
                   ) : (
                     reviews.map((review) => (
                       <ReviewCard
-                        key={review.id}
+                        key={review._id}
                         review={review}
                         currentUserId={currentUser?.uid}
                         onVote={handleVoteOnReview}

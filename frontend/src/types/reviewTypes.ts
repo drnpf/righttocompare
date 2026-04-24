@@ -18,7 +18,7 @@ export interface ReviewMetaData {
  * This interface is used by the API layer and the page components.
  */
 export interface ReviewFilterOptions {
-  sentiments?: SentimentTag[]; // Using your existing SentimentTag type (+camera, -price, etc.)
+  sentiments?: SentimentTag[];
   sortBy?: ReviewSortType;
 }
 
@@ -48,9 +48,17 @@ export interface ReviewData {
  * review entries for a certain review page, and metadata on pagination and
  * aggregated rating of current phone.
  */
-export interface ReviewsResponse {
+export interface ReviewsResponse extends ReviewMetaData {
   reviews: ReviewData[];
-  totalReviews: number;
   totalPages: number;
   currentPage: number;
+}
+
+/**
+ * For containing create/delete response metadata.
+ */
+export interface ReviewActionResponse {
+  message?: string;
+  review?: ReviewData;
+  meta: ReviewMetaData;
 }

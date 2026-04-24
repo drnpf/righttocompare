@@ -1,5 +1,5 @@
 import { CategoryRatings } from "../components/MultiRatingInput";
-import { ReviewFilterOptions, ReviewData, ReviewsResponse } from "../types/reviewTypes";
+import { ReviewFilterOptions, ReviewData, ReviewsResponse, ReviewActionResponse } from "../types/reviewTypes";
 import { SentimentSummary } from "../types/sentimentTypes";
 import { mapJsonToSentimentSummary } from "../utils/mappers/sentimentMappers";
 
@@ -29,7 +29,10 @@ export const getPhoneReviews = async (
       limit: limit.toString(),
       sortBy: sortBy,
     });
+
+    // Maps sentiment tag labels to string for query
     if (sentiments.length > 0) queryParams.append("sentiment", sentiments.join(","));
+
     const response = await fetch(`${API_URL}/${phoneId}/reviews?${queryParams.toString()}`);
 
     // Handles error case
@@ -57,7 +60,7 @@ export const submitReview = async (
     categoryRatings: CategoryRatings;
   },
   token: string,
-): Promise<ReviewData | null> => {
+): Promise<ReviewActionResponse | null> => {
   try {
     const response = await fetch(`${API_URL}/${phoneId}/reviews`, {
       method: "POST",
@@ -90,7 +93,7 @@ export const submitReview = async (
  */
 export const voteOnReview = async (
   phoneId: string,
-  reviewId: number,
+  reviewId: string,
   voteType: "helpful" | "notHelpful",
   token: string,
 ): Promise<ReviewData | null> => {
@@ -123,7 +126,11 @@ export const voteOnReview = async (
  * @param token Firebase auth token
  * @returns True if deleted successfully
  */
-export const deleteReview = async (phoneId: string, reviewId: number, token: string): Promise<boolean> => {
+export const deleteReview = async (
+  phoneId: string,
+  reviewId: string,
+  token: string,
+): Promise<ReviewActionResponse | null> => {
   try {
     const response = await fetch(`${API_URL}/${phoneId}/reviews/${reviewId}`, {
       method: "DELETE",
@@ -137,7 +144,7 @@ export const deleteReview = async (phoneId: string, reviewId: number, token: str
       throw new Error(errorData.message || "Failed to delete review");
     }
 
-    return true;
+    return await response.json();
   } catch (error) {
     console.error("Error deleting review:", error);
     throw error;
