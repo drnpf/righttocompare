@@ -1,7 +1,17 @@
 import { CategoryRatings } from "../components/MultiRatingInput";
-import { SentimentTag } from "./sentimentTypes";
+import { SentimentSummary, SentimentTag } from "./sentimentTypes";
 
 export type ReviewSortType = "newest" | "oldest" | "helpful";
+
+/**
+ * Contains review metadata of phone.
+ */
+export interface ReviewMetaData {
+  totalReviews: number;
+  aggregateRating: number;
+  categoryAverages: CategoryRatings;
+  sentimentSummary: SentimentSummary;
+}
 
 /**
  * Defines the criteria used to filter and sort reviews.
@@ -17,7 +27,8 @@ export interface ReviewFilterOptions {
  * ratings, content, community feedback and generated sentiment analysis.
  */
 export interface ReviewData {
-  id: number;
+  _id: string;
+  phoneId: string;
   userId?: string;
   userName: string;
   rating: number;
