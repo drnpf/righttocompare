@@ -6121,3 +6121,25 @@ html {
   width: 50%;
   animation: loading-bar 1.5s infinite linear;
 }
+
+/* Marquee animation */
+@keyframes marquee-infinite {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    /* Since we have 4 sets, moving -25% puts the second set 
+       exactly where the first set started. */
+    transform: translateX(-25%);
+  }
+}
+
+.animate-marquee-infinite {
+  display: flex;
+  width: max-content;
+  animation: marquee-infinite 30s linear infinite;
+}
+
+.hover\:pause:hover {
+  animation-play-state: paused;
+}
