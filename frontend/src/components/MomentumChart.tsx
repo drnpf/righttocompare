@@ -1,4 +1,3 @@
-// components/trends/MomentumChart.tsx
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface MomentumChartProps {
@@ -17,7 +16,7 @@ export function MomentumChart({ data }: MomentumChartProps) {
         </span>
       </div>
 
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="99%" aspect={3}>
         <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="colorRating" x1="0" y1="0" x2="0" y2="1">
