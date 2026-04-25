@@ -2,10 +2,13 @@ import mongoose, { Schema, Document } from "mongoose";
 import { ICategoryRatings } from "./Review";
 import { ISentimentSummary } from "./Sentiment";
 
-export interface IPhoneSummary {
+export interface IPhoneReference {
   id: string;
   name: string;
   manufacturer: string;
+}
+
+export interface IPhoneSummary extends IPhoneReference {
   price: number;
   images: {
     main: string;

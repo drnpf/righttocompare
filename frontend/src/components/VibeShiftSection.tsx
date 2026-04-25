@@ -31,12 +31,12 @@ export function VibeShiftSection({ phoneId }: { phoneId: string }) {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Historical Timeline */}
+        {/* SENTIMENT HISTORY CHART */}
         <div className="lg:col-span-2">
           <MomentumChart data={data?.timeline.map((t) => ({ ...t, month: t.date, count: 0 })) || []} />
         </div>
 
-        {/* Current Vibe (Pros & Cons) */}
+        {/* PROS AND CONS */}
         <div className="bg-white dark:bg-[#161b22] p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
           <h3 className="text-sm font-bold uppercase tracking-widest text-[#2c3968] dark:text-[#4a7cf6] mb-6 flex items-center gap-2">
             <Info size={16} /> Current Vibe

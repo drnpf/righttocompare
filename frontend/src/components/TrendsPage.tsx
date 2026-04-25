@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { Activity } from "lucide-react";
 
 // Custom Components & API
-import { MomentumChart } from "../components/MomentumChart";
-import { BrandRadar } from "../components/BrandRadar";
-import { SentimentTicker } from "../components/SentimentTicker";
-import { VibeShiftSection } from "../components/VibeShiftSection";
+import { DebouncedPhoneSearch } from "./DebouncedPhoneSearch";
+import { MomentumChart } from "./MomentumChart";
+import { BrandRadar } from "./BrandRadar";
+import { SentimentTicker } from "./SentimentTicker";
+import { VibeShiftSection } from "./VibeShiftSection";
 import { getGlobalTrends, getTickerData } from "../api/trendsApi";
 import { GlobalTrendsResponse, TickerData } from "../types/trendTypes";
 
@@ -100,41 +101,31 @@ export default function TrendsPage() {
           </div>
         </div>
 
+        {/* DEVICE SENTIMENT (SINGLE-DEVICE) */}
         <section className="space-y-10 pt-10 border-t border-gray-200 dark:border-gray-800">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div>
-              <h2 className="text-3xl font-black tracking-tight dark:text-white uppercase">Device Deep Dive</h2>
-              <p className="text-sm text-gray-500 font-medium">
-                Analyze specific sentiment shifts for a single device.
+              <h2 className="text-3xl font-black tracking-tight dark:text-white uppercase leading-none mb-2">
+                Device Deep Dive
+              </h2>
+              <p className="text-sm text-gray-500 font-medium italic">
+                Analyze the historical sentiment shifts for a specific device.
               </p>
             </div>
-
-            {/* Select Phone */}
-            <div className="relative w-full max-w-xs">
-              <select
-                value={selectedPhoneId}
-                onChange={(e) => setSelectedPhoneId(e.target.value)}
-                className="w-full bg-white dark:bg-[#161b22] border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-sm font-bold shadow-sm focus:ring-2 focus:ring-[#4a7cf6] outline-none appearance-none cursor-pointer"
-              >
-                <option value="">Select a Phone...</option>
-                <option value="iphone-15-pro">iPhone 15 Pro</option>
-                <option value="samsung-s24-ultra">Galaxy S24 Ultra</option>
-              </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path
-                    d="M2.5 4.5L6 8L9.5 4.5"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-            </div>
+            <DebouncedPhoneSearch onSelect={(id) => setSelectedPhoneId(id)} />
           </div>
 
-          <VibeShiftSection phoneId={selectedPhoneId} />
+          {selectedPhoneId ? (
+            <VibeShiftSection phoneId={selectedPhoneId} />
+          ) : (
+            <div className="h-[400px] border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-3xl flex flex-col items-center justify-center text-gray-400">
+              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-full mb-4">
+                <Activity size={32} className="opacity-20" />
+              </div>
+              <p className="font-bold tracking-tight">Ready for analysis</p>
+              <p className="text-xs">Search for a device above to begin the deep dive.</p>
+            </div>
+          )}
         </section>
       </div>
     </div>
