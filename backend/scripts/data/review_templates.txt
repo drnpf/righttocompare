@@ -1,0 +1,102 @@
+[
+  {
+    "title": "Absolutely incredible daily driver",
+    "review": "The battery life on this thing is a beast. I easily get two days of heavy use. The camera is sharp and the performance is snappy. Best phone I have owned.",
+    "ratings": {"camera": 5, "battery": 5, "design": 4, "performance": 5, "value": 4}
+  },
+  {
+    "title": "The display is a work of art",
+    "review": "I can't get over how bright and smooth this display is. Watching movies is a joy. The design is sleek and it feels very premium in the hand.",
+    "ratings": {"camera": 4, "battery": 4, "design": 5, "performance": 4, "value": 3}
+  },
+  {
+    "title": "Gaming performance is top-tier",
+    "review": "No lag at all in heavy games. The performance is consistent and it doesn't get too hot. Very impressed with the thermal management.",
+    "ratings": {"camera": 3, "battery": 4, "design": 4, "performance": 5, "value": 4}
+  },
+  {
+    "title": "A photography powerhouse",
+    "review": "The camera sensors capture so much detail. Low light performance is incredible. If you care about photos, this is the one to get.",
+    "ratings": {"camera": 5, "battery": 3, "design": 4, "performance": 4, "value": 3}
+  },
+  {
+    "title": "Great hardware, messy software",
+    "review": "The design and display are 10/10, but the software is buggy. I've had a few apps crash already. Hopefully, an update fixes this soon.",
+    "ratings": {"camera": 4, "battery": 4, "design": 5, "performance": 3, "value": 3}
+  },
+  {
+    "title": "Solid phone, but the price is high",
+    "review": "Everything works as expected. The battery is good and the camera is reliable. However, the value just isn't there compared to cheaper rivals.",
+    "ratings": {"camera": 4, "battery": 4, "design": 4, "performance": 4, "value": 2}
+  },
+  {
+    "title": "Excellent camera, mediocre battery",
+    "review": "I love the photos I get from this, but I'm looking for a charger by 6 PM. The battery life is just not enough for a pro user.",
+    "ratings": {"camera": 5, "battery": 2, "design": 4, "performance": 4, "value": 3}
+  },
+  {
+    "title": "Snappy performance but boring design",
+    "review": "It's fast and handles everything I throw at it. But it looks exactly like last year's model. The design is getting a bit stale.",
+    "ratings": {"camera": 4, "battery": 4, "design": 2, "performance": 5, "value": 4}
+  },
+  {
+    "title": "Worst battery I've had in years",
+    "review": "I am so disappointed. The battery drains even when I'm not using it. Performance is also sluggish after it gets warm.",
+    "ratings": {"camera": 3, "battery": 1, "design": 3, "performance": 2, "value": 2}
+  },
+  {
+    "title": "Way too expensive for what it is",
+    "review": "The price is insane. The camera is average and the performance isn't any better than phones half the price. Total lack of value.",
+    "ratings": {"camera": 3, "battery": 3, "design": 3, "performance": 3, "value": 1}
+  },
+  {
+    "title": "Uncomfortable design and heavy",
+    "review": "It's so heavy it hurts my wrist. The sharp edges make it uncomfortable to hold without a bulky case. Not a fan of the design.",
+    "ratings": {"camera": 4, "battery": 4, "design": 1, "performance": 4, "value": 3}
+  },
+  {
+    "title": "Constant lagging and stuttering",
+    "review": "The performance is terrible for a flagship. It stutters just scrolling through apps. Returning this for something else.",
+    "ratings": {"camera": 3, "battery": 3, "design": 4, "performance": 1, "value": 2}
+  },
+  {
+    "title": "The ultimate value king",
+    "review": "I can't believe how good this is for the price. The value is unbeatable. It has a great display and decent battery life.",
+    "ratings": {"camera": 3, "battery": 4, "design": 4, "performance": 4, "value": 5}
+  },
+  {
+    "title": "Great features for a fair price",
+    "review": "Finally a phone that doesn't cost a fortune. The performance is snappy and the camera is surprisingly good in daylight.",
+    "ratings": {"camera": 4, "battery": 3, "design": 3, "performance": 4, "value": 5}
+  },
+  {
+    "title": "Decent phone, better value",
+    "review": "It's not the best at anything, but for the price, it's hard to complain. The battery gets me through the day and the display is clear.",
+    "ratings": {"camera": 3, "battery": 4, "design": 3, "performance": 3, "value": 4}
+  },
+  {
+    "title": "A gamers dream device",
+    "review": "The high refresh rate display and raw performance make gaming incredible. The battery drains fast while playing, but it charges quickly.",
+    "ratings": {"camera": 2, "battery": 3, "design": 4, "performance": 5, "value": 4}
+  },
+  {
+    "title": "Sleekest design on the market",
+    "review": "This is the most beautiful phone I've ever held. The design is 10/10. Performance is okay, but I bought it for the looks.",
+    "ratings": {"camera": 3, "battery": 3, "design": 5, "performance": 3, "value": 3}
+  },
+  {
+    "title": "Fastest charging I've seen",
+    "review": "The battery isn't huge, but the charging speed is insane. 0 to 100 in no time. Great performance for multitasking as well.",
+    "ratings": {"camera": 3, "battery": 5, "design": 3, "performance": 4, "value": 4}
+  },
+  {
+    "title": "Software is clean and fast",
+    "review": "I love the minimalist software. No bloatware, just a clean experience. The performance is silky smooth as a result.",
+    "ratings": {"camera": 3, "battery": 4, "design": 4, "performance": 5, "value": 4}
+  },
+  {
+    "title": "Rugged build, very durable",
+    "review": "The design is a bit chunky, but it feels like it could survive a drop. Good battery and the display is plenty bright outdoors.",
+    "ratings": {"camera": 3, "battery": 5, "design": 2, "performance": 3, "value": 4}
+  }
+]

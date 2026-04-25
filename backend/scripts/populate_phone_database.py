@@ -139,7 +139,6 @@ def generate_mock_phones(num_phones=12):
                 }
             },
             "carrierCompatibility": carrier_compatibility,
-            "reviews": [],
         }
         mock_phones.append(phone)
     return mock_phones
