@@ -1,7 +1,8 @@
 import os
 import random
+import argparse
 from datetime import datetime, timedelta
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -12,48 +13,65 @@ load_dotenv(SCRIPT_DIR.parent / ".env")
 MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = os.getenv("DB_NAME")
 
-def fix_dates(days_back=180):
+def fix_dates(days_back, recent_window):
     try:
         client = MongoClient(MONGO_URI)
         db = client[DB_NAME]
         reviews_col = db["reviews"]
+        phones_col = db["phones"]
 
-        print(f"Finding reviews to backdate...")
+        # 1. Map phone release dates for quick lookup
+        phone_releases = {p["id"]: p["releaseDate"] for p in phones_col.find({}, {"id": 1, "releaseDate": 1})}
+
         reviews = list(reviews_col.find({}))
-        
-        if not reviews:
-            print("No reviews found to modify.")
-            return
+        if not reviews: return
 
-        print(f"Backdating {len(reviews)} reviews over a {days_back}-day window...")
+        print(f"Applying temporal-consistent backdating to {len(reviews)} reviews...")
 
-        count = 0
+        bulk_ops = []
         for review in reviews:
-            # Generate a random date between (Now) and (Now - days_back)
-            random_days = random.randint(0, days_back)
-            random_hours = random.randint(0, 23)
-            random_minutes = random.randint(0, 59)
+            p_id = review.get("phoneId")
+            release_date = phone_releases.get(p_id, datetime.now() - timedelta(days=365))
             
+            # The earliest a review can be is the release date
+            days_since_release = (datetime.now() - release_date).days
+            
+            # Use the smaller of the two: your global days_back or the phone actual age
+            max_back = min(days_back, days_since_release)
+            # Adjust the recent window to not exceed the phone age
+            current_window = min(recent_window, max_back)
+
+            if random.random() > 0.3:
+                target_days = random.randint(0, current_window)
+            else:
+                target_days = random.randint(current_window, max_back)
+
             new_date = datetime.now() - timedelta(
-                days=random_days, 
-                hours=random_hours, 
-                minutes=random_minutes
+                days=target_days,
+                hours=random.randint(0, 23),
+                minutes=random.randint(0, 59)
             )
 
-            # Direct update in MongoDB
-            reviews_col.update_one(
-                {"_id": review["_id"]},
-                {"$set": {"date": new_date}}
+            bulk_ops.append(
+                UpdateOne({"_id": review["_id"]}, {"$set": {"date": new_date}})
             )
-            count += 1
 
-        print(f"Successfully updated {count} review timestamps.")
+        if bulk_ops:
+            reviews_col.bulk_write(bulk_ops)
+            print(f"Successfully backdated reviews while respecting release dates.")
 
     except Exception as e:
         print(f"Error: {e}")
-    finally:
-        client.close()
-        print("MongoDB connection closed.")
 
 if __name__ == "__main__":
-    fix_dates(days_back=180)
+    parser = argparse.ArgumentParser(description="Intelligent backdating for MongoDB review documents.")
+    
+    parser.add_argument("--days", type=int, default=180, 
+                        help="Total days to look back from today (default: 180)")
+    parser.add_argument("--window", type=int, default=60, 
+                        help="The 'recent' cluster window in days (default: 60)")
+    args = parser.parse_args()
+
+    if args.window >= args.days:
+        print("Warning: window is >= days. All reviews will be in the recent window.")
+    fix_dates(days_back=args.days, recent_window=args.window)

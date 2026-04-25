@@ -89,7 +89,7 @@ export function DebouncedPhoneSearch({ onSelect }: Props) {
             shouldSearch.current = true;
             setSearchTerm(e.target.value);
           }}
-          onFocus={() => searchTerm && setIsOpen(true)}
+          onFocus={() => searchTerm && results.length > 0 && setIsOpen(true)}
         />
       </div>
 

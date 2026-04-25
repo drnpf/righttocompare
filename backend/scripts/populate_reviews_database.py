@@ -8,16 +8,17 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 from pathlib import Path
 
-from helper.firebase_tool import get_firebase_id_token
-
 # Setup paths relative to script
 SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_DIR = SCRIPT_DIR / "data"
 load_dotenv(SCRIPT_DIR.parent / ".env")
 
+from helper.firebase_tool import get_firebase_id_token
+
 # --- CONFIG ---
 MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = os.getenv("DB_NAME")
+FIREBASE_WEB_API_KEY = os.getenv("FIREBASE_WEB_API_KEY")
 API_BASE_URL = "http://localhost:5001/api/phones"
 
 def clear_all_reviews(db):

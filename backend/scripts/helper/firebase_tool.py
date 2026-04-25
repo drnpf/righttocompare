@@ -1,11 +1,15 @@
 import os
 import requests
 
-FIREBASE_WEB_API_KEY = os.getenv("FIREBASE_WEB_API_KEY")
-
 def get_firebase_id_token(email, password):
+    api_key = os.getenv("FIREBASE_WEB_API_KEY")
+    
+    if not api_key:
+        print("   Error: FIREBASE_WEB_API_KEY is None in helper!")
+        return None
+
     """Logs into Firebase ONCE to get a long-lived token."""
-    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_WEB_API_KEY}"
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}"
     payload = {"email": email, "password": password, "returnSecureToken": True}
     
     response = requests.post(url, json=payload)
