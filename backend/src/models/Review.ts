@@ -38,7 +38,7 @@ const ReviewSchema: Schema = new Schema<IReview>(
       performance: { type: Number, required: true },
       value: { type: Number, required: true },
     },
-    date: { type: Date, default: Date.now, index: true }, // Index this for your Timeline!
+    date: { type: Date, default: Date.now, index: true },
     title: { type: String, required: true },
     review: { type: String, required: true },
     sentimentTags: { type: [String], default: [] },
