@@ -2,6 +2,7 @@ import Phone from "../models/Phone";
 import Review, { IReview, ICategoryRatings } from "../models/Review";
 import { analyzeSentiment } from "../utils/sentimentAnalyzer";
 import { ISentimentItem, ISentimentSummary } from "../models/Sentiment";
+import { calculateDynamicSummary } from "../utils/sentimentUtils";
 
 export type ReviewSortType = "newest" | "oldest" | "helpful";
 
@@ -329,36 +330,3 @@ const syncPhoneMetaData = async (phoneId: string): Promise<void> => {
     },
   );
 };
-
-/**
- * Internal helper to build a sentiment summary from a specific list of reviews
- * @param reviews A list of reviews
- * @returns Returns a sentiment summary of all the reviews
- */
-function calculateDynamicSummary(reviews: any[]): ISentimentSummary {
-  const proCounts: Record<string, number> = {};
-  const conCounts: Record<string, number> = {};
-  const allTopics = new Set<string>();
-
-  reviews.forEach((r) => {
-    r.sentimentTags?.forEach((tag: string) => {
-      const isPos = tag.startsWith("+");
-      const topic = tag.slice(1);
-      allTopics.add(topic);
-      if (isPos) proCounts[topic] = (proCounts[topic] || 0) + 1;
-      else conCounts[topic] = (conCounts[topic] || 0) + 1;
-    });
-  });
-
-  return {
-    pros: Array.from(allTopics)
-      .filter((t) => proCounts[t])
-      .map((t) => ({ topic: t, count: proCounts[t] }))
-      .sort((a, b) => b.count - a.count),
-    cons: Array.from(allTopics)
-      .filter((t) => conCounts[t])
-      .map((t) => ({ topic: t, count: conCounts[t] }))
-      .sort((a, b) => b.count - a.count),
-    totalAnalyzed: reviews.length,
-  };
-}
