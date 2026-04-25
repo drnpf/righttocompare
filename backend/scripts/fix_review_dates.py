@@ -18,14 +18,14 @@ def fix_dates(days_back=180):
         db = client[DB_NAME]
         reviews_col = db["reviews"]
 
-        print(f"🔍 Finding reviews to backdate...")
+        print(f"Finding reviews to backdate...")
         reviews = list(reviews_col.find({}))
         
         if not reviews:
             print("No reviews found to modify.")
             return
 
-        print(f"⏳ Backdating {len(reviews)} reviews over a {days_back}-day window...")
+        print(f"Backdating {len(reviews)} reviews over a {days_back}-day window...")
 
         count = 0
         for review in reviews:
