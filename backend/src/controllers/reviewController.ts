@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/authMiddleware";
 import * as reviewService from "../services/reviewService";
-import Phone from "src/models/Phone";
+import Phone from "../models/Phone";
 
 /**
  * Creates a new review for a phone.
