@@ -166,10 +166,6 @@ export default function PhoneSpecPage({
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "helpful">("newest");
   const [activeSentiment, setActiveSentiment] = useState<string[]>([]);
 
-  // -- Review Sentiment States --
-  const [sentimentSummary, setSentimentSummary] = useState<SentimentSummary | null>(null);
-  const [isLoadingSentiment, setIsLoadingSentiment] = useState(true);
-
   // -- Comparison Cart States --
   const [comparisonData, setComparisonData] = useState<PhoneSummary[]>([]);
   const [showComparisonCart, setShowComparisonCart] = useState(false);
@@ -240,7 +236,7 @@ export default function PhoneSpecPage({
                 totalReviews: response.totalReviews,
                 aggregateRating: response.aggregateRating,
                 categoryAverages: response.categoryAverages,
-                sentimentSummary: response.sentimentSummary,
+                sentimentSummary: response.sentimentSummary || prev.sentimentSummary,
               }
             : null,
         );
@@ -251,71 +247,6 @@ export default function PhoneSpecPage({
       setIsLoadingReviews(false);
     }
   }, []);
-
-  /**
-   * SYNC: Phone Review Sentiment Summary
-   * Action: Fetches the sentiment summary from the backend.
-   */
-  const fetchSentiment = useCallback(async (targetPhoneId: string) => {
-    if (!targetPhoneId) return;
-    setIsLoadingSentiment(true);
-    try {
-      const data = await getPhoneReviewSentiment(targetPhoneId);
-      setSentimentSummary(data);
-    } catch (error) {
-      console.error("Failed to fetch sentiment summary:", error);
-    } finally {
-      setIsLoadingSentiment(false);
-    }
-  }, []);
-
-  /**
-   * SYNC: Live Review Sentiment Tracking
-   * Signal: reviews list or filteredTotal changes
-   * Action: Recalculates sentiment summary (pros/cons) based on the
-   * reviews currently in state.
-   */
-  const liveSentiment = useMemo(() => {
-    const summary: SentimentSummary = {
-      pros: [],
-      cons: [],
-      totalAnalyzed: filteredTotal, // Anchor to the actual count from the backend
-    };
-
-    if (reviews.length === 0) return summary;
-
-    const prosMap: Record<string, number> = {};
-    const consMap: Record<string, number> = {};
-
-    reviews.forEach((review) => {
-      review.sentimentTags?.forEach((tag) => {
-        const topic = tag.slice(1);
-        if (tag.startsWith("+")) {
-          prosMap[topic] = (prosMap[topic] || 0) + 1;
-        } else if (tag.startsWith("-")) {
-          consMap[topic] = (consMap[topic] || 0) + 1;
-        }
-      });
-    });
-
-    summary.pros = Object.entries(prosMap)
-      .map(([topic, count]) => ({ topic, count }))
-      .sort((a, b) => b.count - a.count);
-    summary.cons = Object.entries(consMap)
-      .map(([topic, count]) => ({ topic, count }))
-      .sort((a, b) => b.count - a.count);
-
-    return summary;
-  }, [reviews, filteredTotal]);
-
-  /**
-   * SYNC: Phone Review Sentiment Summary
-   * Signal: phoneId change
-   * Action: Fetches the review sentiment summary from backend on current phone
-   */
-  useEffect(() => {
-    if (phoneId) fetchSentiment(phoneId);
-  }, [phoneId, fetchSentiment]);
 
   /**
    * SYNC: Phone Review Page
@@ -448,6 +379,8 @@ export default function PhoneSpecPage({
   // -- REVIEW SENTIMENT --
   // Handles filtering via sentiment pills
   const handleSentimentClick = (tag: string) => {
+    setIsLoadingReviews(true);
+
     setActiveSentiment((prev) => {
       const isAlreadySelected = prev.includes(tag);
       const nextSentiments = isAlreadySelected ? prev.filter((t) => t !== tag) : [...prev, tag];
@@ -1675,17 +1608,15 @@ export default function PhoneSpecPage({
 
             <CollapsibleContent>
               {/* Sentiment Summary (Pros/Cons + Filtering) */}
-              {sentimentSummary && (
-                <SentimentSummaryCard
-                  data={liveSentiment}
-                  isLoading={isLoadingSentiment}
-                  activeFilters={activeSentiment}
-                  onPillClick={handleSentimentClick}
-                  isCollapsible={true}
-                  defaultExpanded={true}
-                  matchedCount={filteredTotal}
-                />
-              )}
+              <SentimentSummaryCard
+                data={phoneData.sentimentSummary}
+                isLoading={isLoadingReviews}
+                activeFilters={activeSentiment}
+                onPillClick={handleSentimentClick}
+                isCollapsible={true}
+                defaultExpanded={true}
+                matchedCount={filteredTotal}
+              />
 
               {/* Global Community Statistics */}
               <div className="mb-8 bg-gradient-to-br from-[#f7f9fc] to-white border-2 border-[#2c3968]/10 rounded-2xl p-8">

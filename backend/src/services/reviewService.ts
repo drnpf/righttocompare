@@ -80,6 +80,7 @@ export const getReviewsForPhone = async (
   currentPage: number;
   aggregateRating: number;
   categoryAverages: ICategoryRatings;
+  sentimentSummary: ISentimentSummary;
 } | null> => {
   const { sentiments = [], sortBy = "newest" } = options; // Default options
   const skip = (page - 1) * limit; // # of pages to skip
@@ -94,20 +95,22 @@ export const getReviewsForPhone = async (
   else if (sortBy === "oldest") sortStage["reviews.date"] = 1;
   else if (sortBy === "helpful") sortStage["reviews.helpful"] = -1;
 
-  // Executing query for getting review page
+  // Executing query for getting review page and filtering by sentiments
   const reviews = await Review.find(query).sort(sortStage).skip(skip).limit(limit).lean();
+  const allMatchingReviews = await Review.find(query, { sentimentTags: 1 }).lean();
+
+  // Getting metadata based on the reviews filtered by sentiment
+  const totalMatchingCount = allMatchingReviews.length;
+  const filteredSummary = calculateDynamicSummary(allMatchingReviews);
 
   // Getting phone metadata
-  const phoneStats = await Phone.findOne(
-    { id: phoneId },
-    { totalReviews: 1, aggregateRating: 1, categoryAverages: 1 },
-  ).lean();
+  const phoneStats = await Phone.findOne({ id: phoneId }).lean();
   if (!phoneStats) return null;
 
   return {
     reviews: reviews,
-    totalReviews: phoneStats?.totalReviews,
-    totalPages: Math.ceil(phoneStats?.totalReviews / limit),
+    totalReviews: totalMatchingCount,
+    totalPages: Math.ceil(totalMatchingCount / limit),
     currentPage: page,
     aggregateRating: phoneStats?.aggregateRating || 0,
     categoryAverages: phoneStats?.categoryAverages || {
@@ -117,6 +120,7 @@ export const getReviewsForPhone = async (
       performance: 0,
       value: 0,
     },
+    sentimentSummary: filteredSummary,
   };
 };
 
@@ -325,3 +329,36 @@ const syncPhoneMetaData = async (phoneId: string): Promise<void> => {
     },
   );
 };
+
+/**
+ * Internal helper to build a sentiment summary from a specific list of reviews
+ * @param reviews A list of reviews
+ * @returns Returns a sentiment summary of all the reviews
+ */
+function calculateDynamicSummary(reviews: any[]): ISentimentSummary {
+  const proCounts: Record<string, number> = {};
+  const conCounts: Record<string, number> = {};
+  const allTopics = new Set<string>();
+
+  reviews.forEach((r) => {
+    r.sentimentTags?.forEach((tag: string) => {
+      const isPos = tag.startsWith("+");
+      const topic = tag.slice(1);
+      allTopics.add(topic);
+      if (isPos) proCounts[topic] = (proCounts[topic] || 0) + 1;
+      else conCounts[topic] = (conCounts[topic] || 0) + 1;
+    });
+  });
+
+  return {
+    pros: Array.from(allTopics)
+      .filter((t) => proCounts[t])
+      .map((t) => ({ topic: t, count: proCounts[t] }))
+      .sort((a, b) => b.count - a.count),
+    cons: Array.from(allTopics)
+      .filter((t) => conCounts[t])
+      .map((t) => ({ topic: t, count: conCounts[t] }))
+      .sort((a, b) => b.count - a.count),
+    totalAnalyzed: reviews.length,
+  };
+}
