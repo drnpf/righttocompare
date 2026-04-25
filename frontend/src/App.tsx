@@ -21,6 +21,7 @@ const SignUpPage = lazy(() => import("./components/SignUpPage"));
 const UserProfilePage = lazy(() => import("./components/UserProfilePage"));
 const AdminDashboardPage = lazy(() => import("./components/AdminDashboardPage"));
 const PasswordResetPage = lazy(() => import("./components/PasswordResetPage"));
+const TrendsPage = lazy(() => import("./components/TrendsPage"));
 
 // UI Component (Lazy Loaded)
 const AIChatWidget = lazy(() => import("./components/AIChatWidget"));
@@ -238,6 +239,10 @@ function AppContent() {
     navigate("/discussions");
   };
 
+  const handleTrendsClick = () => {
+    navigate("/trends");
+  };
+
   // ------------------------------------------------------------
   // | UI SECTION
   // -----------------------------------------------------------
@@ -251,6 +256,7 @@ function AppContent() {
             user={currentUser}
             onComparisonToolClick={handleNavigateToComparison}
             onDiscussionsClick={handleDiscussionsClick}
+            onTrendsClick={handleTrendsClick}
             onSignInClick={handleSignInClick}
             onSignOut={handleSignOut}
             onProfileClick={handleProfileClick}
@@ -334,6 +340,9 @@ function AppContent() {
 
               {/* Password reset */}
               <Route path="/password-reset" element={<PasswordResetPage onNavigateToSignIn={handleSignInClick} />} />
+
+              {/* Trends Page */}
+              <Route path="/trends" element={<TrendsPage onNavigate={handleNavigateToPhone} />} />
 
               {/* Catch all */}
               <Route path="*" element={<Navigate to="/" replace />} />

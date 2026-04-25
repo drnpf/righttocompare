@@ -34,6 +34,7 @@ function LogoButton({ className, onClick }: { className?: string; onClick?: () =
 function NavigationBarLinks({
   onComparisonToolClick,
   onDiscussionsClick,
+  onTrendsClick,
   isAuthenticated,
   user,
   onSignInClick,
@@ -44,6 +45,7 @@ function NavigationBarLinks({
 }: {
   onComparisonToolClick?: () => void;
   onDiscussionsClick?: () => void;
+  onTrendsClick?: () => void;
   isAuthenticated: boolean;
   user: AppUser | null;
   onSignInClick?: () => void;
@@ -112,6 +114,7 @@ function NavigationBarLinks({
         className="content-start flex flex-wrap gap-[8px] items-center relative shrink-0"
         data-name="Navigation Bar Pill List"
       >
+        {/* Catalog Page */}
         <button
           onClick={onCatalogClick}
           className="box-border content-stretch flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
@@ -121,6 +124,19 @@ function NavigationBarLinks({
             <p className="font-['Inter:Bold',sans-serif] font-bold leading-none text-[16px] whitespace-pre">Catalog</p>
           </div>
         </button>
+
+        {/* Trends Page */}
+        <button
+          onClick={onTrendsClick}
+          className="box-border content-stretch flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
+          data-name="Trends"
+        >
+          <div className="flex flex-col font-['Inter:Bold',sans-serif] font-bold justify-center leading-none text-[16px] text-[#1e1e1e] dark:text-white whitespace-pre">
+            Trends
+          </div>
+        </button>
+
+        {/* Comparison Tool Page */}
         <button
           onClick={onComparisonToolClick}
           className="box-border content-stretch flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
@@ -132,6 +148,8 @@ function NavigationBarLinks({
             </p>
           </div>
         </button>
+
+        {/* Discussion Page */}
         <button
           onClick={onDiscussionsClick}
           className="box-border content-stretch hidden lg:flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
@@ -222,6 +240,7 @@ function NavigationBarLinks({
 function NavigationBarLayout({
   onComparisonToolClick,
   onDiscussionsClick,
+  onTrendsClick,
   isAuthenticated,
   user,
   onSignInClick,
@@ -233,6 +252,7 @@ function NavigationBarLayout({
 }: {
   onComparisonToolClick?: () => void;
   onDiscussionsClick?: () => void;
+  onTrendsClick?: () => void;
   isAuthenticated: boolean;
   user: AppUser | null;
   onSignInClick?: () => void;
@@ -253,6 +273,7 @@ function NavigationBarLayout({
       <NavigationBarLinks
         onComparisonToolClick={onComparisonToolClick}
         onDiscussionsClick={onDiscussionsClick}
+        onTrendsClick={onTrendsClick}
         isAuthenticated={isAuthenticated}
         user={user}
         onSignInClick={onSignInClick}
@@ -268,6 +289,7 @@ function NavigationBarLayout({
 export default function NavigationBar({
   onComparisonToolClick,
   onDiscussionsClick,
+  onTrendsClick,
   isAuthenticated,
   user,
   onSignInClick,
@@ -279,6 +301,7 @@ export default function NavigationBar({
 }: {
   onComparisonToolClick?: () => void;
   onDiscussionsClick?: () => void;
+  onTrendsClick?: () => void;
   isAuthenticated: boolean;
   user: AppUser | null;
   onSignInClick?: () => void;
@@ -296,6 +319,7 @@ export default function NavigationBar({
       <NavigationBarLayout
         onComparisonToolClick={onComparisonToolClick}
         onDiscussionsClick={onDiscussionsClick}
+        onTrendsClick={onTrendsClick}
         isAuthenticated={isAuthenticated}
         user={user}
         onSignInClick={onSignInClick}
