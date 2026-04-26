@@ -78,3 +78,4 @@ Thumbs.db
 # --- BACKEND IGNORES ---
 # Ignores keys
 backend/src/config/keys/*
+backend/phone_recs_bot/.venv/
