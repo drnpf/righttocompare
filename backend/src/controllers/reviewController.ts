@@ -67,7 +67,15 @@ export const createReview = async (req: AuthRequest, res: Response) => {
 
     // Return the newly created review
     const newReview = updatedPhone.reviews[0];
-    res.status(201).json(newReview);
+    res.status(201).json({
+      review: newReview,
+      meta: {
+        totalReviews: updatedPhone.totalReviews,
+        aggregateRating: updatedPhone.aggregateRating,
+        categoryAverages: updatedPhone.categoryAverages,
+        sentimentSummary: updatedPhone.sentimentSummary,
+      },
+    });
   } catch (err: any) {
     if (err.message === "User has already reviewed this phone") {
       return res.status(409).json({ message: err.message });
@@ -87,14 +95,24 @@ export const getReviews = async (req: AuthRequest, res: Response) => {
   try {
     const { phoneId } = req.params;
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const rawLimit = parseInt(req.query.limit as string) || 10;
+    const limit = Math.min(rawLimit, 25); // Hard cap of 25 reviews per page
 
-    const result = await reviewService.getReviewsForPhone(phoneId, page, limit);
+    // Parsing and sanitizing sort
+    const allowedSorts: reviewService.ReviewSortType[] = ["newest", "oldest", "helpful"];
+    const sortBy = allowedSorts.includes(req.query.sortBy as reviewService.ReviewSortType)
+      ? (req.query.sortBy as reviewService.ReviewSortType)
+      : "newest";
 
+    // Parsing sentiment filters
+    const sentimentQuery = req.query.sentiment as string;
+    const sentiments = sentimentQuery ? sentimentQuery.split(",") : [];
+    const result = await reviewService.getReviewsForPhone(phoneId, page, limit, { sentiments, sortBy });
+
+    // Searching for phone
     if (!result) {
       return res.status(404).json({ message: "Phone not found" });
     }
-
     res.status(200).json(result);
   } catch (err) {
     console.error("Error fetching reviews:", err);
@@ -124,12 +142,7 @@ export const voteOnReview = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: "User not authenticated" });
     }
 
-    const updatedReview = await reviewService.updateReviewVote(
-      phoneId,
-      parseInt(reviewId),
-      userId,
-      voteType
-    );
+    const updatedReview = await reviewService.updateReviewVote(phoneId, parseInt(reviewId), userId, voteType);
 
     if (!updatedReview) {
       return res.status(404).json({ message: "Phone or review not found" });
@@ -139,6 +152,29 @@ export const voteOnReview = async (req: AuthRequest, res: Response) => {
   } catch (err) {
     console.error("Error voting on review:", err);
     res.status(500).json({ message: "Server error voting on review" });
+  }
+};
+
+/**
+ * Gets a sentiment summary (pros/cons) for a phone based on review text analysis.
+ * @route GET /api/phones/:phoneId/reviews/sentiment
+ * @param req Request containing phoneId param
+ * @param res Express Response
+ */
+export const getReviewSentiment = async (req: AuthRequest, res: Response) => {
+  try {
+    const { phoneId } = req.params;
+
+    const result = await reviewService.getSentimentSummary(phoneId);
+
+    if (!result) {
+      return res.status(404).json({ message: "Phone not found" });
+    }
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("Error fetching sentiment summary:", err);
+    res.status(500).json({ message: "Server error fetching sentiment summary" });
   }
 };
 
@@ -157,17 +193,21 @@ export const deleteReview = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: "User not authenticated" });
     }
 
-    const deleted = await reviewService.removeReview(
-      phoneId,
-      parseInt(reviewId),
-      userId
-    );
+    const updatedPhone = await reviewService.removeReview(phoneId, parseInt(reviewId), userId);
 
-    if (!deleted) {
+    if (!updatedPhone) {
       return res.status(404).json({ message: "Review not found" });
     }
 
-    res.status(200).json({ message: "Review deleted successfully" });
+    res.status(200).json({
+      message: "Review deleted successfully",
+      meta: {
+        totalReviews: updatedPhone.totalReviews,
+        aggregateRating: updatedPhone.aggregateRating,
+        categoryAverages: updatedPhone.categoryAverages,
+        sentimentSummary: updatedPhone.sentimentSummary,
+      },
+    });
   } catch (err: any) {
     if (err.message === "Not authorized to delete this review") {
       return res.status(403).json({ message: err.message });

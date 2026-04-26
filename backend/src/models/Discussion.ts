@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from "mongoose";
+import { ISentimentSummary } from "./Sentiment";
 
 /**
  * Interface for a Discussion document.
@@ -11,6 +12,8 @@ export interface IDiscussion extends Document {
   authorAvatar: string;
   category: string;
   tags: string[];
+  sentimentTags: string[]; // e.g. ["+camera", "-battery", "+performance"]
+  sentimentSummary: ISentimentSummary;
   images: string[];
   upvotes: number;
   downvotes: number;
@@ -32,6 +35,7 @@ export interface IReply extends Document {
   authorName: string;
   authorAvatar: string;
   images: string[];
+  sentimentTags: string[]; // e.g. ["+camera", "-battery"]
   upvotes: number;
   downvotes: number;
   upvoters: string[];
@@ -51,8 +55,24 @@ const discussionSchema = new Schema<IDiscussion>(
     authorId: { type: String, required: true },
     authorName: { type: String, required: true },
     authorAvatar: { type: String, default: "" },
-    category: { type: String, default: "Discussion" },
+    category: { type: String, default: "Discussion", index: true },
     tags: { type: [String], default: [] },
+    sentimentTags: { type: [String], default: [], index: true },
+    sentimentSummary: {
+      pros: [
+        {
+          topic: { type: String },
+          count: { type: Number, default: 0 },
+        },
+      ],
+      cons: [
+        {
+          topic: { type: String },
+          count: { type: Number, default: 0 },
+        },
+      ],
+      totalAnalyzed: { type: Number, default: 0 },
+    },
     images: { type: [String], default: [] },
     upvotes: { type: Number, default: 0 },
     downvotes: { type: Number, default: 0 },
@@ -61,7 +81,7 @@ const discussionSchema = new Schema<IDiscussion>(
     replyCount: { type: Number, default: 0 },
     views: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 /**
@@ -75,13 +95,14 @@ const replySchema = new Schema<IReply>(
     authorName: { type: String, required: true },
     authorAvatar: { type: String, default: "" },
     images: { type: [String], default: [] },
+    sentimentTags: { type: [String], default: [], index: true },
     upvotes: { type: Number, default: 0 },
     downvotes: { type: Number, default: 0 },
     upvoters: { type: [String], default: [] },
     downvoters: { type: [String], default: [] },
     parentReplyId: { type: Schema.Types.ObjectId, ref: "Reply", default: null },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const Discussion = mongoose.model<IDiscussion>("Discussion", discussionSchema);

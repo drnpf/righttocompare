@@ -1,48 +1,7 @@
+import { DiscussionResponse, ReplyResponse, DiscussionsListResponse } from "../types/discussionTypes";
+import { SentimentSummary } from "../types/sentimentTypes";
+
 const API_URL = "http://localhost:5001/api/discussions"; // CHANGE LATER ON PRODUCTION
-
-export interface DiscussionResponse {
-  _id: string;
-  title: string;
-  content: string;
-  authorId: string;
-  authorName: string;
-  authorAvatar: string;
-  category: string;
-  tags: string[];
-  images: string[];
-  upvotes: number;
-  downvotes: number;
-  upvoters: string[];
-  downvoters: string[];
-  replyCount: number;
-  views: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ReplyResponse {
-  _id: string;
-  discussionId: string;
-  content: string;
-  authorId: string;
-  authorName: string;
-  authorAvatar: string;
-  images: string[];
-  upvotes: number;
-  downvotes: number;
-  upvoters: string[];
-  downvoters: string[];
-  parentReplyId: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface DiscussionsListResponse {
-  discussions: DiscussionResponse[];
-  totalDiscussions: number;
-  totalPages: number;
-  currentPage: number;
-}
 
 /**
  * Fetches paginated discussions with optional filtering and search.
@@ -52,7 +11,8 @@ export const getDiscussions = async (
   limit: number = 20,
   filter: "recent" | "trending" | "popular" = "trending",
   search?: string,
-  categories?: string[]
+  categories?: string[],
+  sentimentTags?: string[],
 ): Promise<DiscussionsListResponse | null> => {
   try {
     const params = new URLSearchParams({
@@ -61,20 +21,14 @@ export const getDiscussions = async (
       filter,
     });
 
-    if (search && search.trim()) {
-      params.append("search", search.trim());
-    }
+    // Adding URL parameters
+    if (search && search.trim()) params.append("search", search.trim());
+    if (categories && categories.length > 0) categories.forEach((cat) => params.append("categories", cat));
+    if (sentimentTags && sentimentTags.length > 0) sentimentTags.forEach((tag) => params.append("sentimentTags", tag));
 
-    if (categories && categories.length > 0) {
-      params.append("categories", categories.join(","));
-    }
-
+    // Fetching for discussion page
     const response = await fetch(`${API_URL}?${params}`);
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch discussions");
-    }
-
+    if (!response.ok) throw new Error("Failed to fetch discussions");
     return await response.json();
   } catch (error) {
     console.error("Error fetching discussions:", error);
@@ -85,9 +39,7 @@ export const getDiscussions = async (
 /**
  * Fetches a single discussion by ID (increments view count).
  */
-export const getDiscussion = async (
-  id: string
-): Promise<DiscussionResponse | null> => {
+export const getDiscussion = async (id: string): Promise<DiscussionResponse | null> => {
   try {
     const response = await fetch(`${API_URL}/${id}`);
 
@@ -117,7 +69,7 @@ export const createDiscussion = async (
     tags: string[];
     images: string[];
   },
-  token: string
+  token: string,
 ): Promise<DiscussionResponse | null> => {
   try {
     const response = await fetch(API_URL, {
@@ -147,7 +99,7 @@ export const createDiscussion = async (
 export const voteOnDiscussion = async (
   id: string,
   voteType: "up" | "down",
-  token: string
+  token: string,
 ): Promise<DiscussionResponse | null> => {
   try {
     const response = await fetch(`${API_URL}/${id}/vote`, {
@@ -174,10 +126,7 @@ export const voteOnDiscussion = async (
 /**
  * Deletes a discussion (author only).
  */
-export const deleteDiscussion = async (
-  id: string,
-  token: string
-): Promise<boolean> => {
+export const deleteDiscussion = async (id: string, token: string): Promise<boolean> => {
   try {
     const response = await fetch(`${API_URL}/${id}`, {
       method: "DELETE",
@@ -201,9 +150,7 @@ export const deleteDiscussion = async (
 /**
  * Fetches all replies for a discussion.
  */
-export const getReplies = async (
-  discussionId: string
-): Promise<ReplyResponse[]> => {
+export const getReplies = async (discussionId: string): Promise<ReplyResponse[]> => {
   try {
     const response = await fetch(`${API_URL}/${discussionId}/replies`);
 
@@ -228,7 +175,7 @@ export const createReply = async (
     images: string[];
     parentReplyId?: string;
   },
-  token: string
+  token: string,
 ): Promise<ReplyResponse | null> => {
   try {
     const response = await fetch(`${API_URL}/${discussionId}/replies`, {
@@ -258,7 +205,7 @@ export const createReply = async (
 export const voteOnReply = async (
   replyId: string,
   voteType: "up" | "down",
-  token: string
+  token: string,
 ): Promise<ReplyResponse | null> => {
   try {
     const response = await fetch(`${API_URL}/replies/${replyId}/vote`, {
@@ -283,12 +230,27 @@ export const voteOnReply = async (
 };
 
 /**
+ * Fetches all discussions created by a specific user.
+ */
+export const getDiscussionsByUser = async (userId: string): Promise<DiscussionResponse[]> => {
+  try {
+    const response = await fetch(`${API_URL}/user/${userId}`);
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch user discussions");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching user discussions:", error);
+    return [];
+  }
+};
+
+/**
  * Deletes a reply (author only).
  */
-export const deleteReply = async (
-  replyId: string,
-  token: string
-): Promise<boolean> => {
+export const deleteReply = async (replyId: string, token: string): Promise<boolean> => {
   try {
     const response = await fetch(`${API_URL}/replies/${replyId}`, {
       method: "DELETE",
@@ -306,5 +268,42 @@ export const deleteReply = async (
   } catch (error) {
     console.error("Error deleting reply:", error);
     throw error;
+  }
+};
+
+/**
+ * Gets the sentiment summary for the discussion thread
+ */
+export const getThreadSentiment = async (discussionId: string): Promise<SentimentSummary> => {
+  try {
+    const response = await fetch(`${API_URL}/${discussionId}/sentiment`);
+    if (!response.ok) throw new Error("Failed to fetch thread sentiment data");
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching discussion thread sentiment", error);
+    return {
+      pros: [],
+      cons: [],
+      totalAnalyzed: 0,
+    };
+  }
+};
+
+/**
+ * Fetches community sentiment, aggregated from all discussions and replies.
+ */
+export const getCommunitySentiment = async (category?: string): Promise<SentimentSummary> => {
+  try {
+    const url = category ? `${API_URL}/sentiment?category=${encodeURIComponent(category)}` : `${API_URL}/sentiment`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Failed to fetch thread sentiment data");
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching discussion community sentiment", error);
+    return {
+      pros: [],
+      cons: [],
+      totalAnalyzed: 0,
+    };
   }
 };
