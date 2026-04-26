@@ -1,4 +1,4 @@
-import { Search, Grid3x3, List, ChevronDown, Plus, Check } from "lucide-react";
+import { Search, Grid3x3, List, ChevronDown, Plus, Check} from "lucide-react";
 import { useState } from "react";
 import { phonesData } from "../data/phoneData";
 import ComparisonCart from "./ComparisonCart";
@@ -14,6 +14,11 @@ interface PhoneCatalogPageProps {
   recentlyViewedPhones?: string[];
 }
 
+// Parses price string
+const parsePrice = (priceStr: string): number => {
+  return parseInt(priceStr.replace(/[^0-9]/g, "")) || 0;
+};
+
 export default function PhoneCatalogPage({
   onNavigate,
   comparisonPhoneIds = [],
@@ -27,6 +32,12 @@ export default function PhoneCatalogPage({
   const [manufacturerFilter, setManufacturerFilter] = useState<string>("all");
   const [isCartMinimized, setIsCartMinimized] = useState(false);
   const [activeTab, setActiveTab] = useState<"catalog" | "hot" | "popular">("catalog");
+  const [priceDropdownOpen, setPriceDropdownOpen] = useState(false);
+
+  // Price range filter  
+  const [minPrice, setMinPrice] = useState<string>("");
+  const [maxPrice, setMaxPrice] = useState<string>("");
+
 
   // Get all phones as an array
   const allPhones = Object.values(phonesData);
@@ -75,7 +86,14 @@ export default function PhoneCatalogPage({
         phone.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         phone.manufacturer.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesManufacturer = manufacturerFilter === "all" || phone.manufacturer === manufacturerFilter;
-      return matchesSearch && matchesManufacturer;
+      
+      // Price range filtering
+      const phonePrice = parsePrice(phone.price);
+      const min = minPrice ? parseInt(minPrice) : 0;
+      const max = maxPrice ? parseInt(maxPrice) : Infinity;
+      const matchesPrice = phonePrice >= min && phonePrice <= max;
+
+      return matchesSearch && matchesManufacturer && matchesPrice;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -91,6 +109,9 @@ export default function PhoneCatalogPage({
           return 0;
       }
     });
+  
+  // Checks if price filter is on
+  const isPriceFilterActive = minPrice !== "" || maxPrice !== "";  
 
   const handleAddToComparison = (phoneId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -122,6 +143,14 @@ export default function PhoneCatalogPage({
 
   const isPhoneInComparison = (phoneId: string) => {
     return comparisonPhoneIds.includes(phoneId);
+  };
+
+  // Clears all filters 
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setManufacturerFilter("all");
+    setMinPrice("");
+    setMaxPrice("");
   };
 
   return (
@@ -205,6 +234,115 @@ export default function PhoneCatalogPage({
                 />
               </div>
 
+              {/* Price Range Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setPriceDropdownOpen(!priceDropdownOpen)}
+                  className={`appearance-none pl-4 pr-10 py-3 rounded-lg border ${
+                    isPriceFilterActive
+                      ? "border-[#2c3968] dark:border-[#4a7cf6] bg-[#2c3968]/5 dark:bg-[#4a7cf6]/5"
+                      : "border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e]"
+                  } text-[#1e1e1e] dark:text-white transition-all cursor-pointer text-left`}
+                >
+                  {isPriceFilterActive
+                    ? `$${minPrice || "0"} — $${maxPrice || "Any"}`
+                    : "Price Range"}
+                </button>
+                <ChevronDown
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] pointer-events-none"
+                  size={20}
+                />
+
+                {priceDropdownOpen && (
+                  <div className="absolute top-full mt-2 left-0 w-64 bg-white dark:bg-[#161b26] rounded-xl shadow-lg border border-[#e5e5e5] dark:border-[#2d3548] p-4 z-50">
+                    <p className="text-sm text-[#666] dark:text-[#a0a8b8] mb-3">Price Range</p>
+
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="relative flex-1">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#999] dark:text-[#707070] text-sm">$</span>
+                        <input
+                          type="number"
+                          placeholder="Min"
+                          value={minPrice}
+                          onChange={(e) => setMinPrice(e.target.value)}
+                          className="w-full pl-7 pr-2 py-1.5 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none text-sm"
+                        />
+                      </div>
+                      <span className="text-[#999] dark:text-[#707070]">—</span>
+                      <div className="relative flex-1">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#999] dark:text-[#707070] text-sm">$</span>
+                        <input
+                          type="number"
+                          placeholder="Max"
+                          value={maxPrice}
+                          onChange={(e) => setMaxPrice(e.target.value)}
+                          className="w-full pl-7 pr-2 py-1.5 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-[#999] dark:text-[#707070] mb-2">Quick ranges</p>
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <button
+                        onClick={() => { setMinPrice(""); setMaxPrice("500"); }}
+                        className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${
+                          maxPrice === "500" && minPrice === ""
+                            ? "border-[#2c3968] dark:border-[#4a7cf6] bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6]"
+                            : "border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] hover:border-[#2c3968] dark:hover:border-[#4a7cf6]"
+                        }`}
+                      >
+                        Under $500
+                      </button>
+                      <button
+                        onClick={() => { setMinPrice("500"); setMaxPrice("800"); }}
+                        className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${
+                          minPrice === "500" && maxPrice === "800"
+                            ? "border-[#2c3968] dark:border-[#4a7cf6] bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6]"
+                            : "border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] hover:border-[#2c3968] dark:hover:border-[#4a7cf6]"
+                        }`}
+                      >
+                        $500 - $800
+                      </button>
+                      <button
+                        onClick={() => { setMinPrice("800"); setMaxPrice("1000"); }}
+                        className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${
+                          minPrice === "800" && maxPrice === "1000"
+                            ? "border-[#2c3968] dark:border-[#4a7cf6] bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6]"
+                            : "border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] hover:border-[#2c3968] dark:hover:border-[#4a7cf6]"
+                        }`}
+                      >
+                        $800 - $1000
+                      </button>
+                      <button
+                        onClick={() => { setMinPrice("1000"); setMaxPrice(""); }}
+                        className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${
+                          minPrice === "1000" && maxPrice === ""
+                            ? "border-[#2c3968] dark:border-[#4a7cf6] bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6]"
+                            : "border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] hover:border-[#2c3968] dark:hover:border-[#4a7cf6]"
+                        }`}
+                      >
+                        $1000+
+                      </button>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setMinPrice(""); setMaxPrice(""); }}
+                        className="flex-1 py-2 text-sm border border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] rounded-lg hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] transition-all"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        onClick={() => setPriceDropdownOpen(false)}
+                        className="flex-1 py-2 text-sm bg-[#2c3968] dark:bg-[#4a7cf6] text-white rounded-lg hover:opacity-90 transition-all"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Sort By */}
               <div className="relative">
                 <select
@@ -249,7 +387,7 @@ export default function PhoneCatalogPage({
           </div>
 
           {/* Active Filters */}
-          {(searchQuery || manufacturerFilter !== "all") && (
+          {(searchQuery || manufacturerFilter !== "all" || isPriceFilterActive) && (
             <div className="mt-4 pt-4 border-t border-[#e5e5e5] dark:border-[#2d3548]">
               <div className="flex flex-wrap gap-2 items-center">
                 <span className="text-[#666] dark:text-[#a0a8b8]">Active filters:</span>
@@ -263,11 +401,13 @@ export default function PhoneCatalogPage({
                     Brand: {manufacturerFilter}
                   </span>
                 )}
+                {isPriceFilterActive && (
+                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full">
+                    Price: {minPrice ? `$${minPrice}` : "$0"} — {maxPrice ? `$${maxPrice}` : "Any"}
+                    </span>
+                  )}
                 <button
-                  onClick={() => {
-                    setSearchQuery("");
-                    setManufacturerFilter("all");
-                  }}
+                  onClick={clearAllFilters}
                   className="text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] underline"
                 >
                   Clear all
@@ -428,10 +568,7 @@ export default function PhoneCatalogPage({
                 We couldn't find any phones matching your search criteria. Try adjusting your filters.
               </p>
               <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setManufacturerFilter("all");
-                }}
+                onClick={clearAllFilters}
                 className="px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-lg hover:shadow-lg hover:scale-[1.02] transition-all duration-200"
               >
                 Clear Filters

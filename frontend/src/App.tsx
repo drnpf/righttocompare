@@ -73,6 +73,52 @@ function AppContent() {
     }
   }, []);
 
+  // Load from localStorage 
+  useEffect(() => {
+    if (!currentUser) {
+      try {
+        const stored = localStorage.getItem("comparisonPhoneIds");
+        if (stored) setComparisonPhoneIds(JSON.parse(stored));
+      } catch {}
+    }
+    setComparisonLoaded(true);
+  }, []);
+
+  // Load comparison selections from user profile
+  useEffect(() => {
+    if (currentUser?.comparisonPhoneIds && currentUser.comparisonPhoneIds.length > 0) {
+      setComparisonPhoneIds(currentUser.comparisonPhoneIds);
+    }
+  }, [currentUser]);
+
+  // Save comparison selections when they change
+  const [comparisonLoaded, setComparisonLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!comparisonLoaded) return; 
+
+    if (currentUser?.firebaseUser) {
+      const saveToDb = async () => {
+        try {
+          const token = await currentUser.firebaseUser.getIdToken();
+          await fetch(`http://localhost:5001/api/users/${currentUser.uid}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ comparisonPhoneIds }),
+          });
+        } catch (err) {
+          console.error("Failed to save comparisons:", err);
+        }
+      };
+      saveToDb();
+    } else {
+      localStorage.setItem("comparisonPhoneIds", JSON.stringify(comparisonPhoneIds));
+    }
+  }, [comparisonPhoneIds]);
+
   // Add current page to recently viewed when it changes
   useEffect(() => {
     if (pageType === "spec" && currentPage) {
@@ -310,7 +356,7 @@ function AppContent() {
         <AIChatWidget onNavigate={navigateToPhone} />
 
         {/* Firebase Connection Test - Remove this after testing */}
-        <FirebaseConnectionTest />
+        {/* <FirebaseConnectionTest /> */}
       </div>
     </DarkModeProvider>
   );

@@ -33,6 +33,7 @@ export interface IUser extends Document {
     };
   };
   wishlist: string[];
+  comparisonPhoneIds: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -69,6 +70,7 @@ const UserSchema: Schema = new Schema(
       },
     },
     wishlist: { type: [String], default: [] },
+    comparisonPhoneIds: { type: [String], default: [] },
   },
   {
     timestamps: true,

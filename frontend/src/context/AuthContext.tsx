@@ -70,6 +70,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           role: userData.role,
           preferences: userData.preferences,
           wishlist: userData.wishlist,
+          comparisonPhoneIds: userData.comparisonPhoneIds || [],
         };
         setCurrentUser(appUser);
         console.log("Sync is complete. AppUser is ready.");

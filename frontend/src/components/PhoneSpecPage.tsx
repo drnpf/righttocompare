@@ -26,6 +26,7 @@ import { ReviewForm } from "./ReviewForm";
 import { ReviewCard, ReviewData } from "./ReviewCard";
 import { CategoryRatings } from "./MultiRatingInput";
 import { getPhoneReviews, submitReview, voteOnReview, deleteReview, ReviewsResponse } from "../api/reviewApi";
+import BenchmarkDisplay from "./BenchmarkDisplay";
 
 // Category icons mapping - minimalistic uniform color scheme
 const categoryConfig: Record<string, { icon: any }> = {
@@ -840,6 +841,12 @@ export default function PhoneSpecPage({ phoneData, onNavigate, onNavigateToCompa
         </div>
       </Collapsible>
 
+      {/* Performance Benchmarks */}
+      <BenchmarkDisplay 
+        benchmarks={phoneData.categories.benchmarks} 
+        phoneName={phoneData.name} 
+      />
+      
       {/* 3. Price Tracking */}
       <Collapsible open={isPriceTrackingOpen} onOpenChange={setIsPriceTrackingOpen}>
         <div id="price-tracking" className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-8 mb-8">
