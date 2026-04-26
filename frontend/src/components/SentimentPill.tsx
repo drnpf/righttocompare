@@ -28,7 +28,7 @@ export function SentimentPill({ tag, count, isActive, onClick, readOnly = false 
     : `cursor-pointer transition-all ${
         isActive
           ? isDarkMode
-            ? "ring-1 ring-[#4a7cf6] scale-105"
+            ? "ring-1 ring-white scale-105"
             : "ring-1 ring-[#2c3968] scale-105"
           : "opacity-80 hover:opacity-100 hover:scale-[1.02] active:scale-95 shadow-sm"
       }`;

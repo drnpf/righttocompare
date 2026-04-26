@@ -499,7 +499,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
     // ------------------------------------------------------------
     return (
       <div key={reply.id} className={isNested ? "ml-12 mt-4" : ""}>
-        <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-transparent dark:border-[#2d3548]">
+        <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
           <div className="flex gap-4 p-6">
             {/* Vote Section */}
             <div className="flex flex-col items-center gap-2 min-w-[50px]">
@@ -507,14 +507,14 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                 onClick={() => handleReplyVote(reply.id, "up")}
                 className={`p-2 rounded-lg transition-all duration-200 ${
                   replyVote === "up"
-                    ? "bg-[#2c3968] text-white dark:bg-[#4a7cf6]"
-                    : "bg-[#f0f2f5] dark:bg-[#1a1f2e] text-[#666] dark:text-[#a0a8b8] hover:bg-[#2c3968] hover:text-white dark:hover:bg-[#4a7cf6]"
+                    ? "bg-[#2c3968] text-white"
+                    : "bg-[#f0f2f5] text-[#666] hover:bg-[#2c3968] hover:text-white"
                 }`}
               >
                 <ThumbsUp className="w-4 h-4" />
               </button>
               <span
-                className={`text-sm ${replyNetScore > 0 ? "text-[#2c3968] dark:text-[#4a7cf6]" : replyNetScore < 0 ? "text-red-500 dark:text-red-400" : "text-[#666] dark:text-[#a0a8b8]"}`}
+                className={`text-sm ${replyNetScore > 0 ? "text-[#2c3968]" : replyNetScore < 0 ? "text-red-500" : "text-[#666]"}`}
               >
                 {replyNetScore > 0 ? "+" : ""}
                 {replyNetScore}
@@ -523,8 +523,8 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                 onClick={() => handleReplyVote(reply.id, "down")}
                 className={`p-2 rounded-lg transition-all duration-200 ${
                   replyVote === "down"
-                    ? "bg-red-500 text-white dark:bg-red-400"
-                    : "bg-[#f0f2f5] dark:bg-[#1a1f2e] text-[#666] dark:text-[#a0a8b8] hover:bg-red-500 hover:text-white dark:hover:bg-red-400"
+                    ? "bg-red-500 text-white"
+                    : "bg-[#f0f2f5] text-[#666] hover:bg-red-500 hover:text-white"
                 }`}
               >
                 <ThumbsDown className="w-4 h-4" />
@@ -534,12 +534,12 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
             {/* Reply Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-3">
-                <img src={reply.authorAvatar} alt={reply.author} className="w-10 h-10 rounded-full bg-[#f0f2f5] dark:bg-[#1a1f2e]" />
+                <img src={reply.authorAvatar} alt={reply.author} className="w-10 h-10 rounded-full bg-[#f0f2f5]" />
                 <div className="flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[#2c3968] dark:text-[#4a7cf6]">{reply.author}</span>
-                    <span className="text-[#999] dark:text-[#6b7280]">•</span>
-                    <span className="text-[#999] dark:text-[#6b7280] text-sm">{getTimeAgo(reply.timestamp)}</span>
+                    <span className="text-[#2c3968]">{reply.author}</span>
+                    <span className="text-[#999]">•</span>
+                    <span className="text-[#999] text-sm">{getTimeAgo(reply.timestamp)}</span>
                     {reply.parentReplyId &&
                       depth === 0 &&
                       (() => {
@@ -547,8 +547,8 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                         if (parentReply) {
                           return (
                             <>
-                              <span className="text-[#999] dark:text-[#6b7280]">•</span>
-                              <span className="text-[#2c3968] dark:text-[#4a7cf6] text-sm flex items-center gap-1">
+                              <span className="text-[#999]">•</span>
+                              <span className="text-[#2c3968] text-sm flex items-center gap-1">
                                 <CornerDownRight className="w-3 h-3" />
                                 replying to {parentReply.author}
                               </span>
@@ -559,7 +559,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                   </div>
                 </div>
               </div>
-              <p className="text-[#333] dark:text-[#e0e0e0] whitespace-pre-wrap leading-relaxed mb-3">{reply.content}</p>
+              <p className="text-[#333] whitespace-pre-wrap leading-relaxed mb-3">{reply.content}</p>
 
               {/* Reply Images */}
               {reply.images && reply.images.length > 0 && (
@@ -577,7 +577,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                       key={idx}
                       src={img}
                       alt={`Reply image ${idx + 1}`}
-                      className="w-full h-auto rounded-lg border border-[#e0e0e0] dark:border-[#2d3548] cursor-pointer hover:opacity-90 transition-opacity"
+                      className="w-full h-auto rounded-lg border border-[#e0e0e0] cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={() => window.open(img, "_blank")}
                     />
                   ))}
@@ -591,13 +591,13 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                     variant="ghost"
                     size="sm"
                     onClick={() => handleReplyToReply(reply)}
-                    className="text-[#2c3968] dark:text-[#4a7cf6] hover:bg-[#f0f2f5] dark:hover:bg-[#1a1f2e] text-sm -ml-2"
+                    className="text-[#2c3968] hover:bg-[#f0f2f5] text-sm -ml-2"
                   >
                     <CornerDownRight className="w-4 h-4 mr-1.5" />
                     Reply
                   </Button>
                   {nestedReplies.length > 0 && (
-                    <span className="text-sm text-[#999] dark:text-[#6b7280]">
+                    <span className="text-sm text-[#999]">
                       {nestedReplies.length} {nestedReplies.length === 1 ? "reply" : "replies"}
                     </span>
                   )}
@@ -608,7 +608,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteReply(reply.id)}
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 text-xs"
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50 text-xs"
                     >
                       <Trash2 className="w-3.5 h-3.5 mr-1" />
                       Delete
@@ -619,7 +619,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                     size="sm"
                     onClick={() => handleOpenReportDialog(reply.id, "reply")}
                     disabled={userReports[reply.id]}
-                    className={`text-xs ${userReports[reply.id] ? "text-red-400" : "text-[#999] dark:text-[#6b7280] hover:text-red-500 dark:hover:text-red-400"}`}
+                    className={`text-xs ${userReports[reply.id] ? "text-red-400" : "text-[#999] hover:text-red-500"}`}
                   >
                     <Flag className="w-3.5 h-3.5 mr-1" />
                     {userReports[reply.id] ? "Reported" : "Report"}
@@ -644,11 +644,11 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f7f7f7] dark:bg-[#0f1419] pb-12">
+      <div className="min-h-screen bg-[#f7f7f7] pb-12">
         <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 pt-8">
-          <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-transparent dark:border-[#2d3548] p-12 text-center">
-            <Loader2 className="w-8 h-8 text-[#2c3968] dark:text-[#4a7cf6] mx-auto mb-4 animate-spin" />
-            <p className="text-[#666] dark:text-[#a0a8b8]">Loading discussion...</p>
+          <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+            <Loader2 className="w-8 h-8 text-[#2c3968] mx-auto mb-4 animate-spin" />
+            <p className="text-[#666]">Loading discussion...</p>
           </div>
         </div>
       </div>
@@ -657,12 +657,12 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
 
   if (!discussion) {
     return (
-      <div className="min-h-screen bg-[#f7f7f7] dark:bg-[#0f1419] pb-12">
+      <div className="min-h-screen bg-[#f7f7f7] pb-12">
         <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 pt-8">
-          <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-transparent dark:border-[#2d3548] p-12 text-center">
-            <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-3">Discussion Not Found</h2>
-            <p className="text-[#666] dark:text-[#a0a8b8] mb-6">The discussion you're looking for doesn't exist.</p>
-            <Button onClick={onBack} className="bg-[#2c3968] hover:bg-[#1e2547] dark:bg-[#4a7cf6] dark:hover:bg-[#5b8df7]">
+          <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+            <h2 className="text-[#2c3968] mb-3">Discussion Not Found</h2>
+            <p className="text-[#666] mb-6">The discussion you're looking for doesn't exist.</p>
+            <Button onClick={onBack} className="bg-[#2c3968] hover:bg-[#1e2547]">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Discussions
             </Button>
@@ -676,19 +676,19 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
   const netScore = discussion.upvotes - discussion.downvotes;
 
   return (
-    <div className="min-h-screen bg-[#f7f7f7] dark:bg-[#0f1419] pb-12">
+    <div className="min-h-screen bg-[#f7f7f7] pb-12">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#2c3968] via-[#3d4a7a] to-[#2c3968] dark:from-[#1a1f2e] dark:via-[#252b3d] dark:to-[#1a1f2e] relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#2c3968] via-[#3d4a7a] to-[#2c3968] relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-white dark:bg-[#4a7cf6] rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-white dark:bg-[#4a7cf6] rounded-full blur-3xl"></div>
+          <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-white rounded-full blur-3xl"></div>
         </div>
 
         <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 py-8 relative z-10">
           <Button
             onClick={onBack}
             variant="outline"
-            className="mb-6 bg-white/10 border-white/20 text-white hover:bg-white/20 dark:bg-[#4a7cf6]/10 dark:border-[#4a7cf6]/20 dark:hover:bg-[#4a7cf6]/20"
+            className="mb-6 bg-white/10 border-white/20 text-white hover:bg-white/20"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Discussions
@@ -698,7 +698,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
 
       <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 -mt-4">
         {/* Main Discussion */}
-        <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-lg border border-transparent dark:border-[#2d3548] overflow-hidden mb-6">
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-6">
           <div className="flex gap-6 p-8">
             {/* Vote Section */}
             <div className="flex flex-col items-center gap-3 min-w-[70px]">
@@ -706,14 +706,14 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                 onClick={() => handleVote("up")}
                 className={`p-3 rounded-xl transition-all duration-200 ${
                   userVote === "up"
-                    ? "bg-[#2c3968] text-white shadow-lg dark:bg-[#4a7cf6]"
-                    : "bg-[#f0f2f5] dark:bg-[#1a1f2e] text-[#666] dark:text-[#a0a8b8] hover:bg-[#2c3968] hover:text-white dark:hover:bg-[#4a7cf6]"
+                    ? "bg-[#2c3968] text-white shadow-lg"
+                    : "bg-[#f0f2f5] text-[#666] hover:bg-[#2c3968] hover:text-white"
                 }`}
               >
                 <ThumbsUp className="w-6 h-6" />
               </button>
               <span
-                className={`text-xl ${netScore > 0 ? "text-[#2c3968] dark:text-[#4a7cf6]" : netScore < 0 ? "text-red-500 dark:text-red-400" : "text-[#666] dark:text-[#a0a8b8]"}`}
+                className={`text-xl ${netScore > 0 ? "text-[#2c3968]" : netScore < 0 ? "text-red-500" : "text-[#666]"}`}
               >
                 {netScore > 0 ? "+" : ""}
                 {netScore}
@@ -722,8 +722,8 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                 onClick={() => handleVote("down")}
                 className={`p-3 rounded-xl transition-all duration-200 ${
                   userVote === "down"
-                    ? "bg-red-500 text-white shadow-lg dark:bg-red-400"
-                    : "bg-[#f0f2f5] dark:bg-[#1a1f2e] text-[#666] dark:text-[#a0a8b8] hover:bg-red-500 hover:text-white dark:hover:bg-red-400"
+                    ? "bg-red-500 text-white shadow-lg"
+                    : "bg-[#f0f2f5] text-[#666] hover:bg-red-500 hover:text-white"
                 }`}
               >
                 <ThumbsDown className="w-6 h-6" />
@@ -737,19 +737,19 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                 <img
                   src={discussion.authorAvatar}
                   alt={discussion.author}
-                  className="w-12 h-12 rounded-full bg-[#f0f2f5] dark:bg-[#1a1f2e]"
+                  className="w-12 h-12 rounded-full bg-[#f0f2f5]"
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[#2c3968] dark:text-[#4a7cf6]">{discussion.author}</span>
-                    <span className="text-[#999] dark:text-[#6b7280]">•</span>
-                    <span className="text-[#999] dark:text-[#6b7280]">{getTimeAgo(discussion.timestamp)}</span>
+                    <span className="text-[#2c3968]">{discussion.author}</span>
+                    <span className="text-[#999]">•</span>
+                    <span className="text-[#999]">{getTimeAgo(discussion.timestamp)}</span>
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline" className="border-[#e0e0e0] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8]">{discussion.category}</Badge>
+                    <Badge variant="outline">{discussion.category}</Badge>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-[#999] dark:text-[#6b7280]">
+                <div className="flex items-center gap-4 text-sm text-[#999]">
                   <div className="flex items-center gap-1.5">
                     <MessageCircle className="w-4 h-4" />
                     <span>{discussion.replies}</span>
@@ -762,10 +762,10 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
               </div>
 
               {/* Title */}
-              <h1 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">{discussion.title}</h1>
+              <h1 className="text-[#2c3968] mb-4">{discussion.title}</h1>
 
               {/* Content */}
-              <div className="text-[#333] dark:text-[#e0e0e0] mb-4 whitespace-pre-wrap leading-relaxed">{discussion.content}</div>
+              <div className="text-[#333] mb-4 whitespace-pre-wrap leading-relaxed">{discussion.content}</div>
 
               {/* Images */}
               {discussion.images && discussion.images.length > 0 && (
@@ -783,7 +783,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                       key={idx}
                       src={img}
                       alt={`Discussion image ${idx + 1}`}
-                      className="w-full h-auto rounded-lg border border-[#e0e0e0] dark:border-[#2d3548] cursor-pointer hover:opacity-90 transition-opacity"
+                      className="w-full h-auto rounded-lg border border-[#e0e0e0] cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={() => window.open(img, "_blank")}
                     />
                   ))}
@@ -795,7 +795,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                 {discussion.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {discussion.tags.map((tag, idx) => (
-                      <span key={idx} className="px-3 py-1.5 bg-[#f0f2f5] dark:bg-[#1a1f2e] text-[#2c3968] dark:text-[#4a7cf6] text-sm rounded-full">
+                      <span key={idx} className="px-3 py-1.5 bg-[#f0f2f5] text-[#2c3968] text-sm rounded-full">
                         {tag}
                       </span>
                     ))}
@@ -806,7 +806,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                   size="sm"
                   onClick={() => handleOpenReportDialog(discussion.id, "discussion")}
                   disabled={userReports[discussion.id]}
-                  className={`ml-auto ${userReports[discussion.id] ? "text-red-400" : "text-[#999] dark:text-[#6b7280] hover:text-red-500 dark:hover:text-red-400"}`}
+                  className={`ml-auto ${userReports[discussion.id] ? "text-red-400" : "text-[#999] hover:text-red-500"}`}
                 >
                   <Flag className="w-4 h-4 mr-1.5" />
                   {userReports[discussion.id] ? "Reported" : "Report"}
@@ -827,36 +827,36 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
         </div>
 
         {/* Reply Section */}
-        <div id="reply-section" className="bg-white dark:bg-[#161b26] rounded-2xl shadow-lg border border-transparent dark:border-[#2d3548] p-8 mb-6">
-          <h3 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">{replyingTo ? `Replying to ${replyingTo.author}` : "Add a Reply"}</h3>
+        <div id="reply-section" className="bg-white rounded-2xl shadow-lg p-8 mb-6">
+          <h3 className="text-[#2c3968] mb-4">{replyingTo ? `Replying to ${replyingTo.author}` : "Add a Reply"}</h3>
 
           {!currentUser ? (
-            <p className="text-[#666] dark:text-[#a0a8b8] text-center py-4">Please sign in to reply.</p>
+            <p className="text-[#666] text-center py-4">Please sign in to reply.</p>
           ) : (
             <>
               {replyingTo && (
-                <div className="mb-4 p-4 bg-[#f0f2f5] dark:bg-[#252b3d] rounded-lg border-l-4 border-[#2c3968] dark:border-[#4a7cf6]">
+                <div className="mb-4 p-4 bg-[#f0f2f5] rounded-lg border-l-4 border-[#2c3968]">
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2">
                       <img src={replyingTo.authorAvatar} alt={replyingTo.author} className="w-8 h-8 rounded-full" />
-                      <span className="text-[#2c3968] dark:text-[#4a7cf6]">{replyingTo.author}</span>
+                      <span className="text-[#2c3968]">{replyingTo.author}</span>
                     </div>
                     <Button variant="ghost" size="sm" onClick={handleCancelReplyTo} className="h-auto p-1">
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
-                  <p className="text-[#666] dark:text-[#a0a8b8] text-sm line-clamp-2">{replyingTo.content}</p>
+                  <p className="text-[#666] text-sm line-clamp-2">{replyingTo.content}</p>
                 </div>
               )}
 
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm text-[#666] dark:text-[#a0a8b8]">
+                  <span className="text-sm text-[#666]">
                     {newReply.length > 0 && newReply.trim().length < 10 && (
                       <span className="text-amber-500">Minimum 10 characters</span>
                     )}
                   </span>
-                  <span className={`text-xs ${newReply.length > 2000 ? "text-red-500" : "text-[#999] dark:text-[#6b7280]"}`}>
+                  <span className={`text-xs ${newReply.length > 2000 ? "text-red-500" : "text-[#999]"}`}>
                     {newReply.length}/2000
                   </span>
                 </div>
@@ -864,7 +864,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                   placeholder={replyingTo ? "Write your reply..." : "Share your thoughts..."}
                   value={newReply}
                   onChange={(e) => setNewReply(e.target.value.slice(0, 2000))}
-                  className="min-h-[120px] dark:bg-[#1a1f2e] dark:border-[#2d3548] dark:text-white dark:placeholder:text-[#6b7280]"
+                  className="min-h-[120px]"
                 />
               </div>
 
@@ -897,7 +897,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                         <img
                           src={img}
                           alt={`Reply upload ${idx + 1}`}
-                          className="w-full h-24 object-cover rounded-lg border border-[#e0e0e0] dark:border-[#2d3548]"
+                          className="w-full h-24 object-cover rounded-lg border border-[#e0e0e0]"
                         />
                         <button
                           type="button"
@@ -916,7 +916,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
                 <Button
                   onClick={handleSubmitReply}
                   disabled={newReply.trim().length < 10 || isSubmittingReply}
-                  className="bg-[#2c3968] hover:bg-[#1e2547] dark:bg-[#4a7cf6] dark:hover:bg-[#5b8df7]"
+                  className="bg-[#2c3968] hover:bg-[#1e2547]"
                 >
                   {isSubmittingReply ? (
                     <>
@@ -937,14 +937,14 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
 
         {/* Replies List */}
         <div className="space-y-4">
-          <h3 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">
+          <h3 className="text-[#2c3968] mb-4">
             {topLevelReplies.length} {topLevelReplies.length === 1 ? "Reply" : "Replies"}
           </h3>
 
           {topLevelReplies.length === 0 ? (
-            <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-transparent dark:border-[#2d3548] p-12 text-center">
-              <MessageCircle className="w-16 h-16 text-[#ccc] dark:text-[#4a7cf6] mx-auto mb-4" />
-              <p className="text-[#666] dark:text-[#a0a8b8]">No replies yet. Be the first to share your thoughts!</p>
+            <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+              <MessageCircle className="w-16 h-16 text-[#ccc] mx-auto mb-4" />
+              <p className="text-[#666]">No replies yet. Be the first to share your thoughts!</p>
             </div>
           ) : (
             topLevelReplies
@@ -958,64 +958,64 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
 
       {/* Report Dialog */}
       <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
-        <DialogContent className="max-w-md bg-white dark:bg-[#161b26] border-[#e0e0e0] dark:border-[#2d3548]">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#1e1e1e] dark:text-white">Report {reportItemType === "discussion" ? "Discussion" : "Reply"}</DialogTitle>
-            <DialogDescription className="text-[#666] dark:text-[#a0a8b8]">
+            <DialogTitle>Report {reportItemType === "discussion" ? "Discussion" : "Reply"}</DialogTitle>
+            <DialogDescription>
               Help us keep the community safe by reporting content that violates our guidelines.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div>
-              <Label className="text-[#1e1e1e] dark:text-white">Reason for reporting *</Label>
+              <Label>Reason for reporting *</Label>
               <RadioGroup value={reportReason} onValueChange={setReportReason} className="mt-3 space-y-2">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="spam" id="spam" />
-                  <Label htmlFor="spam" className="cursor-pointer text-[#666] dark:text-[#a0a8b8]">
+                  <Label htmlFor="spam" className="cursor-pointer">
                     Spam or misleading
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="harassment" id="harassment" />
-                  <Label htmlFor="harassment" className="cursor-pointer text-[#666] dark:text-[#a0a8b8]">
+                  <Label htmlFor="harassment" className="cursor-pointer">
                     Harassment or hate speech
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="inappropriate" id="inappropriate" />
-                  <Label htmlFor="inappropriate" className="cursor-pointer text-[#666] dark:text-[#a0a8b8]">
+                  <Label htmlFor="inappropriate" className="cursor-pointer">
                     Inappropriate content
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="misinformation" id="misinformation" />
-                  <Label htmlFor="misinformation" className="cursor-pointer text-[#666] dark:text-[#a0a8b8]">
+                  <Label htmlFor="misinformation" className="cursor-pointer">
                     Misinformation
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="other" id="other" />
-                  <Label htmlFor="other" className="cursor-pointer text-[#666] dark:text-[#a0a8b8]">
+                  <Label htmlFor="other" className="cursor-pointer">
                     Other
                   </Label>
                 </div>
               </RadioGroup>
             </div>
             <div>
-              <Label htmlFor="details" className="text-[#1e1e1e] dark:text-white">Additional details (optional)</Label>
+              <Label htmlFor="details">Additional details (optional)</Label>
               <Textarea
                 id="details"
                 placeholder="Provide more context about why you're reporting this..."
                 value={reportDetails}
                 onChange={(e) => setReportDetails(e.target.value)}
-                className="mt-1.5 min-h-[100px] bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white placeholder:text-[#999] dark:placeholder:text-[#6b7280]"
+                className="mt-1.5 min-h-[100px]"
               />
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsReportDialogOpen(false)} className="bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white hover:bg-[#f7f9fc] dark:hover:bg-[#252b3d]">
+              <Button variant="outline" onClick={() => setIsReportDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmitReport} disabled={!reportReason} className="bg-red-500 hover:bg-red-600 dark:bg-red-400 dark:hover:bg-red-500">
+              <Button onClick={handleSubmitReport} disabled={!reportReason} className="bg-red-500 hover:bg-red-600">
                 Submit Report
               </Button>
             </div>

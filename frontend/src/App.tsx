@@ -67,7 +67,7 @@ function AppContent() {
   // ------------------------------------------------------------
   // | HOOKS
   // -----------------------------------------------------------
-  const { currentUser, loading: authLoading, signOut } = useAuth();
+  const { currentUser, signOut } = useAuth();
 
   // React Router hook
   const navigate = useNavigate();
@@ -324,12 +324,12 @@ function AppContent() {
                 path="/sign-up"
                 element={<SignUpPage onSignUpSuccess={handleSignUpSuccess} onNavigateToSignIn={handleSignInClick} />}
               />
-              <Route path="/profile" element={authLoading ? <LoadingSpinner /> : currentUser ? <UserProfilePage /> : <Navigate to="/sign-in" />} />
+              <Route path="/profile" element={currentUser ? <UserProfilePage /> : <Navigate to="/sign-in" />} />
 
               {/* Admin */}
               <Route
                 path="/admin"
-                element={authLoading ? <LoadingSpinner /> : currentUser?.role === "admin" ? <AdminDashboardPage /> : <Navigate to="/" />}
+                element={currentUser?.role === "admin" ? <AdminDashboardPage /> : <Navigate to="/" />}
               />
 
               {/* Password reset */}

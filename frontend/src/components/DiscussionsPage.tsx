@@ -491,13 +491,13 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
   // | UI SECTION
   // ------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-[#f7f7f7] dark:bg-[#0f1419] pb-12">
+    <div className="min-h-screen bg-[#f7f7f7] pb-12">
       {/* Header Section */}
-      <div className="bg-gradient-to-br from-[#2c3968] via-[#3d4a7a] to-[#2c3968] dark:from-[#1a1f2e] dark:via-[#252b3d] dark:to-[#1a1f2e] relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#2c3968] via-[#3d4a7a] to-[#2c3968] relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-white dark:bg-[#4a7cf6] rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-white dark:bg-[#4a7cf6] rounded-full blur-3xl"></div>
+          <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-white rounded-full blur-3xl"></div>
         </div>
 
         <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 py-16 relative z-10">
@@ -520,25 +520,25 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
               }}
             >
               <DialogTrigger asChild>
-                <Button className="bg-white text-[#2c3968] hover:bg-white/90 dark:bg-[#4a7cf6] dark:text-white dark:hover:bg-[#5b8df7] shadow-lg self-start md:self-auto">
+                <Button className="bg-white text-[#2c3968] hover:bg-white/90 shadow-lg self-start md:self-auto">
                   <Plus className="w-5 h-5 mr-2" />
                   New Discussion
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl bg-white dark:bg-[#161b26] border-[#e0e0e0] dark:border-[#2d3548]">
+              <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle className="text-[#1e1e1e] dark:text-white">Create New Discussion</DialogTitle>
-                  <DialogDescription className="text-[#666] dark:text-[#a0a8b8]">Start a new conversation with the community</DialogDescription>
+                  <DialogTitle>Create New Discussion</DialogTitle>
+                  <DialogDescription>Start a new conversation with the community</DialogDescription>
                 </DialogHeader>
                 {!currentUser ? (
-                  <p className="text-center text-[#666] dark:text-[#a0a8b8] py-8">Please sign in to create a discussion.</p>
+                  <p className="text-center text-[#666] py-8">Please sign in to create a discussion.</p>
                 ) : (
                   <div className="space-y-4 mt-4">
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <Label htmlFor="title" className="text-[#1e1e1e] dark:text-white">Title</Label>
+                        <Label htmlFor="title">Title</Label>
                         <span
-                          className={`text-xs ${newPost.title.length > 100 ? "text-red-500" : newPost.title.length < 5 && newPost.title.length > 0 ? "text-amber-500" : "text-[#999] dark:text-[#6b7280]"}`}
+                          className={`text-xs ${newPost.title.length > 100 ? "text-red-500" : newPost.title.length < 5 && newPost.title.length > 0 ? "text-amber-500" : "text-[#999]"}`}
                         >
                           {newPost.title.length}/100
                         </span>
@@ -548,7 +548,6 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                         placeholder="What's on your mind?"
                         value={newPost.title}
                         onChange={(e) => setNewPost({ ...newPost, title: e.target.value.slice(0, 100) })}
-                        className="bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white placeholder:text-[#999] dark:placeholder:text-[#6b7280]"
                       />
                       {newPost.title.length > 0 && newPost.title.length < 5 && (
                         <p className="text-xs text-amber-500 mt-1">Title must be at least 5 characters</p>
@@ -556,8 +555,8 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <Label htmlFor="content" className="text-[#1e1e1e] dark:text-white">Content</Label>
-                        <span className={`text-xs ${newPost.content.length > 5000 ? "text-red-500" : "text-[#999] dark:text-[#6b7280]"}`}>
+                        <Label htmlFor="content">Content</Label>
+                        <span className={`text-xs ${newPost.content.length > 5000 ? "text-red-500" : "text-[#999]"}`}>
                           {newPost.content.length}/5000
                         </span>
                       </div>
@@ -566,23 +565,23 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                         placeholder="Share your thoughts, questions, or insights..."
                         value={newPost.content}
                         onChange={(e) => setNewPost({ ...newPost, content: e.target.value.slice(0, 5000) })}
-                        className="min-h-[150px] bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white placeholder:text-[#999] dark:placeholder:text-[#6b7280]"
+                        className="min-h-[150px]"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="category" className="mb-1.5 block text-[#1e1e1e] dark:text-white">
+                      <Label htmlFor="category" className="mb-1.5 block">
                         Category
                       </Label>
                       <Select
                         value={newPost.category}
                         onValueChange={(value) => setNewPost({ ...newPost, category: value })}
                       >
-                        <SelectTrigger id="category" className="bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white">
+                        <SelectTrigger id="category">
                           <SelectValue placeholder="Select a category" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548]">
+                        <SelectContent>
                           {DISCUSSION_CATEGORIES.map((cat) => (
-                            <SelectItem key={cat} value={cat} className="dark:text-white dark:focus:bg-[#252b3d]">
+                            <SelectItem key={cat} value={cat}>
                               {cat}
                             </SelectItem>
                           ))}
@@ -590,17 +589,17 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="tags" className="text-[#1e1e1e] dark:text-white">Tags (comma separated)</Label>
+                      <Label htmlFor="tags">Tags (comma separated)</Label>
                       <Input
                         id="tags"
                         placeholder="e.g., Samsung, Camera, Battery"
                         value={newPost.tags}
                         onChange={(e) => setNewPost({ ...newPost, tags: e.target.value })}
-                        className="mt-1.5 bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white placeholder:text-[#999] dark:placeholder:text-[#6b7280]"
+                        className="mt-1.5"
                       />
                     </div>
                     <div>
-                      <Label className="text-[#1e1e1e] dark:text-white">Images (up to 4)</Label>
+                      <Label>Images (up to 4)</Label>
                       <div className="mt-1.5 space-y-3">
                         <input
                           ref={fileInputRef}
@@ -616,7 +615,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                           variant="outline"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={newPostImages.length >= 4}
-                          className="w-full bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white hover:bg-[#f7f9fc] dark:hover:bg-[#252b3d]"
+                          className="w-full"
                         >
                           <ImageIcon className="w-4 h-4 mr-2" />
                           Upload Images ({newPostImages.length}/4)
@@ -628,7 +627,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                                 <img
                                   src={img}
                                   alt={`Upload ${idx + 1}`}
-                                  className="w-full h-32 object-cover rounded-lg border border-[#e0e0e0] dark:border-[#2d3548]"
+                                  className="w-full h-32 object-cover rounded-lg border border-[#e0e0e0]"
                                 />
                                 <button
                                   type="button"
@@ -644,7 +643,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                       </div>
                     </div>
                     <div className="flex justify-end gap-3 pt-4">
-                      <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white hover:bg-[#f7f9fc] dark:hover:bg-[#252b3d]">
+                      <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                         Cancel
                       </Button>
                       <Button
@@ -652,7 +651,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                         disabled={
                           !newPost.title.trim() || newPost.title.length < 5 || !newPost.content.trim() || isCreating
                         }
-                        className="bg-[#2c3968] hover:bg-[#1e2547] dark:bg-[#4a7cf6] dark:hover:bg-[#5b8df7]"
+                        className="bg-[#2c3968] hover:bg-[#1e2547]"
                       >
                         {isCreating ? (
                           <>
@@ -674,14 +673,14 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
 
       {/* Filters and Search */}
       <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 -mt-8 relative z-20">
-        <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-lg border border-transparent dark:border-[#2d3548] p-6 space-y-4">
+        <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
           <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
             {/* Filter Buttons */}
             <div className="flex gap-2 flex-wrap">
               <Button
                 variant={filter === "trending" ? "default" : "outline"}
                 onClick={() => setFilter("trending")}
-                className={filter === "trending" ? "bg-[#2c3968] hover:bg-[#1e2547] dark:bg-[#4a7cf6] dark:hover:bg-[#5b8df7]" : "bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white hover:bg-[#f7f9fc] dark:hover:bg-[#252b3d]"}
+                className={filter === "trending" ? "bg-[#2c3968] hover:bg-[#1e2547]" : ""}
               >
                 <TrendingUp className="w-4 h-4 mr-2" />
                 Trending
@@ -689,7 +688,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
               <Button
                 variant={filter === "recent" ? "default" : "outline"}
                 onClick={() => setFilter("recent")}
-                className={filter === "recent" ? "bg-[#2c3968] hover:bg-[#1e2547] dark:bg-[#4a7cf6] dark:hover:bg-[#5b8df7]" : "bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white hover:bg-[#f7f9fc] dark:hover:bg-[#252b3d]"}
+                className={filter === "recent" ? "bg-[#2c3968] hover:bg-[#1e2547]" : ""}
               >
                 <Clock className="w-4 h-4 mr-2" />
                 Recent
@@ -697,7 +696,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
               <Button
                 variant={filter === "popular" ? "default" : "outline"}
                 onClick={() => setFilter("popular")}
-                className={filter === "popular" ? "bg-[#2c3968] hover:bg-[#1e2547] dark:bg-[#4a7cf6] dark:hover:bg-[#5b8df7]" : "bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white hover:bg-[#f7f9fc] dark:hover:bg-[#252b3d]"}
+                className={filter === "popular" ? "bg-[#2c3968] hover:bg-[#1e2547]" : ""}
               >
                 <Flame className="w-4 h-4 mr-2" />
                 Popular
@@ -706,27 +705,27 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
 
             {/* Search */}
             <div className="relative md:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#999] dark:text-[#6b7280]" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#999]" />
               <Input
                 placeholder="Search discussions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white placeholder:text-[#999] dark:placeholder:text-[#6b7280]"
+                className="pl-10"
               />
             </div>
           </div>
 
           {/* Category Filters */}
           {allCategories.length > 0 && (
-            <div className="border-t border-[#e0e0e0] dark:border-[#2d3548] pt-4">
+            <div className="border-t border-[#e0e0e0] pt-4">
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-sm text-[#666] dark:text-[#a0a8b8]">Categories:</span>
+                <span className="text-sm text-[#666]">Categories:</span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedCategories([])}
                   className={
-                    selectedCategories.length === 0 ? "bg-[#2c3968] text-white hover:bg-[#1e2547] hover:text-white dark:bg-[#4a7cf6] dark:hover:bg-[#5b8df7]" : "bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white hover:bg-[#f7f9fc] dark:hover:bg-[#252b3d]"
+                    selectedCategories.length === 0 ? "bg-[#2c3968] text-white hover:bg-[#1e2547] hover:text-white" : ""
                   }
                 >
                   All
@@ -739,8 +738,8 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                     onClick={() => toggleCategory(category)}
                     className={
                       selectedCategories.includes(category)
-                        ? "bg-[#2c3968] text-white hover:bg-[#1e2547] hover:text-white dark:bg-[#4a7cf6] dark:hover:bg-[#5b8df7]"
-                        : "bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white hover:bg-[#f7f9fc] dark:hover:bg-[#252b3d]"
+                        ? "bg-[#2c3968] text-white hover:bg-[#1e2547] hover:text-white"
+                        : ""
                     }
                   >
                     {category}
@@ -775,7 +774,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
           {/* Progress Bar */}
           <div className="absolute top-0 left-0 right-0 h-0.5 z-40 overflow-hidden">
             <div
-              className={`h-full bg-[#2c3968] dark:bg-[#4a7cf6] transition-all duration-500 ${isLoading ? "w-1/2 animate-infinite-loading" : "w-0 opacity-0"}`}
+              className={`h-full bg-[#2c3968] transition-all duration-500 ${isLoading ? "w-1/2 animate-infinite-loading" : "w-0 opacity-0"}`}
             />
           </div>
           <div
@@ -785,13 +784,13 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
             {isLoading && discussions.length === 0 ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-32 w-full bg-white dark:bg-[#161b26] animate-pulse rounded-2xl border border-gray-100 dark:border-[#2d3548]" />
+                  <div key={i} className="h-32 w-full bg-white animate-pulse rounded-2xl border border-gray-100" />
                 ))}
               </div>
             ) : filteredDiscussions.length === 0 ? (
-              <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-12 text-center border-2 border-dashed border-gray-200 dark:border-[#2d3548]">
-                <MessageCircle className="w-12 h-12 text-[#ccc] dark:text-[#6b7280] mx-auto mb-4" />
-                <p className="text-[#666] dark:text-[#a0a8b8] font-medium">No discussions match your current filters.</p>
+              <div className="bg-white rounded-2xl shadow-sm p-12 text-center border-2 border-dashed border-gray-200">
+                <MessageCircle className="w-12 h-12 text-[#ccc] mx-auto mb-4" />
+                <p className="text-[#666] font-medium">No discussions match your current filters.</p>
               </div>
             ) : (
               filteredDiscussions.map((discussion) => {
@@ -807,7 +806,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                 return (
                   <div
                     key={discussion.id}
-                    className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-transparent hover:border-[#2c3968]/10 dark:border-[#2d3548] dark:hover:border-[#4a7cf6]/30"
+                    className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-transparent hover:border-[#2c3968]/10"
                   >
                     <div className="flex gap-4 p-6">
                       {/* Vote Section */}
@@ -816,14 +815,14 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                           onClick={() => handleVote(discussion.id, "up")}
                           className={`p-2 rounded-lg transition-all duration-200 ${
                             userVote === "up"
-                              ? "bg-[#2c3968] text-white dark:bg-[#4a7cf6]"
-                              : "bg-[#f0f2f5] dark:bg-[#1a1f2e] text-[#666] dark:text-[#a0a8b8] hover:bg-[#2c3968] hover:text-white dark:hover:bg-[#4a7cf6]"
+                              ? "bg-[#2c3968] text-white"
+                              : "bg-[#f0f2f5] text-[#666] hover:bg-[#2c3968] hover:text-white"
                           }`}
                         >
                           <ThumbsUp className="w-5 h-5" />
                         </button>
                         <span
-                          className={`font-semibold ${netScore > 0 ? "text-[#2c3968] dark:text-[#4a7cf6]" : netScore < 0 ? "text-red-500 dark:text-red-400" : "text-[#666] dark:text-[#a0a8b8]"}`}
+                          className={`font-semibold ${netScore > 0 ? "text-[#2c3968]" : netScore < 0 ? "text-red-500" : "text-[#666]"}`}
                         >
                           {netScore > 0 ? "+" : ""}
                           {netScore}
@@ -832,8 +831,8 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                           onClick={() => handleVote(discussion.id, "down")}
                           className={`p-2 rounded-lg transition-all duration-200 ${
                             userVote === "down"
-                              ? "bg-red-500 text-white dark:bg-red-400"
-                              : "bg-[#f0f2f5] dark:bg-[#1a1f2e] text-[#666] dark:text-[#a0a8b8] hover:bg-red-500 hover:text-white dark:hover:bg-red-400"
+                              ? "bg-red-500 text-white"
+                              : "bg-[#f0f2f5] text-[#666] hover:bg-red-500 hover:text-white"
                           }`}
                         >
                           <ThumbsDown className="w-5 h-5" />
@@ -847,14 +846,14 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                           <img
                             src={discussion.authorAvatar}
                             alt={discussion.author}
-                            className="w-10 h-10 rounded-full bg-[#f0f2f5] dark:bg-[#1a1f2e]"
+                            className="w-10 h-10 rounded-full bg-[#f0f2f5]"
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-[#2c3968] dark:text-[#4a7cf6]">{discussion.author}</span>
-                              <span className="text-[#999] dark:text-[#6b7280]">•</span>
-                              <span className="text-[#999] dark:text-[#6b7280] text-sm">{getTimeAgo(discussion.timestamp)}</span>
-                              <Badge variant="outline" className="ml-auto border-[#e0e0e0] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8]">
+                              <span className="text-[#2c3968]">{discussion.author}</span>
+                              <span className="text-[#999]">•</span>
+                              <span className="text-[#999] text-sm">{getTimeAgo(discussion.timestamp)}</span>
+                              <Badge variant="outline" className="ml-auto">
                                 {discussion.category}
                               </Badge>
                             </div>
@@ -863,14 +862,14 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
 
                         {/* Title */}
                         <h3
-                          className="text-[#2c3968] dark:text-[#4a7cf6] mb-2 cursor-pointer hover:text-[#1e2547] dark:hover:text-[#5b8df7] transition-colors"
+                          className="text-[#2c3968] mb-2 cursor-pointer hover:text-[#1e2547] transition-colors"
                           onClick={() => onViewDiscussion?.(discussion.id)}
                         >
                           {discussion.title}
                         </h3>
 
                         {/* Content Preview */}
-                        <p className="text-[#666] dark:text-[#a0a8b8] mb-3 line-clamp-2">{discussion.content}</p>
+                        <p className="text-[#666] mb-3 line-clamp-2">{discussion.content}</p>
 
                         {/* Sentiment Specific Tags */}
                         {sortedTags && sortedTags.length > 0 && (
@@ -887,7 +886,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                             {discussion.tags.map((tag, idx) => (
                               <span
                                 key={idx}
-                                className="px-2.5 py-1 bg-[#f0f2f5] dark:bg-[#1a1f2e] text-[#2c3968] dark:text-[#4a7cf6] text-xs rounded-full hover:bg-[#2c3968] hover:text-white dark:hover:bg-[#4a7cf6] transition-colors cursor-pointer"
+                                className="px-2.5 py-1 bg-[#f0f2f5] text-[#2c3968] text-xs rounded-full hover:bg-[#2c3968] hover:text-white transition-colors cursor-pointer"
                               >
                                 {tag}
                               </span>
@@ -897,7 +896,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
 
                         {/* Stats and Actions */}
                         <div className="flex items-center justify-between gap-4 flex-wrap">
-                          <div className="flex items-center gap-4 text-sm text-[#999] dark:text-[#6b7280]">
+                          <div className="flex items-center gap-4 text-sm text-[#999]">
                             <div className="flex items-center gap-1.5">
                               <MessageCircle className="w-4 h-4" />
                               <span>{discussion.replies} replies</span>
@@ -915,7 +914,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                                 e.stopPropagation();
                                 onViewDiscussion?.(discussion.id);
                               }}
-                              className="text-[#2c3968] dark:text-[#4a7cf6] hover:bg-[#2c3968] hover:text-white dark:hover:bg-[#4a7cf6] border-[#2c3968]/20 dark:border-[#4a7cf6]/20 bg-white dark:bg-[#161b26]"
+                              className="text-[#2c3968] hover:bg-[#2c3968] hover:text-white border-[#2c3968]/20"
                             >
                               <CornerDownRight className="w-4 h-4 mr-1.5" />
                               Reply
@@ -928,7 +927,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                                   e.stopPropagation();
                                   handleDeleteDiscussion(discussion.id);
                                 }}
-                                className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-500/10"
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
                               >
                                 <Trash2 className="w-3.5 h-3.5 mr-1" />
                                 Delete
@@ -942,7 +941,7 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
                                 handleOpenReportDialog(discussion.id);
                               }}
                               disabled={userReports[discussion.id]}
-                              className={`text-xs ${userReports[discussion.id] ? "text-red-400" : "text-[#999] dark:text-[#6b7280] hover:text-red-500 dark:hover:text-red-400"}`}
+                              className={`text-xs ${userReports[discussion.id] ? "text-red-400" : "text-[#999] hover:text-red-500"}`}
                             >
                               <Flag className="w-3.5 h-3.5 mr-1" />
                               {userReports[discussion.id] ? "Reported" : "Report"}
@@ -961,64 +960,64 @@ export default function DiscussionsPage({ onNavigate, onViewDiscussion }: Discus
 
       {/* Report Dialog */}
       <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
-        <DialogContent className="max-w-md bg-white dark:bg-[#161b26] border-[#e0e0e0] dark:border-[#2d3548]">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#1e1e1e] dark:text-white">Report Discussion</DialogTitle>
-            <DialogDescription className="text-[#666] dark:text-[#a0a8b8]">
+            <DialogTitle>Report Discussion</DialogTitle>
+            <DialogDescription>
               Help us keep the community safe by reporting content that violates our guidelines.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div>
-              <Label className="text-[#1e1e1e] dark:text-white">Reason for reporting *</Label>
+              <Label>Reason for reporting *</Label>
               <RadioGroup value={reportReason} onValueChange={setReportReason} className="mt-3 space-y-2">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="spam" id="spam" />
-                  <Label htmlFor="spam" className="cursor-pointer text-[#666] dark:text-[#a0a8b8]">
+                  <Label htmlFor="spam" className="cursor-pointer">
                     Spam or misleading
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="harassment" id="harassment" />
-                  <Label htmlFor="harassment" className="cursor-pointer text-[#666] dark:text-[#a0a8b8]">
+                  <Label htmlFor="harassment" className="cursor-pointer">
                     Harassment or hate speech
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="inappropriate" id="inappropriate" />
-                  <Label htmlFor="inappropriate" className="cursor-pointer text-[#666] dark:text-[#a0a8b8]">
+                  <Label htmlFor="inappropriate" className="cursor-pointer">
                     Inappropriate content
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="misinformation" id="misinformation" />
-                  <Label htmlFor="misinformation" className="cursor-pointer text-[#666] dark:text-[#a0a8b8]">
+                  <Label htmlFor="misinformation" className="cursor-pointer">
                     Misinformation
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="other" id="other" />
-                  <Label htmlFor="other" className="cursor-pointer text-[#666] dark:text-[#a0a8b8]">
+                  <Label htmlFor="other" className="cursor-pointer">
                     Other
                   </Label>
                 </div>
               </RadioGroup>
             </div>
             <div>
-              <Label htmlFor="details" className="text-[#1e1e1e] dark:text-white">Additional details (optional)</Label>
+              <Label htmlFor="details">Additional details (optional)</Label>
               <Textarea
                 id="details"
                 placeholder="Provide more context about why you're reporting this..."
                 value={reportDetails}
                 onChange={(e) => setReportDetails(e.target.value)}
-                className="mt-1.5 min-h-[100px] bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white placeholder:text-[#999] dark:placeholder:text-[#6b7280]"
+                className="mt-1.5 min-h-[100px]"
               />
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setIsReportDialogOpen(false)} className="bg-white dark:bg-[#1a1f2e] border-[#e0e0e0] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white hover:bg-[#f7f9fc] dark:hover:bg-[#252b3d]">
+              <Button variant="outline" onClick={() => setIsReportDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmitReport} disabled={!reportReason} className="bg-red-500 hover:bg-red-600 dark:bg-red-400 dark:hover:bg-red-500">
+              <Button onClick={handleSubmitReport} disabled={!reportReason} className="bg-red-500 hover:bg-red-600">
                 Submit Report
               </Button>
             </div>

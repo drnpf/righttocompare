@@ -110,8 +110,6 @@ export const findPhonePage = async (
     name_asc: { name: 1 },
     name_desc: { name: -1 },
     newest: { releaseDate: -1 },
-    oldest: { releaseDate: 1 },
-    rating_desc: { averageRating: -1 },
   };
 
   // Gets sort strategy from argument if it exist otherwise sort by newest if garbage input
