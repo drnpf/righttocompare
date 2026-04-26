@@ -20,6 +20,10 @@ export const findUserByEmail = async (email: string): Promise<IUser | null> => {
   return await User.findOne({ email: email });
 };
 
+export const findAllUsers = async (): Promise<IUser[]> => {
+  return await User.find();
+};
+
 /**
  * Updates the last login timestamp for existing user to the current time.
  * Should be called every time user loggs in.
@@ -62,5 +66,16 @@ export const updateUserProfile = async (uid: string, data: Partial<IUser>): Prom
     { firebaseUid: uid },
     { $set: data }, // Applies the updates
     { new: true, runValidators: true } // Returns the new user doc and does a schema check
+  );
+};
+
+export const updateNotificationState = async (
+  uid: string,
+  notificationState: IUser["notificationState"]
+): Promise<IUser | null> => {
+  return await User.findOneAndUpdate(
+    { firebaseUid: uid },
+    { $set: { notificationState } },
+    { new: true, runValidators: true }
   );
 };

@@ -10,6 +10,8 @@ import discussionRoutes from "./routes/discussionRoutes";
 import scraperRoutes from "./routes/scraperRoutes";
 import chatbotRoutes from "./routes/chatbotRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
+import { initializeEmailService } from "./services/emailService";
+import { startDailyDigestScheduler } from "./services/notificationService";
 
 // Loading environment variables
 dotenv.config(); // THIS IS FOR DEVELOPMENT maybe we can use system environment variables on production
@@ -45,6 +47,7 @@ app.use(express.json());
  * Database Connection (MongoDB)
  */
 connectDB();
+initializeEmailService();
 
 /**
  * API Routes
@@ -65,4 +68,5 @@ app.get("/", (req: Request, res: Response) => {
 // Starting server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  startDailyDigestScheduler();
 });
