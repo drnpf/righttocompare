@@ -62,7 +62,16 @@ export const getGlobalTrends = async (months: number = 6): Promise<GlobalTrendsR
   return results[0] as GlobalTrendsResponse;
 };
 
+/**
+ * Retrieves sentiment tags and their velocity (upward/downward trend) based on sentiment tags by
+ * aggregating review data over a specific day range. Groups individual tags to calculate their
+ * frequency and filters by top contributors to show current market trends.
+ * @param days The number of days to look back for recent senitment
+ * @returns An array of TickerData objects containing the top 15 sentiment tags
+ */
 export const getTickerData = async (days: number = 30): Promise<TickerData[]> => {
+  const TOP_SENTIMENT_TAG_LIMT = 15; // The number of top sentiment tags to pull for ticker data
+
   // Determining how many days to pull data back till
   const dateLimit = new Date();
   dateLimit.setDate(dateLimit.getDate() - days);
@@ -79,11 +88,21 @@ export const getTickerData = async (days: number = 30): Promise<TickerData[]> =>
       },
     },
     { $sort: { velocity: -1 } }, // Sorts in descending order
-    { $limit: 15 }, // Only keep top 15 sentiment tags
+    { $limit: TOP_SENTIMENT_TAG_LIMT }, // Only keep top 15 sentiment tags
     { $project: { tag: "$_id", velocity: 1, _id: 0 } },
   ]);
 };
 
+/**
+ * Performs analysis of specific device by combining historical rating trajectory
+ * with processing of recent sentiment tags. Generates a month-by-month timeline
+ * to show high-frequency sentiment shifts and provide a categorized summary of
+ * recent pros and cons.
+ * @param phoneId The unique identifier of the device being analyzed
+ * @param recentDays The number of days used to calculate the current sentiment
+ * @returns A VibeShiftResponse containing sentiment timeline and pro/con breakdown;
+ * null if device not found
+ */
 export const getPhoneVibeShift = async (
   phoneId: string,
   recentDays: number = 30,
