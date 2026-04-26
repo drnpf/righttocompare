@@ -114,6 +114,26 @@ interface PhoneSpecPageProps {
   onNavigateToComparison: () => void;
 }
 
+interface PriceHistoryPoint {
+  month: string;
+  price: number;
+  recordedAt: string;
+}
+
+interface PriceSummary {
+  phoneId: string;
+  currency: string;
+  latestPrice: number | null;
+  oldestPrice: number | null;
+  changeAmount: number | null;
+  changePercent: number | null;
+  lowestPrice: number | null;
+  lowestPriceMonth: string | null;
+  latestRecordedAt: string | null;
+}
+
+const API_BASE_URL = "http://localhost:5001/api";
+
 export default function PhoneSpecPage({
   comparisonPhoneIds,
   onComparisonChange,
@@ -165,6 +185,9 @@ export default function PhoneSpecPage({
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "helpful">("newest");
   const [activeSentiment, setActiveSentiment] = useState<string[]>([]);
+  const [priceHistory, setPriceHistory] = useState<PriceHistoryPoint[]>([]);
+  const [priceSummary, setPriceSummary] = useState<PriceSummary | null>(null);
+  const [isLoadingPriceData, setIsLoadingPriceData] = useState(false);
 
   // -- Review Sentiment States --
   const [sentimentSummary, setSentimentSummary] = useState<SentimentSummary | null>(null);
@@ -365,6 +388,43 @@ export default function PhoneSpecPage({
     };
   }, [phoneId, fetchReviews, onAddToRecentlyViewed]);
 
+  useEffect(() => {
+    const fetchPriceTrackingData = async () => {
+      if (!phoneId) return;
+
+      setIsLoadingPriceData(true);
+
+      try {
+        const [historyResponse, summaryResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/phones/${phoneId}/price-history`),
+          fetch(`${API_BASE_URL}/phones/${phoneId}/price-summary`),
+        ]);
+
+        if (!historyResponse.ok) {
+          throw new Error("Failed to fetch price history");
+        }
+
+        if (!summaryResponse.ok) {
+          throw new Error("Failed to fetch price summary");
+        }
+
+        const historyData = await historyResponse.json();
+        const summaryData = await summaryResponse.json();
+
+        setPriceHistory(Array.isArray(historyData) ? historyData : []);
+        setPriceSummary(summaryData);
+      } catch (error) {
+        console.error("Failed to fetch price tracking data:", error);
+        setPriceHistory([]);
+        setPriceSummary(null);
+      } finally {
+        setIsLoadingPriceData(false);
+      }
+    };
+
+    fetchPriceTrackingData();
+  }, [phoneId]);
+
   /**
    * SYNC: Comparison Cart Metadata Cache
    * Signal: comparisonPhoneIds list or phoneId changes
@@ -550,47 +610,33 @@ export default function PhoneSpecPage({
     }
   };
 
+  // -- PRICE HISTORY --
+  const currentPrice =
+    priceSummary?.latestPrice ??
+    parseFloat(String(phoneData.price).replace("$", "").replace(",", ""));
+
+  const oldestPrice = priceSummary?.oldestPrice ?? null;
+  const priceChange = priceSummary?.changeAmount ?? 0;
+  const priceChangePercent =
+    priceSummary?.changePercent !== null && priceSummary?.changePercent !== undefined
+      ? priceSummary.changePercent.toFixed(1)
+      : "0.0";
+
+  const lowestPrice = priceSummary?.lowestPrice ?? null;
+  const lowestPriceMonth = priceSummary?.lowestPriceMonth ?? "N/A";
+
+  const latestRecordedAt = priceSummary?.latestRecordedAt
+    ? new Date(priceSummary.latestRecordedAt).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+    : "No price history yet";
+
   // Handle canceling the review form
   const handleCancelReview = () => {
     setShowReviewForm(false);
   };
-
-  // -- PRICE HISTORY --
-  // Generate price history data (mock data for demonstration)
-  const generatePriceHistory = () => {
-    const currentPrice = parseFloat(phoneData.price.replace("$", "").replace(",", ""));
-    const history = [];
-    const monthsBack = 6;
-
-    for (let i = monthsBack; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const monthName = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-
-      // Generate price variation (random fluctuation around current price)
-      let price;
-      if (i === 0) {
-        price = currentPrice; // Current month uses actual price
-      } else {
-        // Earlier prices tend to be higher, with some random variation
-        const variation = (Math.random() - 0.3) * (currentPrice * 0.15);
-        const baseIncrease = (i / monthsBack) * (currentPrice * 0.1);
-        price = Math.round(currentPrice + baseIncrease + variation);
-      }
-
-      history.push({
-        month: monthName,
-        price: price,
-      });
-    }
-    return history;
-  };
-
-  const priceHistory = generatePriceHistory();
-  const currentPrice = parseFloat(phoneData.price.replace("$", "").replace(",", ""));
-  const oldestPrice = priceHistory[0].price;
-  const priceChange = currentPrice - oldestPrice;
-  const priceChangePercent = ((priceChange / oldestPrice) * 100).toFixed(1);
 
   const toggleSpec = (category: string, specName: string) => {
     setSelectedSpecs((prev) => {
@@ -1079,11 +1125,10 @@ export default function PhoneSpecPage({
                       <DollarSign className="w-5 h-5" />
                       <p className="text-sm opacity-90">Current Price</p>
                     </div>
-                    <p className="text-3xl mb-1">{phoneData.price}</p>
-                    <p className="text-xs opacity-75">
-                      As of{" "}
-                      {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    <p className="text-3xl mb-1">
+                      {currentPrice ? `$${currentPrice.toLocaleString()}` : "No data"}
                     </p>
+                    <p className="text-xs opacity-75">As of {latestRecordedAt}</p>
                   </div>
 
                   <div
@@ -1105,7 +1150,7 @@ export default function PhoneSpecPage({
                     </p>
                     <p className="text-xs text-[#666] dark:text-[#a0a8b8]">
                       {priceChange < 0 ? "" : "+"}
-                      {priceChangePercent}% from ${oldestPrice}
+                      {priceChangePercent}% from {oldestPrice ? `$${oldestPrice.toLocaleString()}` : "N/A"}
                     </p>
                   </div>
 
@@ -1115,10 +1160,10 @@ export default function PhoneSpecPage({
                       <p className="text-sm text-[#666] dark:text-[#a0a8b8]">Lowest Price</p>
                     </div>
                     <p className="text-3xl text-[#2c3968] dark:text-[#4a7cf6] mb-1">
-                      ${Math.min(...priceHistory.map((h) => h.price))}
+                      {lowestPrice ? `$${lowestPrice.toLocaleString()}` : "No data"}
                     </p>
                     <p className="text-xs text-[#666] dark:text-[#a0a8b8]">
-                      In {priceHistory.find((h) => h.price === Math.min(...priceHistory.map((p) => p.price)))?.month}
+                      In {lowestPriceMonth}
                     </p>
                   </div>
                 </div>
@@ -1126,31 +1171,42 @@ export default function PhoneSpecPage({
                 {/* Price Chart */}
                 <div className="border border-[#e0e0e0] dark:border-[#2d3548] rounded-xl p-6 dark:bg-[#1a1f2e]">
                   <h3 className="text-lg text-[#2c3968] dark:text-[#4a7cf6] mb-4">Price History (Last 6 Months)</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={priceHistory} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                      <XAxis dataKey="month" stroke="#666" style={{ fontSize: "12px" }} />
-                      <YAxis stroke="#666" style={{ fontSize: "12px" }} tickFormatter={(value) => `$${value}`} />
-                      <RechartsTooltip
-                        contentStyle={{
-                          backgroundColor: "white",
-                          border: "2px solid #2c3968",
-                          borderRadius: "8px",
-                          padding: "8px 12px",
-                        }}
-                        formatter={(value: any) => [`$${value}`, "Price"]}
-                        labelStyle={{ color: "#2c3968", fontWeight: "bold" }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="price"
-                        stroke="#2c3968"
-                        strokeWidth={3}
-                        dot={{ fill: "#2c3968", r: 5 }}
-                        activeDot={{ r: 7, fill: "#2c3968" }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  {isLoadingPriceData ? (
+                    <div className="h-[300px] flex items-center justify-center text-[#666] dark:text-[#a0a8b8]">
+                      <Loader2 className="animate-spin mr-2" size={24} />
+                      Loading price history...
+                    </div>
+                  ) : priceHistory.length === 0 ? (
+                    <div className="h-[300px] flex items-center justify-center text-[#666] dark:text-[#a0a8b8] text-center">
+                      No price history available yet.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={priceHistory} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                        <XAxis dataKey="month" stroke="#666" style={{ fontSize: "12px" }} />
+                        <YAxis stroke="#666" style={{ fontSize: "12px" }} tickFormatter={(value) => `$${value}`} />
+                        <RechartsTooltip
+                          contentStyle={{
+                            backgroundColor: "white",
+                            border: "2px solid #2c3968",
+                            borderRadius: "8px",
+                            padding: "8px 12px",
+                          }}
+                          formatter={(value: any) => [`$${value}`, "Price"]}
+                          labelStyle={{ color: "#2c3968", fontWeight: "bold" }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="price"
+                          stroke="#2c3968"
+                          strokeWidth={3}
+                          dot={{ fill: "#2c3968", r: 5 }}
+                          activeDot={{ r: 7, fill: "#2c3968" }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
                   <p className="text-xs text-[#666] dark:text-[#a0a8b8] mt-4 text-center">
                     💡 Tip: Set a price alert above to get notified when the price drops to your target
                   </p>
