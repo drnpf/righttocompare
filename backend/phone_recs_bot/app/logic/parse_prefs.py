@@ -32,15 +32,18 @@ def _extract_budget(text: str) -> float | None:
       max 900
       budget 450
       around 800
+      800 dollars
+      $800
+      800
     """
-    t = text.lower().replace(",", "")
+    t = text.lower().replace(",", "").strip()
 
     m = re.search(r"(under|max|budget|<=|less than|around|about)\s*\$?\s*(\d+(\.\d+)?)", t)
     if m:
         return float(m.group(2))
 
-    m2 = re.search(r"\$?\s*(\d+(\.\d+)?)\s*(usd|dollars|\$)\b", t)
-    if m2 and any(x in t for x in ["under", "max", "budget", "around", "about"]):
+    m2 = re.fullmatch(r"\$?\s*(\d+(\.\d+)?)\s*(usd|dollars|\$)?", t)
+    if m2:
         return float(m2.group(1))
 
     return None
