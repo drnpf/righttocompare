@@ -84,8 +84,6 @@ import { ReviewData } from "../types/reviewTypes";
 import { getPhoneReviews, submitReview, voteOnReview, deleteReview } from "../api/reviewApi";
 import { PhoneSummary, PhoneData } from "../types/phoneTypes";
 import { getPhoneById, getPhoneSummaries } from "../api/phoneApi";
-import { SentimentSummary } from "../types/sentimentTypes";
-import { getPhoneReviewSentiment } from "../api/reviewApi";
 
 // Category icons mapping - minimalistic uniform color scheme
 const categoryConfig: Record<string, { icon: any }> = {

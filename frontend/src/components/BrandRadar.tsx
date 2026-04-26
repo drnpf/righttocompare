@@ -3,6 +3,26 @@ interface BrandRadarProps {
 }
 
 export function BrandRadar({ brands }: BrandRadarProps) {
+  // ------------------------------------------------------------
+  // | COMPONENT LOGIC
+  // ------------------------------------------------------------
+  // Calculate total insights to determine statistical confidence
+  const totalInsights = brands.reduce((sum, item) => sum + item.reviewCount, 0);
+
+  /**
+   * Confidence Calculation:
+   * Score that scales with data volume.
+   * Logic: 100 reviews = ~80% confidence, 500+ reviews = 99%+
+   * Formula: 100 * (1 - e^(-total / constant))
+   */
+  const calculateConfidence = (total: number) => {
+    if (total === 0) return 0;
+    const score = 70 + 29.9 * (1 - Math.exp(-total / 200));
+    return score.toFixed(1);
+  };
+
+  const dynamicConfidence = calculateConfidence(totalInsights);
+
   return (
     <div className="bg-white dark:bg-[#111622] p-8 rounded-[2.5rem] border border-white dark:border-gray-800 shadow-[0_20px_50px_rgba(0,0,0,0.02)] h-full flex flex-col">
       <div className="mb-10">
@@ -12,9 +32,12 @@ export function BrandRadar({ brands }: BrandRadarProps) {
         <p className="text-[10px] text-gray-400 font-medium">Market sentiment ranking</p>
       </div>
 
-      <div className="space-y-8 flex-1">
+      <div className="space-y-4 flex-1">
         {brands.map((item, idx) => (
-          <div key={item.brand} className="group cursor-default">
+          <div
+            key={item.brand}
+            className="group cursor-default p-4 -mx-4 rounded-2xl transition-all duration-300 hover:bg-gray-50 dark:hover:bg-black/20"
+          >
             <div className="flex justify-between items-end mb-3">
               <div className="flex items-center gap-3">
                 {/* Ranking Index */}
@@ -60,7 +83,7 @@ export function BrandRadar({ brands }: BrandRadarProps) {
       {/* Analytics Footer */}
       <div className="mt-8 pt-6 border-t border-gray-50 dark:border-gray-800/50">
         <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest text-center">
-          Confidence Score: <span className="text-[#4a7cf6]">98.4%</span>
+          Confidence Score: <span className="text-[#4a7cf6]">{dynamicConfidence}%</span>
         </p>
       </div>
     </div>

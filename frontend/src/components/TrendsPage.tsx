@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity } from "lucide-react";
 
 // Custom Components & API
@@ -7,31 +7,68 @@ import { MomentumChart } from "./MomentumChart";
 import { BrandRadar } from "./BrandRadar";
 import { SentimentTicker } from "./SentimentTicker";
 import { VibeShiftSection } from "./VibeShiftSection";
+import ComparisonCart from "./ComparisonCart";
 import { getGlobalTrends, getTickerData } from "../api/trendsApi";
 import { GlobalTrendsResponse, TickerData } from "../types/trendTypes";
+import { PhoneSummary } from "../types/phoneTypes";
+import { getPhoneSummaries } from "../api/phoneApi";
+import { useNavigate } from "react-router-dom";
 
-export default function TrendsPage() {
+interface TrendsPageProps {
+  comparisonPhoneIds: string[];
+  onCompare: (id: string) => void;
+  onRemove: (id: string) => void;
+  onViewDetails: (id: string) => void;
+}
+
+export default function TrendsPage({ comparisonPhoneIds, onCompare, onRemove, onViewDetails }: TrendsPageProps) {
   // ------------------------------------------------------------
   // | HOOKS
   // ------------------------------------------------------------
+  const navigate = useNavigate();
   const [data, setData] = useState<GlobalTrendsResponse | null>(null);
   const [ticker, setTicker] = useState<TickerData[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState(12); // Default to 12 months
   const [selectedPhoneId, setSelectedPhoneId] = useState<string>("");
 
+  // --- COMPARISON CART STATES ---
+  const [comparisonData, setComparisonData] = useState<PhoneSummary[]>([]);
+  const [isCartMinimized, setIsCartMinimized] = useState(true);
+
   // ------------------------------------------------------------
   // | DATA SYNCHRONIZATION
   // ------------------------------------------------------------
+
+  // Memoize the phone selection handler
+  const handlePhoneSelect = useCallback((id: string) => {
+    setSelectedPhoneId(id);
+  }, []); // Empty dependency array means this reference is static
+
+  // Memoized search component for phone sentiment history section
+  const MemoizedSearch = useMemo(
+    () => <DebouncedPhoneSearch onSelect={(id) => setSelectedPhoneId(id)} />,
+    [handlePhoneSelect],
+  );
+  // Derive the full phone objects for the cart
+  const comparisonPhones = useMemo<PhoneSummary[]>(() => {
+    return (comparisonPhoneIds || []).map((id) => {
+      const cached = comparisonData.find((p) => p.id === id);
+      if (cached) return cached;
+      return { id, name: "Loading...", manufacturer: "", images: { main: "" }, price: "---" };
+    });
+  }, [comparisonPhoneIds, comparisonData]);
+  /**
+   * SYNC: Global Market Intelligence
+   * Signal: timeRange change
+   * Action: Fetches both the global momentum trajectory and the 30-day
+   * sentiment ticker in parallel to initialize the dashboard.
+   */
   useEffect(() => {
     const fetchAllData = async () => {
       try {
         setLoading(true);
-        // Fetching both datasets in parallel
-        const [trendsResult, tickerResult] = await Promise.all([
-          getGlobalTrends(timeRange),
-          getTickerData(30), // Ticker tracks the last 30 days of buzz
-        ]);
+        const [trendsResult, tickerResult] = await Promise.all([getGlobalTrends(timeRange), getTickerData(30)]);
 
         setData(trendsResult);
         setTicker(tickerResult);
@@ -42,7 +79,35 @@ export default function TrendsPage() {
       }
     };
     fetchAllData();
-  }, [timeRange]); // Refetch whenever the user changes the time filter
+  }, [timeRange]);
+
+  /**
+   * SYNC: Comparison Cart Metadata Cache
+   * Signal: comparisonPhoneIds list changes
+   * Action: Identifies phone IDs in the comparison cart that are missing
+   * from the local metadata cache and fetches their summaries (names, images)
+   * to ensure the UI remains populated.
+   */
+  useEffect(() => {
+    const syncCart = async () => {
+      // Find IDs that aren't in our local metadata cache yet
+      const missingIds = (comparisonPhoneIds || []).filter((id) => !comparisonData.find((p) => p.id === id));
+
+      if (missingIds.length === 0) return;
+
+      try {
+        const newItems = await getPhoneSummaries(missingIds);
+        setComparisonData((prev) => {
+          const combined = [...prev, ...newItems];
+          // Ensure uniqueness by ID
+          return Array.from(new Map(combined.map((item) => [item.id, item])).values());
+        });
+      } catch (error) {
+        console.error("Failed to sync comparison cart:", error);
+      }
+    };
+    syncCart();
+  }, [comparisonPhoneIds]);
 
   // ------------------------------------------------------------
   // | RENDER GUARD PAGES
@@ -55,6 +120,15 @@ export default function TrendsPage() {
     );
 
   if (!data) return <div className="p-20 text-center font-bold">Failed to load market data.</div>;
+
+  // ------------------------------------------------------------
+  // | COMPONENT LOGIC
+  // ------------------------------------------------------------
+  // Adds phone to comparison list
+  const handleAddAndPop = (id: string) => {
+    onCompare(id);
+    setIsCartMinimized(false); // Maximize the cart immediately
+  };
 
   // ------------------------------------------------------------
   // | UI
@@ -87,7 +161,7 @@ export default function TrendsPage() {
                 <button
                   key={m}
                   onClick={() => setTimeRange(m)}
-                  className={`px-6 py-2.5 rounded-xl text-[12px] font-black transition-all duration-300 ${
+                  className={`px-6 py-2.5 rounded-xl text-[12px] font-black transition-all duration-300 cursor-pointer ${
                     timeRange === m
                       ? "bg-[#2c3968] text-white shadow-lg shadow-indigo-500/20 scale-105"
                       : "text-gray-400 hover:text-[#4a7cf6] hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -124,15 +198,19 @@ export default function TrendsPage() {
                 Enter a specific model to extract granular sentiment shifts and feature mentions.
               </p>
             </div>
-            <div className="w-full max-w-md">
-              <DebouncedPhoneSearch onSelect={(id) => setSelectedPhoneId(id)} />
-            </div>
+            <div className="w-full max-w-md">{MemoizedSearch}</div>
           </div>
 
           {/* PHONE VIBE SECTION (CHART + PRO/CON LIST) */}
           <div className="min-h-[600px] w-full relative">
             {selectedPhoneId ? (
-              <VibeShiftSection phoneId={selectedPhoneId} />
+              <VibeShiftSection
+                phoneId={selectedPhoneId}
+                comparisonPhoneIds={comparisonPhoneIds}
+                onCompare={handleAddAndPop}
+                onRemove={onRemove}
+                onViewDetails={onViewDetails}
+              />
             ) : (
               <div className="h-[500px] bg-[#f8fafc] dark:bg-[#111622]/50 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-[3rem] flex flex-col items-center justify-center text-gray-400 group hover:border-[#4a7cf6]/30 transition-all duration-500">
                 <div className="p-6 bg-white dark:bg-gray-900 rounded-[2rem] shadow-xl shadow-blue-500/5 mb-6 group-hover:scale-110 transition-transform duration-500">
@@ -151,6 +229,15 @@ export default function TrendsPage() {
           </div>
         </div>
       </section>
+
+      <ComparisonCart
+        phones={comparisonPhones}
+        onRemovePhone={onRemove}
+        onCompare={() => navigate("/compare")}
+        onClose={() => setIsCartMinimized(true)}
+        isMinimized={isCartMinimized}
+        onMinimizedChange={setIsCartMinimized}
+      />
     </div>
   );
 }

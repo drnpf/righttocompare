@@ -342,7 +342,17 @@ function AppContent() {
               <Route path="/password-reset" element={<PasswordResetPage onNavigateToSignIn={handleSignInClick} />} />
 
               {/* Trends Page */}
-              <Route path="/trends" element={<TrendsPage onNavigate={handleNavigateToPhone} />} />
+              <Route
+                path="/trends"
+                element={
+                  <TrendsPage
+                    comparisonPhoneIds={comparisonPhoneIds}
+                    onCompare={handleAddToComparison}
+                    onRemove={handleRemoveFromComparison}
+                    onViewDetails={handleNavigateToPhone}
+                  />
+                }
+              />
 
               {/* Catch all */}
               <Route path="*" element={<Navigate to="/" replace />} />

@@ -506,7 +506,7 @@ export default function PhoneCatalogPage({
           )}
         </div>
 
-        {/* 3. YOUR ADVANCED FILTER DRAWER */}
+        {/* ADVANCED FILTER DRAWER */}
         {showFilters && (
           <CatalogFilters
             availableManufacturers={availableManufacturers}

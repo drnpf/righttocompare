@@ -109,7 +109,7 @@ export function DebouncedPhoneSearch({ onSelect }: Props) {
                 setSearchTerm(phone.name);
                 setIsOpen(false);
               }}
-              className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-[#252b3d] transition-colors flex items-center gap-4 group"
+              className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-[#252b3d] transition-colors flex items-center gap-4 group cursor-pointer"
             >
               {/* PHONE THUMBNAIL */}
               <div className="w-12 h-12 flex-shrink-0 rounded-xl bg-white dark:bg-gray-800 overflow-hidden flex items-center justify-center border border-gray-100 dark:border-gray-700 p-1 shadow-inner">
