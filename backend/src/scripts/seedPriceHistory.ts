@@ -49,6 +49,9 @@ const seed = async () => {
         await mongoose.connect(MONGO_URI);
         console.log("Connected!");
 
+        await PriceHistory.deleteMany({ source: "mock-seed" });
+        console.log("Cleared existing price history");
+
         const phones = await Phone.find({});
         console.log(`Found ${phones.length} phones`);
 
