@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useDarkMode } from "./DarkModeContext";
 import { darkModeColors } from "./darkModeConfig";
 
@@ -13,6 +14,27 @@ interface BrandRadarProps {
 export function BrandRadar({ brands }: BrandRadarProps) {
   const { isDarkMode } = useDarkMode();
   const colors = darkModeColors;
+
+  // ------------------------------------------------------------
+  // | THEME DERIVATION
+  // ------------------------------------------------------------
+  const theme = useMemo(
+    () => ({
+      cardBg: isDarkMode ? colors.background.card.dark : colors.background.card.light,
+      cardBorder: isDarkMode ? colors.border.default.dark : colors.border.default.light,
+
+      brand: isDarkMode ? colors.text.brand.dark : colors.text.brand.light,
+      textPrimary: isDarkMode ? colors.text.primary.dark : colors.text.primary.light,
+      textMuted: isDarkMode ? colors.text.secondary.dark : colors.text.secondary.light,
+
+      ratingBadge: isDarkMode ? "#ffffff" : colors.text.brand.light,
+      pulseDot: isDarkMode ? "#4a7cf6" : "#10b981",
+
+      footerBorder: isDarkMode ? colors.border.subtle.dark : colors.border.subtle.light,
+      itemHover: isDarkMode ? "#1e2530" : "#f0f0f0",
+    }),
+    [isDarkMode, colors],
+  );
 
   // ------------------------------------------------------------
   // | COMPONENT LOGIC
@@ -34,27 +56,24 @@ export function BrandRadar({ brands }: BrandRadarProps) {
   const dynamicConfidence = calculateConfidence(totalInsights);
 
   // ------------------------------------------------------------
-  // | THEME DEFINITION
+  // | UI SECTION
   // ------------------------------------------------------------
-  const brandColor = isDarkMode ? colors.text.brand.dark : colors.text.brand.light;
-  const secondaryText = isDarkMode ? colors.text.secondary.dark : colors.text.secondary.light;
-
   return (
     <div
       className="p-8 rounded-[2.5rem] border shadow-[0_20px_50px_rgba(0,0,0,0.02)] h-full flex flex-col transition-all duration-500"
       style={{
-        backgroundColor: isDarkMode ? colors.background.card.dark : colors.background.card.light,
-        borderColor: isDarkMode ? colors.border.default.dark : colors.border.default.light,
+        backgroundColor: theme.cardBg,
+        borderColor: theme.cardBorder,
       }}
     >
       <div className="mb-10">
         <h3
           className="text-xs font-black uppercase tracking-[0.2em] mb-1 transition-colors duration-500"
-          style={{ color: brandColor }}
+          style={{ color: theme.brand }}
         >
           Brand Radar
         </h3>
-        <p className="text-[10px] font-medium" style={{ color: secondaryText }}>
+        <p className="text-[10px] font-medium" style={{ color: theme.textMuted }}>
           Market sentiment ranking
         </p>
       </div>
@@ -63,24 +82,27 @@ export function BrandRadar({ brands }: BrandRadarProps) {
         {brands.map((item, idx) => (
           <div
             key={item.brand}
-            className="group cursor-default p-4 -mx-4 rounded-2xl transition-all duration-300 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530]"
+            className="group cursor-default p-4 -mx-4 rounded-2xl transition-all duration-300"
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = theme.itemHover)}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
           >
             <div className="flex justify-between items-end mb-3">
               <div className="flex items-center gap-3">
-                {/* Ranking Index */}
                 <span className="text-[10px] font-black text-gray-300 dark:text-gray-600 group-hover:text-[#4a7cf6] transition-colors">
                   {(idx + 1).toString().padStart(2, "0")}
                 </span>
-                <span className="font-black text-gray-900 dark:text-white uppercase italic tracking-tighter group-hover:translate-x-1 transition-transform duration-300">
+                <span
+                  className="font-black uppercase italic tracking-tighter group-hover:translate-x-1 transition-transform duration-300"
+                  style={{ color: theme.textPrimary }}
+                >
                   {item.brand}
                 </span>
               </div>
 
-              {/* Rating Badge */}
               <div className="flex flex-col items-end">
                 <span
                   className="text-lg font-black leading-none transition-colors duration-500"
-                  style={{ color: isDarkMode ? "#fff" : colors.text.brand.light }}
+                  style={{ color: theme.ratingBadge }}
                 >
                   {item.avgRating.toFixed(2)}
                 </span>
@@ -93,7 +115,7 @@ export function BrandRadar({ brands }: BrandRadarProps) {
                 className="relative h-full transition-all duration-1000 ease-out"
                 style={{
                   width: `${(item.avgRating / 5) * 100}%`,
-                  backgroundColor: brandColor,
+                  backgroundColor: theme.brand,
                 }}
               >
                 <div className="absolute right-0 top-0 h-full w-2 bg-white/40 blur-[2px]" />
@@ -104,13 +126,13 @@ export function BrandRadar({ brands }: BrandRadarProps) {
             <div className="flex justify-between items-center mt-2">
               <p
                 className="text-[9px] uppercase font-black tracking-widest opacity-60 group-hover:opacity-100 transition-opacity"
-                style={{ color: secondaryText }}
+                style={{ color: theme.textMuted }}
               >
                 {item.reviewCount} <span className="font-medium text-[8px]">Community Insights</span>
               </p>
               <div
                 className="h-1 w-1 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"
-                style={{ backgroundColor: isDarkMode ? "#4a7cf6" : "#10b981" }}
+                style={{ backgroundColor: theme.pulseDot }}
               />
             </div>
           </div>
@@ -118,12 +140,9 @@ export function BrandRadar({ brands }: BrandRadarProps) {
       </div>
 
       {/* Analytics Footer */}
-      <div
-        className="mt-8 pt-6 border-t"
-        style={{ borderColor: isDarkMode ? colors.border.subtle.dark : colors.border.subtle.light }}
-      >
-        <p className="text-[9px] font-bold uppercase tracking-widest text-center" style={{ color: secondaryText }}>
-          Confidence Score: <span style={{ color: brandColor }}>{dynamicConfidence}%</span>
+      <div className="mt-8 pt-6 border-t" style={{ borderColor: theme.footerBorder }}>
+        <p className="text-[9px] font-bold uppercase tracking-widest text-center" style={{ color: theme.textMuted }}>
+          Confidence Score: <span style={{ color: theme.brand }}>{dynamicConfidence}%</span>
         </p>
       </div>
     </div>

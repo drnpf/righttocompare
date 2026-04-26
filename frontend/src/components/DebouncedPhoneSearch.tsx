@@ -26,7 +26,9 @@ export function DebouncedPhoneSearch({ onSelect }: Props) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const shouldSearch = useRef(true);
 
-  // Memoization of themes for phone search
+  // ------------------------------------------------------------
+  // | THEME DERIVATION
+  // ------------------------------------------------------------
   const theme = useMemo(
     () => ({
       inputBg: isDarkMode ? colors.background.card.dark : colors.background.card.light,

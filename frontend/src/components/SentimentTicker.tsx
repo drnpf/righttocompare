@@ -2,27 +2,33 @@ import { useDarkMode } from "./DarkModeContext";
 import { darkModeColors } from "./darkModeConfig";
 import { TickerData } from "../types/trendTypes";
 import { TrendingUp, TrendingDown, Flame, AlertCircle } from "lucide-react";
+import { useMemo } from "react";
 
 export function SentimentTicker({ items }: { items: TickerData[] }) {
   const { isDarkMode } = useDarkMode();
   const colors = darkModeColors;
 
-  if (items.length === 0) return null;
+  // ------------------------------------------------------------
+  // | THEME DERIVATION
+  // ------------------------------------------------------------
+  const theme = useMemo(
+    () => ({
+      containerBg: isDarkMode ? colors.background.primary.dark : colors.background.primary.light,
+      containerBorder: isDarkMode ? colors.border.default.dark : colors.border.default.light,
+      pillBg: isDarkMode ? colors.background.card.dark : colors.background.card.light,
+      velocityText: isDarkMode ? colors.text.primary.dark : colors.text.primary.light,
+    }),
+    [isDarkMode, colors],
+  );
 
-  // ------------------------------------------------------------
-  // | THEME DEFINITION
-  // ------------------------------------------------------------
-  const containerBg = isDarkMode ? colors.background.primary.dark : colors.background.primary.light;
-  const containerBorder = isDarkMode ? colors.border.default.dark : colors.border.default.light;
-  const pillBg = isDarkMode ? colors.background.card.dark : colors.background.card.light;
-  const velocityText = isDarkMode ? colors.text.primary.dark : colors.text.primary.light;
+  if (items.length === 0) return null;
 
   return (
     <div
       className="w-full border-b py-3 overflow-hidden whitespace-nowrap relative z-10 transition-colors duration-500"
       style={{
-        backgroundColor: containerBg,
-        borderColor: containerBorder,
+        backgroundColor: theme.containerBg,
+        borderColor: theme.containerBorder,
       }}
     >
       <div className="flex items-center gap-12 animate-marquee-infinite hover:pause w-max">
@@ -36,8 +42,8 @@ export function SentimentTicker({ items }: { items: TickerData[] }) {
               key={idx}
               className="flex items-center gap-4 px-4 py-1 rounded-full border transition-all duration-300 hover:scale-105 shadow-sm"
               style={{
-                backgroundColor: pillBg,
-                borderColor: containerBorder,
+                backgroundColor: theme.pillBg,
+                borderColor: theme.containerBorder,
               }}
             >
               <span
@@ -52,7 +58,7 @@ export function SentimentTicker({ items }: { items: TickerData[] }) {
               <div className="flex items-center gap-2">
                 <span
                   className="text-xs font-black tabular-nums transition-colors duration-500"
-                  style={{ color: velocityText }}
+                  style={{ color: theme.velocityText }}
                 >
                   {item.velocity}
                 </span>
