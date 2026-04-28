@@ -9,6 +9,7 @@ import NavigationBar from "./imports/NavigationBar";
 import FooterBar from "./imports/FooterBar";
 import BackToTopButton from "./components/BackToTopButton";
 import LoadingSpinner from "./components/ui/LoadingSpinner";
+import { logComparison } from "./api/analyticsApi";
 
 // Pages (Lazy Loaded)
 const PhoneSpecPage = lazy(() => import("./components/PhoneSpecPage"));
@@ -187,6 +188,7 @@ function AppContent() {
 
   const handleNavigateToComparison = () => {
     navigate("/compare");
+    logComparison(comparisonPhoneIds);
   };
 
   const handleDiscussionsClick = () => {
