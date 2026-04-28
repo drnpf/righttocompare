@@ -79,19 +79,6 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
   // | DATA SYNCHRONIZATION
   // ------------------------------------------------------------
   /**
-   * SYNC: Sorted OP Sentiment Tags
-   * Signal: discussion.sentimentTags changes
-   * Action: Groups the original post tags by pros then cons
-   */
-  const sortedDiscussionTags = useMemo(() => {
-    return [...(discussion?.sentimentTags || [])].sort((a, b) => {
-      if (a.startsWith("+") && b.startsWith("-")) return -1;
-      if (a.startsWith("-") && b.startsWith("+")) return 1;
-      return a.localeCompare(b);
-    });
-  }, [discussion?.sentimentTags]);
-
-  /**
    * SYNC: Live Thread Sentiment Tracking
    * Signal: discussion or replies list changes
    * Action: Aggregates tags from the original post and all replies
@@ -816,7 +803,7 @@ export default function DiscussionDetailPage({ discussionId, onBack }: Discussio
           </div>
         </div>
 
-        {/* Sentiment Summary Card v*/}
+        {/* Sentiment Summary Card */}
         <div className="mb-8">
           <SentimentSummaryCard
             data={liveThreadSentiment}
