@@ -190,11 +190,10 @@ def _parse_prices_multi(price_raw: str) -> list[dict]:
 
         out.append({"amount": amount, "currency": currency})
 
-    # If nothing matched parts, try one-pass fallback
+    # If nothing matched, just return an empty list.
+    # The raw price string is still preserved in _extract_price().
     if not out:
-        amount, currency = _parse_price_amount_currency(price_raw)
-        if amount is not None or currency is not None:
-            out.append({"amount": amount, "currency": currency})
+        return []
 
     return out
 
@@ -211,6 +210,47 @@ def _extract_price(raw_tables: Dict[str, Dict[str, str]]) -> Optional[dict]:
         "type": "msrp_or_estimate",
         "raw": price_raw,
         "prices": prices,  # list of {amount, currency}
+    }
+
+def _extract_network_bands(raw_tables: Dict[str, Dict[str, str]]) -> dict:
+    network = raw_tables.get("Network", {}) or {}
+
+    return {
+        "bands2G": network.get("2G bands"),
+        "bands3G": network.get("3G bands"),
+        "bands4G": network.get("4G bands"),
+        "bands5G": network.get("5G bands"),
+    }
+
+
+def _extract_benchmarks(raw_tables: Dict[str, Dict[str, str]]) -> dict:
+    tests = raw_tables.get("Tests", {}) or {}
+
+    benchmark_text = " ".join(str(v) for v in tests.values())
+
+    antutu = None
+    geekbench = None
+
+    antutu_match = re.search(
+        r"AnTuTu[:\s]*([\d,]+)",
+        benchmark_text,
+        flags=re.IGNORECASE,
+    )
+    if antutu_match:
+        antutu = int(antutu_match.group(1).replace(",", ""))
+
+    geekbench_match = re.search(
+        r"GeekBench[:\s]*([\d,]+)",
+        benchmark_text,
+        flags=re.IGNORECASE,
+    )
+    if geekbench_match:
+        geekbench = int(geekbench_match.group(1).replace(",", ""))
+
+    return {
+        "antutu": antutu,
+        "geekbench": geekbench,
+        "raw": tests,
     }
 
 
@@ -245,6 +285,9 @@ def parse_phone_page(http: HttpClient, url: str) -> ScrapeOutput:
         # helpful for sorting/debugging
         "announcedRaw": announced_str,
         "announcedParsed": announced_dt.isoformat() if announced_dt else None,
+
+        "networkBands": _extract_network_bands(raw_tables),
+        "benchmarks": _extract_benchmarks(raw_tables),
     }
 
     price_obj = _extract_price(raw_tables)
