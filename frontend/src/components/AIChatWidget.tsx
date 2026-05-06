@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { MessageCircle, X, Send, Sparkles, Smartphone, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner@2.0.3";
+import { sendChatbotMessage } from "../api/chatbotApi";
 
 interface Message {
   id: string;
@@ -12,13 +13,24 @@ interface Message {
     name: string;
     brand: string;
     reason: string;
-    phoneId: string;
+    link?: string;
   }[];
 }
 
 interface AIChatWidgetProps {
   onNavigate?: (phoneId: string) => void;
 }
+
+const CHATBOT_SESSION_KEY = "rtc_chatbot_session_id";
+
+const getSessionId = () => {
+  let sessionId = localStorage.getItem(CHATBOT_SESSION_KEY);
+  if (!sessionId) {
+    sessionId = `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(CHATBOT_SESSION_KEY, sessionId);
+  }
+  return sessionId;
+};
 
 export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -51,6 +63,12 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
   const [messages, setMessages] = useState<Message[]>(getInitialMessages());
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [selectedPhone, setSelectedPhone] = useState<{
+    name: string;
+    brand: string;
+    reason: string;
+    link?: string;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -77,208 +95,117 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
     }
   }, [isOpen]);
 
-  const generateAIResponse = (userMessage: string): Message => {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    // Samsung specific
-    if (lowerMessage.includes("samsung") || lowerMessage.includes("galaxy")) {
-      return {
-        id: Date.now().toString(),
-        text: "Samsung offers excellent Android flagship phones with innovative features:",
-        sender: "ai",
-        timestamp: new Date(),
-        phoneRecommendations: [
-          {
-            name: "Galaxy S24 Ultra",
-            brand: "Samsung",
-            reason: "Top-tier flagship with S Pen, 200MP camera, and stunning display",
-            phoneId: "galaxy-s24-ultra"
-          }
-        ]
-      };
-    }
-
-    // Apple/iPhone specific
-    if (lowerMessage.includes("iphone") || lowerMessage.includes("apple") || lowerMessage.includes("ios")) {
-      return {
-        id: Date.now().toString(),
-        text: "Apple's iPhone lineup offers premium quality and seamless ecosystem integration:",
-        sender: "ai",
-        timestamp: new Date(),
-        phoneRecommendations: [
-          {
-            name: "iPhone 15 Pro Max",
-            brand: "Apple",
-            reason: "Titanium design, A17 Pro chip, and industry-leading camera system",
-            phoneId: "iphone-15-pro-max"
-          }
-        ]
-      };
-    }
-
-    // Budget-based recommendations
-    if (lowerMessage.includes("budget") || lowerMessage.includes("cheap") || lowerMessage.includes("affordable") || lowerMessage.includes("under")) {
-      return {
-        id: Date.now().toString(),
-        text: "Based on your budget requirements, I recommend these excellent value phones:",
-        sender: "ai",
-        timestamp: new Date(),
-        phoneRecommendations: [
-          {
-            name: "Galaxy S24 Ultra",
-            brand: "Samsung",
-            reason: "Flagship features at competitive pricing with excellent camera system",
-            phoneId: "galaxy-s24-ultra"
-          },
-          {
-            name: "iPhone 15 Pro Max",
-            brand: "Apple",
-            reason: "Premium build quality and long-term software support",
-            phoneId: "iphone-15-pro-max"
-          }
-        ]
-      };
-    }
-
-    // Camera-focused recommendations
-    if (lowerMessage.includes("camera") || lowerMessage.includes("photo") || lowerMessage.includes("photography") || lowerMessage.includes("picture")) {
-      return {
-        id: Date.now().toString(),
-        text: "For photography enthusiasts, these phones offer exceptional camera systems:",
-        sender: "ai",
-        timestamp: new Date(),
-        phoneRecommendations: [
-          {
-            name: "Galaxy S24 Ultra",
-            brand: "Samsung",
-            reason: "200MP main camera with advanced AI processing and 100x Space Zoom",
-            phoneId: "galaxy-s24-ultra"
-          },
-          {
-            name: "iPhone 15 Pro Max",
-            brand: "Apple",
-            reason: "Industry-leading computational photography and ProRAW support",
-            phoneId: "iphone-15-pro-max"
-          }
-        ]
-      };
-    }
-
-    // Gaming recommendations
-    if (lowerMessage.includes("gaming") || lowerMessage.includes("game") || lowerMessage.includes("performance") || lowerMessage.includes("fast")) {
-      return {
-        id: Date.now().toString(),
-        text: "For gaming and peak performance, check out these powerhouses:",
-        sender: "ai",
-        timestamp: new Date(),
-        phoneRecommendations: [
-          {
-            name: "Galaxy S24 Ultra",
-            brand: "Samsung",
-            reason: "Snapdragon 8 Gen 3 processor with advanced cooling system",
-            phoneId: "galaxy-s24-ultra"
-          },
-          {
-            name: "iPhone 15 Pro Max",
-            brand: "Apple",
-            reason: "A17 Pro chip with hardware ray tracing for console-quality gaming",
-            phoneId: "iphone-15-pro-max"
-          }
-        ]
-      };
-    }
-
-    // Battery life recommendations
-    if (lowerMessage.includes("battery") || lowerMessage.includes("charge") || lowerMessage.includes("long lasting") || lowerMessage.includes("all day")) {
-      return {
-        id: Date.now().toString(),
-        text: "These phones excel in battery life and charging capabilities:",
-        sender: "ai",
-        timestamp: new Date(),
-        phoneRecommendations: [
-          {
-            name: "Galaxy S24 Ultra",
-            brand: "Samsung",
-            reason: "5000mAh battery with 45W fast charging and power efficiency",
-            phoneId: "galaxy-s24-ultra"
-          },
-          {
-            name: "iPhone 15 Pro Max",
-            brand: "Apple",
-            reason: "All-day battery life with optimized iOS power management",
-            phoneId: "iphone-15-pro-max"
-          }
-        ]
-      };
-    }
-
-    // Display/Screen recommendations
-    if (lowerMessage.includes("display") || lowerMessage.includes("screen") || lowerMessage.includes("amoled")) {
-      return {
-        id: Date.now().toString(),
-        text: "These phones feature stunning displays perfect for media consumption:",
-        sender: "ai",
-        timestamp: new Date(),
-        phoneRecommendations: [
-          {
-            name: "Galaxy S24 Ultra",
-            brand: "Samsung",
-            reason: "6.8-inch Dynamic AMOLED 2X display with 120Hz and peak brightness of 2600 nits",
-            phoneId: "galaxy-s24-ultra"
-          },
-          {
-            name: "iPhone 15 Pro Max",
-            brand: "Apple",
-            reason: "Super Retina XDR display with ProMotion technology up to 120Hz",
-            phoneId: "iphone-15-pro-max"
-          }
-        ]
-      };
-    }
-
-    // Default recommendation
-    return {
-      id: Date.now().toString(),
-      text: "Here are some of the best phones available right now that offer excellent overall value:",
-      sender: "ai",
-      timestamp: new Date(),
-      phoneRecommendations: [
-        {
-          name: "Galaxy S24 Ultra",
-          brand: "Samsung",
-          reason: "Top-tier flagship with S Pen, incredible cameras, and powerful performance",
-          phoneId: "galaxy-s24-ultra"
-        },
-        {
-          name: "iPhone 15 Pro Max",
-          brand: "Apple",
-          reason: "Premium iOS experience with titanium build and advanced features",
-          phoneId: "iphone-15-pro-max"
-        }
-      ]
-    };
-  };
-
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
-
+  const sendPresetPrompt = async (prompt: string) => {
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: inputValue,
+      text: prompt,
       sender: "user",
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
     setIsTyping(true);
 
-    // Simulate AI thinking time
-    setTimeout(() => {
-      const aiResponse = generateAIResponse(inputValue);
-      setMessages(prev => [...prev, aiResponse]);
+    try {
+      const sessionId = getSessionId();
+      const data = await sendChatbotMessage(sessionId, prompt);
+
+      const userView = data.user_view || {};
+
+      let aiText = userView.summary || "Here are some recommendations.";
+      if (userView.questions?.length) {
+        aiText += "\n\n" + userView.questions.map((q) => `• ${q}`).join("\n");
+      }
+      if (userView.suggestion) {
+        aiText += `\n\n${userView.suggestion}`;
+      }
+      if (userView.next_step) {
+        aiText += `\n\n${userView.next_step}`;
+      }
+
+      const aiMessage: Message = {
+        id: `ai-${Date.now()}`,
+        text: aiText,
+        sender: "ai",
+        timestamp: new Date(),
+        phoneRecommendations: (userView.recommendations || []).map((rec) => ({
+          name: rec.model,
+          brand: rec.brand,
+          reason: (rec.why || []).join(", ") || "Recommended",
+          link: rec.link,
+        })),
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      toast.error("Failed to get AI recommendations");
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    const trimmed = inputValue.trim();
+    if (!trimmed) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: trimmed,
+      sender: "user",
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue("");
+    setIsTyping(true);
+
+    try {
+      const sessionId = getSessionId();
+      const data = await sendChatbotMessage(sessionId, trimmed);
+
+      const userView = data.user_view || {};
+
+      let aiText = userView.summary || "Here are some recommendations.";
+      if (userView.questions && userView.questions.length > 0) {
+        aiText += "\n\n" + userView.questions.map((q) => `• ${q}`).join("\n");
+      }
+      if (userView.suggestion) {
+        aiText += `\n\n${userView.suggestion}`;
+      }
+      if (userView.next_step) {
+        aiText += `\n\n${userView.next_step}`;
+      }
+
+      const aiMessage: Message = {
+        id: `ai-${Date.now()}`,
+        text: aiText,
+        sender: "ai",
+        timestamp: new Date(),
+        phoneRecommendations: (userView.recommendations || []).map((rec) => ({
+          name: rec.model,
+          brand: rec.brand,
+          reason: (rec.why || []).join(", ") || "Recommended based on your preferences",
+          link: rec.link,
+        })),
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (error: any) {
+      console.error("Chatbot error:", error);
+      toast.error("Failed to get AI recommendations");
+
+      const errorMessage: Message = {
+        id: `ai-error-${Date.now()}`,
+        text: "Sorry — I couldn’t get recommendations right now. Please try again.",
+        sender: "ai",
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -288,9 +215,22 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
     }
   };
 
-  const handlePhoneClick = (phoneId: string) => {
-    onNavigate?.(phoneId);
-    toast.success("Opening phone details...");
+  const handlePhoneClick = (link?: string) => {
+    if (!link) {
+      toast.error("No phone link available");
+      return;
+    }
+
+    window.open(link, "_blank");
+  };
+
+  const handleWhyThisPhone = (phone: {
+    name: string;
+    brand: string;
+    reason: string;
+    link?: string;
+  }) => {
+    setSelectedPhone(phone);
   };
 
   const handleClearChat = () => {
@@ -397,23 +337,41 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
                     {message.phoneRecommendations && (
                       <div className="mt-3 space-y-2">
                         {message.phoneRecommendations.map((phone, idx) => (
-                          <button
+                          <div
                             key={idx}
-                            onClick={() => handlePhoneClick(phone.phoneId)}
-                            className="w-full bg-[#f7f7f7] dark:bg-[#161b26] hover:bg-[#ececec] dark:hover:bg-[#1e2530] border border-[#e5e5e5] dark:border-[#2d3548] rounded-lg p-3 text-left transition-all group"
+                            className="w-full bg-[#f7f7f7] dark:bg-[#161b26] border border-[#e5e5e5] dark:border-[#2d3548] rounded-lg p-3 transition-all"
                           >
                             <div className="flex items-start gap-3">
                               <div className="bg-gradient-to-br from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5d8cf7] rounded-lg p-2 shrink-0">
                                 <Smartphone size={16} className="text-white" />
                               </div>
+
                               <div className="flex-1 min-w-0">
-                                <p className="text-[#1e1e1e] dark:text-white mb-1 group-hover:text-[#2c3968] dark:group-hover:text-[#4a7cf6] transition-colors">
+                                <p className="text-[#1e1e1e] dark:text-white mb-1">
                                   {phone.brand} {phone.name}
                                 </p>
-                                <p className="text-xs text-[#666] dark:text-[#a0a8b8] leading-relaxed">{phone.reason}</p>
+                                <p className="text-xs text-[#666] dark:text-[#a0a8b8] leading-relaxed mb-3">
+                                  {phone.reason}
+                                </p>
+
+                                <div className="flex gap-2 flex-wrap">
+                                  <button
+                                    onClick={() => handleWhyThisPhone(phone)}
+                                    className="text-xs px-3 py-1.5 rounded-full bg-[#e9eefc] hover:bg-[#dbe5ff] text-[#2c3968] transition-all"
+                                  >
+                                    Why this phone?
+                                  </button>
+
+                                  <button
+                                    onClick={() => handlePhoneClick(phone.link)}
+                                    className="text-xs px-3 py-1.5 rounded-full bg-[#2c3968] hover:bg-[#24315a] text-white transition-all"
+                                  >
+                                    View page
+                                  </button>
+                                </div>
                               </div>
                             </div>
-                          </button>
+                          </div>
                         ))}
                       </div>
                     )}
@@ -467,40 +425,31 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
-                  onClick={() => {
-                    setInputValue("Best camera phones");
-                    setTimeout(() => handleSendMessage(), 100);
-                  }}
+                  onClick={() => sendPresetPrompt("Best camera phones")}
                   className="text-xs px-3 py-1.5 bg-[#f7f7f7] hover:bg-[#ececec] rounded-full text-[#666] hover:text-[#2c3968] transition-all"
                   disabled={isTyping}
                 >
                   📸 Camera
                 </button>
+
                 <button
-                  onClick={() => {
-                    setInputValue("Gaming phones");
-                    setTimeout(() => handleSendMessage(), 100);
-                  }}
+                  onClick={() => sendPresetPrompt("Gaming phones")}
                   className="text-xs px-3 py-1.5 bg-[#f7f7f7] hover:bg-[#ececec] rounded-full text-[#666] hover:text-[#2c3968] transition-all"
                   disabled={isTyping}
                 >
                   🎮 Gaming
                 </button>
+
                 <button
-                  onClick={() => {
-                    setInputValue("Long battery life");
-                    setTimeout(() => handleSendMessage(), 100);
-                  }}
+                  onClick={() => sendPresetPrompt("Long battery life")}
                   className="text-xs px-3 py-1.5 bg-[#f7f7f7] hover:bg-[#ececec] rounded-full text-[#666] hover:text-[#2c3968] transition-all"
                   disabled={isTyping}
                 >
                   🔋 Battery
                 </button>
+
                 <button
-                  onClick={() => {
-                    setInputValue("Budget phones");
-                    setTimeout(() => handleSendMessage(), 100);
-                  }}
+                  onClick={() => sendPresetPrompt("Budget phones")}
                   className="text-xs px-3 py-1.5 bg-[#f7f7f7] hover:bg-[#ececec] rounded-full text-[#666] hover:text-[#2c3968] transition-all"
                   disabled={isTyping}
                 >
@@ -508,6 +457,66 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
                 </button>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {selectedPhone && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4"
+            onClick={() => setSelectedPhone(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ type: "spring", damping: 22, stiffness: 280 }}
+              className="w-full max-w-md bg-white dark:bg-[#161b26] rounded-2xl shadow-2xl border border-[#e5e5e5] dark:border-[#2d3548] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-white">{selectedPhone.brand} {selectedPhone.name}</h3>
+                  <p className="text-white/80 text-sm">Recommendation Details</p>
+                </div>
+                <button
+                  onClick={() => setSelectedPhone(null)}
+                  className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4">
+                <div>
+                  <p className="text-sm text-[#666] dark:text-[#a0a8b8] mb-2">Why this phone?</p>
+                  <div className="bg-[#f7f7f7] dark:bg-[#0d1117] border border-[#e5e5e5] dark:border-[#2d3548] rounded-xl p-4 text-sm text-[#1e1e1e] dark:text-white leading-relaxed">
+                    {selectedPhone.reason}
+                  </div>
+                </div>
+
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => setSelectedPhone(null)}
+                    className="px-4 py-2 rounded-lg border border-[#d9d9d9] text-[#666] hover:bg-[#f7f7f7] transition-all"
+                  >
+                    Close
+                  </button>
+
+                  {selectedPhone.link && (
+                    <button
+                      onClick={() => handlePhoneClick(selectedPhone.link)}
+                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white hover:shadow-lg transition-all"
+                    >
+                      Open phone page
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

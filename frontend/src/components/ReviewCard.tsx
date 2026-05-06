@@ -2,23 +2,10 @@ import { useState } from "react";
 import { ThumbsUp, ThumbsDown, ChevronDown, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { StarRating } from "./StarRating";
-import { MultiRatingInput, CategoryRatings } from "./MultiRatingInput";
+import { MultiRatingInput } from "./MultiRatingInput";
 import { useDarkMode } from "./DarkModeContext";
-
-export interface ReviewData {
-  id: number;
-  userId?: string;
-  userName: string;
-  rating: number;
-  categoryRatings: CategoryRatings;
-  date: string;
-  title: string;
-  review: string;
-  helpful: number;
-  notHelpful: number;
-  helpfulVoters?: string[];
-  notHelpfulVoters?: string[];
-}
+import { ReviewData } from "../types/reviewTypes";
+import { SentimentPill } from "./SentimentPill";
 
 interface ReviewCardProps {
   review: ReviewData;
@@ -37,15 +24,16 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function ReviewCard({
-  review,
-  currentUserId,
-  onVote,
-  onDelete,
-  isVoting = false,
-}: ReviewCardProps) {
+export function ReviewCard({ review, currentUserId, onVote, onDelete, isVoting = false }: ReviewCardProps) {
   const { isDarkMode } = useDarkMode();
   const [showCategoryRatings, setShowCategoryRatings] = useState(false);
+
+  // Sorting tags by pros first then cons (alphabetical in each group)
+  const sortedTags = [...(review.sentimentTags || [])].sort((a, b) => {
+    if (a.startsWith("+") && b.startsWith("-")) return -1;
+    if (a.startsWith("-") && b.startsWith("+")) return 1;
+    return a.localeCompare(b);
+  });
 
   const hasVotedHelpful = currentUserId && review.helpfulVoters?.includes(currentUserId);
   const hasVotedNotHelpful = currentUserId && review.notHelpfulVoters?.includes(currentUserId);
@@ -59,9 +47,7 @@ export function ReviewCard({
 
   return (
     <div
-      className={`p-6 rounded-xl border ${
-        isDarkMode ? "bg-[#161b22] border-[#2d3748]" : "bg-white border-gray-200"
-      }`}
+      className={`p-6 rounded-xl border ${isDarkMode ? "bg-[#161b22] border-[#2d3748]" : "bg-white border-gray-200"}`}
     >
       {/* Header: Avatar, Name, Date, Rating */}
       <div className="flex items-start justify-between mb-4">
@@ -74,19 +60,15 @@ export function ReviewCard({
             {getInitials(review.userName)}
           </div>
           <div>
-            <p
-              className={`font-medium ${
-                isDarkMode ? "text-[#e0e4eb]" : "text-[#2c3968]"
-              }`}
-            >
-              {review.userName}
-            </p>
-            <p
-              className={`text-sm ${
-                isDarkMode ? "text-[#a0a8b8]" : "text-[#666]"
-              }`}
-            >
-              {review.date}
+            <p className={`font-medium ${isDarkMode ? "text-[#e0e4eb]" : "text-[#2c3968]"}`}>{review.userName}</p>
+            <p className={`text-sm ${isDarkMode ? "text-[#a0a8b8]" : "text-[#666]"}`}>
+              {review.date
+                ? new Date(review.date).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "Recent"}
             </p>
           </div>
         </div>
@@ -110,22 +92,21 @@ export function ReviewCard({
       </div>
 
       {/* Title */}
-      <h3
-        className={`text-lg font-semibold mb-2 ${
-          isDarkMode ? "text-[#e0e4eb]" : "text-[#1e1e1e]"
-        }`}
-      >
+      <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? "text-[#e0e4eb]" : "text-[#1e1e1e]"}`}>
         {review.title}
       </h3>
 
+      {/* Sentiment Tags */}
+      {sortedTags && sortedTags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3 pointer-events-none select-none opacity-90">
+          {sortedTags.map((tag, idx) => (
+            <SentimentPill key={`${review.id}-${tag}-${idx}`} tag={tag as any} readOnly={true} />
+          ))}
+        </div>
+      )}
+
       {/* Review Text */}
-      <p
-        className={`mb-4 leading-relaxed ${
-          isDarkMode ? "text-[#a0a8b8]" : "text-[#666]"
-        }`}
-      >
-        {review.review}
-      </p>
+      <p className={`mb-4 leading-relaxed ${isDarkMode ? "text-[#a0a8b8]" : "text-[#666]"}`}>{review.review}</p>
 
       {/* Category Ratings Toggle */}
       {review.categoryRatings && (
@@ -133,25 +114,15 @@ export function ReviewCard({
           <button
             onClick={() => setShowCategoryRatings(!showCategoryRatings)}
             className={`flex items-center gap-1 text-sm font-medium transition-colors ${
-              isDarkMode
-                ? "text-[#4a7cf6] hover:text-[#6b93f7]"
-                : "text-[#2c3968] hover:text-[#4a5a8a]"
+              isDarkMode ? "text-[#4a7cf6] hover:text-[#6b93f7]" : "text-[#2c3968] hover:text-[#4a5a8a]"
             }`}
           >
-            <ChevronDown
-              className={`w-4 h-4 transition-transform ${
-                showCategoryRatings ? "rotate-180" : ""
-              }`}
-            />
+            <ChevronDown className={`w-4 h-4 transition-transform ${showCategoryRatings ? "rotate-180" : ""}`} />
             <span>{showCategoryRatings ? "Hide" : "View"} detailed ratings</span>
           </button>
 
           {showCategoryRatings && (
-            <div
-              className={`mt-3 p-4 rounded-lg ${
-                isDarkMode ? "bg-[#0d1117]" : "bg-[#f8f9fa]"
-              }`}
-            >
+            <div className={`mt-3 p-4 rounded-lg ${isDarkMode ? "bg-[#0d1117]" : "bg-[#f8f9fa]"}`}>
               <MultiRatingInput
                 value={review.categoryRatings}
                 onChange={() => {}}
@@ -165,18 +136,8 @@ export function ReviewCard({
       )}
 
       {/* Helpful/Not Helpful Voting */}
-      <div
-        className={`flex items-center gap-4 pt-4 border-t ${
-          isDarkMode ? "border-[#2d3748]" : "border-gray-200"
-        }`}
-      >
-        <span
-          className={`text-sm ${
-            isDarkMode ? "text-[#a0a8b8]" : "text-[#666]"
-          }`}
-        >
-          Was this review helpful?
-        </span>
+      <div className={`flex items-center gap-4 pt-4 border-t ${isDarkMode ? "border-[#2d3748]" : "border-gray-200"}`}>
+        <span className={`text-sm ${isDarkMode ? "text-[#a0a8b8]" : "text-[#666]"}`}>Was this review helpful?</span>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -189,8 +150,8 @@ export function ReviewCard({
                   ? "bg-green-900/30 text-green-400"
                   : "bg-green-100 text-green-700"
                 : isDarkMode
-                ? "text-[#a0a8b8] hover:text-green-400 hover:bg-green-900/20"
-                : "text-[#666] hover:text-green-600 hover:bg-green-50"
+                  ? "text-[#a0a8b8] hover:text-green-400 hover:bg-green-900/20"
+                  : "text-[#666] hover:text-green-600 hover:bg-green-50"
             } ${isOwnReview ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             <ThumbsUp className="w-4 h-4" />
@@ -207,8 +168,8 @@ export function ReviewCard({
                   ? "bg-red-900/30 text-red-400"
                   : "bg-red-100 text-red-700"
                 : isDarkMode
-                ? "text-[#a0a8b8] hover:text-red-400 hover:bg-red-900/20"
-                : "text-[#666] hover:text-red-600 hover:bg-red-50"
+                  ? "text-[#a0a8b8] hover:text-red-400 hover:bg-red-900/20"
+                  : "text-[#666] hover:text-red-600 hover:bg-red-50"
             } ${isOwnReview ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             <ThumbsDown className="w-4 h-4" />

@@ -37,4 +37,5 @@ export interface AppUser {
   };
   wishlist: string[];
   comparisonPhoneIds: string[];
+  preferredCarrier: string;
 }

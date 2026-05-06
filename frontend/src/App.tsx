@@ -1,37 +1,31 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Toaster } from "sonner@2.0.3";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+
+// UI Components
+import { DarkModeProvider } from "./components/DarkModeContext";
 import NavigationBar from "./imports/NavigationBar";
 import FooterBar from "./imports/FooterBar";
-import PhoneSpecPage from "./components/PhoneSpecPage";
-import PhoneComparisonPage from "./components/PhoneComparisonPage";
-import PhoneCatalogPage from "./components/PhoneCatalogPage";
-import DiscussionsPage from "./components/DiscussionsPage";
-import DiscussionDetailPage from "./components/DiscussionDetailPage";
-import SignInPage from "./components/SignInPage";
-import SignUpPage from "./components/SignUpPage";
-import UserProfilePage from "./components/UserProfilePage";
-import AdminDashboardPage from "./components/AdminDashboardPage";
-import AIChatWidget from "./components/AIChatWidget";
-import { phonesData } from "./data/phoneData";
-import { Toaster } from "sonner@2.0.3";
-import { DarkModeProvider } from "./components/DarkModeContext";
-import { AuthProvider, useAuth } from "./context/AuthContext";
-import FirebaseConnectionTest from "./components/FirebaseConnectionTest";
-import PasswordResetPage from "./components/PasswordResetPage";
-import { Shield } from "lucide-react";
+import BackToTopButton from "./components/BackToTopButton";
+import LoadingSpinner from "./components/ui/LoadingSpinner";
 
-type PageType =
-  | "spec"
-  | "comparison"
-  | "catalog"
-  | "discussions"
-  | "discussionDetail"
-  | "signIn"
-  | "signUp"
-  | "profile"
-  | "admin"
-  | "passwordReset";
+// Pages (Lazy Loaded)
+const PhoneSpecPage = lazy(() => import("./components/PhoneSpecPage"));
+const PhoneComparisonPage = lazy(() => import("./components/PhoneComparisonPage"));
+const PhoneCatalogPage = lazy(() => import("./components/PhoneCatalogPage"));
+const DiscussionsPage = lazy(() => import("./components/DiscussionsPage"));
+const DiscussionDetailPage = lazy(() => import("./components/DiscussionDetailPage"));
+const SignInPage = lazy(() => import("./components/SignInPage"));
+const SignUpPage = lazy(() => import("./components/SignUpPage"));
+const UserProfilePage = lazy(() => import("./components/UserProfilePage"));
+const AdminDashboardPage = lazy(() => import("./components/AdminDashboardPage"));
+const PasswordResetPage = lazy(() => import("./components/PasswordResetPage"));
 
-// Helper functions for localStorage
+// UI Component (Lazy Loaded)
+const AIChatWidget = lazy(() => import("./components/AIChatWidget"));
+
+// Helper function for getting Recently Viewed phones from localStorage
 const getRecentlyViewedFromStorage = (): string[] => {
   try {
     const stored = localStorage.getItem("recentlyViewedPhones");
@@ -41,6 +35,7 @@ const getRecentlyViewedFromStorage = (): string[] => {
   }
 };
 
+// Helper function for saving Recently Viewed phones to localStorage
 const saveRecentlyViewedToStorage = (phoneIds: string[]) => {
   try {
     localStorage.setItem("recentlyViewedPhones", JSON.stringify(phoneIds));
@@ -49,19 +44,78 @@ const saveRecentlyViewedToStorage = (phoneIds: string[]) => {
   }
 };
 
+// Helper function for getting currently compared phones from localStorage
+const getComparisonFromStorage = (): string[] => {
+  try {
+    const stored = localStorage.getItem("comparisonPhoneIds");
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+// Helper function for saving currently compared phones to localStorage
+const saveComparisonToStorage = (phoneIds: string[]) => {
+  try {
+    localStorage.setItem("comparisonPhoneIds", JSON.stringify(phoneIds));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
 function AppContent() {
+  // ------------------------------------------------------------
+  // | HOOKS
+  // -----------------------------------------------------------
   const { currentUser, signOut } = useAuth();
-  const [currentPage, setCurrentPage] = useState<string>("galaxy-s24-ultra");
-  const [pageType, setPageType] = useState<PageType>("catalog");
+
+  // React Router hook
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // --- Data States ---
   const [comparisonPhoneIds, setComparisonPhoneIds] = useState<string[]>([]);
   const [recentlyViewedPhones, setRecentlyViewedPhones] = useState<string[]>([]);
   const [currentDiscussionId, setCurrentDiscussionId] = useState<string>("");
 
-  // Load recently viewed phones and user from localStorage on mount
+  // ------------------------------------------------------------
+  // | DATA SYNCHRONIZATION (REFRESHES)
+  // ------------------------------------------------------------
+
+  // Add a phone to recently viewed without navigating
+  const addPhoneToRecentlyViewed = useCallback((phoneId: string) => {
+    setRecentlyViewedPhones((prev) => {
+      const filtered = prev.filter((id) => id !== phoneId);
+      const updated = [phoneId, ...filtered].slice(0, 8);
+      saveRecentlyViewedToStorage(updated);
+      return updated;
+    });
+  }, []);
+
+  /**
+   * APP INITIALIZATION: Runs once on mount to handle fetching from
+   * local storage and URL-based routing like password resetting
+   * Action: Fetching recently viewed phones and comparison from local
+   * storage and checking URL for OOB code for password resetting.
+   */
   useEffect(() => {
+    /**
+     * RECENTLY VIEWED
+     */
     const stored = getRecentlyViewedFromStorage();
     setRecentlyViewedPhones(stored);
 
+    /**
+     * COMPARISONS
+     */
+    const storedCompare = getComparisonFromStorage();
+    if (storedCompare.length > 0) {
+      setComparisonPhoneIds(storedCompare);
+    }
+
+    /**
+     * PASSWORD RESET
+     */
     // Check if URL contains password reset code
     const urlParams = new URLSearchParams(window.location.search);
     const oobCode = urlParams.get("oobCode");
@@ -69,34 +123,20 @@ function AppContent() {
 
     // If there's a password reset code in the URL, navigate to password reset page
     if (oobCode && mode === "resetPassword") {
-      setPageType("passwordReset");
+      navigate("/password-reset", { replace: true });
     }
   }, []);
 
-  // Load from localStorage 
+/**
+   * COMPARISON PERSISTENCE:
+   * Signal: Any changes to the comparisonPhoneIds array (i.e. adding new phone)
+   * Action: Syncs current comparison ID list to localStorage; keeps compares
+   * persistent on refresh
+   */
   useEffect(() => {
-    if (!currentUser) {
-      try {
-        const stored = localStorage.getItem("comparisonPhoneIds");
-        if (stored) setComparisonPhoneIds(JSON.parse(stored));
-      } catch {}
-    }
-    setComparisonLoaded(true);
-  }, []);
+    saveComparisonToStorage(comparisonPhoneIds);
 
-  // Load comparison selections from user profile
-  useEffect(() => {
-    if (currentUser?.comparisonPhoneIds && currentUser.comparisonPhoneIds.length > 0) {
-      setComparisonPhoneIds(currentUser.comparisonPhoneIds);
-    }
-  }, [currentUser]);
-
-  // Save comparison selections when they change
-  const [comparisonLoaded, setComparisonLoaded] = useState(false);
-
-  useEffect(() => {
-    if (!comparisonLoaded) return; 
-
+    // Also save to database for logged-in users
     if (currentUser?.firebaseUser) {
       const saveToDb = async () => {
         try {
@@ -114,41 +154,34 @@ function AppContent() {
         }
       };
       saveToDb();
-    } else {
-      localStorage.setItem("comparisonPhoneIds", JSON.stringify(comparisonPhoneIds));
     }
   }, [comparisonPhoneIds]);
-
-  // Add current page to recently viewed when it changes
+  
+  // Update compare page URL whenever user adds/removes phones to compare cart
   useEffect(() => {
-    if (pageType === "spec" && currentPage) {
-      setRecentlyViewedPhones((prev) => {
-        // Remove the current phone if it already exists
-        const filtered = prev.filter((id) => id !== currentPage);
-        // Add current phone to the beginning
-        const updated = [currentPage, ...filtered].slice(0, 8); // Keep max 8 phones
-        saveRecentlyViewedToStorage(updated);
-        return updated;
-      });
+    if (location.pathname !== "/compare") return;
+
+    if (comparisonPhoneIds.length === 0) {
+      navigate("/compare", { replace: true });
+    } else {
+      const phoneQuery = comparisonPhoneIds.join(",");
+      navigate(`/compare?phones=${phoneQuery}`, { replace: true });
     }
-  }, [currentPage, pageType]);
+  }, [comparisonPhoneIds, location.pathname]);
 
-  const navigateToPhone = (phoneId: string) => {
-    setCurrentPage(phoneId);
-    setPageType("spec");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // Update compare page URL on page refresh
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const phones = params.get("phones");
 
-  const navigateToComparison = (phoneIds: string[]) => {
-    setComparisonPhoneIds(phoneIds);
-    setPageType("comparison");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+    if (phones) {
+      setComparisonPhoneIds(phones.split(","));
+    }
+  }, []);
 
-  const handleBackToSpecs = () => {
-    setPageType("spec");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // ------------------------------------------------------------
+  // | UI FUNCTIONS
+  // -----------------------------------------------------------
 
   const handleRemoveFromComparison = (phoneId: string) => {
     const updatedIds = comparisonPhoneIds.filter((id) => id !== phoneId);
@@ -163,102 +196,81 @@ function AppContent() {
     }
   };
 
-  // Add a phone to recently viewed without navigating
-  const addPhoneToRecentlyViewed = (phoneId: string) => {
-    setRecentlyViewedPhones((prev) => {
-      // Remove the phone if it already exists
-      const filtered = prev.filter((id) => id !== phoneId);
-      // Add phone to the beginning
-      const updated = [phoneId, ...filtered].slice(0, 8); // Keep max 8 phones
-      saveRecentlyViewedToStorage(updated);
-      return updated;
-    });
+  // ------------------------------------------------------------
+  // | NAVIGATION FUNCTIONS
+  // ------------------------------------------------------------
+  const handleNavigateToPhone = (phoneId: string) => {
+    addPhoneToRecentlyViewed(phoneId);
+    navigate(`/phones/${phoneId}`);
   };
 
-  const handleComparisonToolClick = () => {
-    // Always navigate to comparison page - it will handle empty states
-    setPageType("comparison");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const handleNavigateToComparison = () => {
+    navigate("/compare");
   };
 
   const handleDiscussionsClick = () => {
-    setPageType("discussions");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    navigate("/discussions");
   };
 
   const handleViewDiscussion = (discussionId: string) => {
     setCurrentDiscussionId(discussionId);
-    setPageType("discussionDetail");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleBackToDiscussions = () => {
-    setPageType("discussions");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    navigate(`/discussions/${discussionId}`);
   };
 
   const handleSignInClick = () => {
-    setPageType("signIn");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    navigate("/sign-in");
   };
 
   const handleSignUpClick = () => {
-    setPageType("signUp");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    navigate("/sign-up");
   };
 
   const handleSignInSuccess = () => {
-    // Navigate to profile page after successful sign in
-    setPageType("profile");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    navigate("/profile");
   };
 
   const handleSignUpSuccess = () => {
-    // Navigate to profile page after successful sign up
-    setPageType("profile");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    navigate("/profile");
   };
 
   const handleSignOut = async () => {
     await signOut();
-    setPageType("catalog");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    navigate("/");
   };
 
   const handleProfileClick = () => {
-    setPageType("profile");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    navigate("/profile");
   };
 
   const handleAdminClick = () => {
-    setPageType("admin");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    navigate("/admin");
   };
 
   const handleCatalogClick = () => {
-    setPageType("catalog");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    navigate("/");
   };
 
   const handleLogoClick = () => {
-    // Navigate to catalog page
-    setPageType("catalog");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    navigate("/");
   };
 
-  // Get the current phone data
-  const currentPhoneData = phonesData[currentPage];
+  const handleBackToDiscussions = () => {
+    navigate("/discussions");
+  };
 
+  // ------------------------------------------------------------
+  // | UI SECTION
+  // -----------------------------------------------------------
   return (
     <DarkModeProvider>
       <div className="min-h-screen bg-[#f7f7f7] dark:bg-[#0d1117] flex flex-col transition-colors duration-300">
         <Toaster position="top-right" richColors />
         <div className="relative h-[80px] shrink-0">
           <NavigationBar
-            onComparisonToolClick={handleComparisonToolClick}
-            onDiscussionsClick={handleDiscussionsClick}
             isAuthenticated={currentUser !== null}
             user={currentUser}
+            onComparisonToolClick={handleNavigateToComparison}
+            onDiscussionsClick={handleDiscussionsClick}
             onSignInClick={handleSignInClick}
             onSignOut={handleSignOut}
             onProfileClick={handleProfileClick}
@@ -269,83 +281,84 @@ function AppContent() {
         </div>
 
         <main className="flex-1">
-          {pageType === "passwordReset" ? (
-            <PasswordResetPage onNavigateToSignIn={handleSignInClick} />
-          ) : pageType === "admin" ? (
-            currentUser?.role === "admin" ? (
-              <AdminDashboardPage />
-            ) : (
-              // Handles invalid access to admin page
-              <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 pt-8">
-                <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-16 text-center flex flex-col items-center border border-[#e5e5e5] dark:border-[#2d3548]">
-                  <div className="h-16 w-full" />
-                  <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-full mb-6">
-                    <Shield size={48} className="text-red-600 dark:text-red-500" />
-                  </div>
+          <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
+              {/* Catalog page */}
+              <Route
+                path="/"
+                element={
+                  <PhoneCatalogPage
+                    onNavigate={handleNavigateToPhone}
+                    comparisonPhoneIds={comparisonPhoneIds}
+                    onComparisonChange={setComparisonPhoneIds}
+                    onNavigateToComparison={handleNavigateToComparison}
+                    recentlyViewedPhones={recentlyViewedPhones}
+                  />
+                }
+              />
 
-                  <h2 className="text-[#2c3968] dark:text-white text-3xl font-bold mb-4">Access Denied</h2>
+              {/* Phone detail page */}
+              <Route
+                path="/phones/:phoneId"
+                element={
+                  <PhoneSpecPage
+                    comparisonPhoneIds={comparisonPhoneIds}
+                    onComparisonChange={setComparisonPhoneIds}
+                    recentlyViewedPhones={recentlyViewedPhones}
+                    onAddToRecentlyViewed={addPhoneToRecentlyViewed}
+                    onNavigateToComparison={handleNavigateToComparison}
+                  />
+                }
+              />
 
-                  <p className="text-[#666] dark:text-[#a0a8b8] max-w-md mx-auto mb-8 text-lg">
-                    You don't have the administrative privileges required to view the
-                    <strong> RightToCompare</strong> dashboard.
-                  </p>
+              {/* Comparison page */}
+              <Route
+                path="/compare"
+                element={
+                  <PhoneComparisonPage
+                    phoneIds={comparisonPhoneIds}
+                    onRemovePhone={handleRemoveFromComparison}
+                    onAddPhone={handleAddToComparison}
+                    recentlyViewedPhones={recentlyViewedPhones}
+                    onNavigate={handleNavigateToPhone}
+                  />
+                }
+              />
 
-                  <button
-                    onClick={handleCatalogClick}
-                    className="bg-[#2c3968] hover:bg-[#3d4a7a] text-white px-8 py-3 rounded-full font-bold transition-all shadow-md hover:shadow-lg active:scale-95"
-                  >
-                    Return to Catalog
-                  </button>
-                  <div className="h-16 w-full" />
-                </div>
-              </div>
-            )
-          ) : pageType === "profile" ? (
-            <UserProfilePage />
-          ) : pageType === "signIn" ? (
-            <SignInPage onSignInSuccess={handleSignInSuccess} onNavigateToSignUp={handleSignUpClick} />
-          ) : pageType === "signUp" ? (
-            <SignUpPage onSignUpSuccess={handleSignUpSuccess} onNavigateToSignIn={handleSignInClick} />
-          ) : pageType === "discussionDetail" ? (
-            <DiscussionDetailPage discussionId={currentDiscussionId} onBack={handleBackToDiscussions} />
-          ) : pageType === "discussions" ? (
-            <DiscussionsPage onNavigate={navigateToPhone} onViewDiscussion={handleViewDiscussion} />
-          ) : pageType === "comparison" ? (
-            <PhoneComparisonPage
-              phoneIds={comparisonPhoneIds}
-              onRemovePhone={handleRemoveFromComparison}
-              onBackToSpecs={handleBackToSpecs}
-              onAddPhone={handleAddToComparison}
-              onNavigate={navigateToPhone}
-              recentlyViewedPhones={recentlyViewedPhones}
-            />
-          ) : pageType === "catalog" ? (
-            <PhoneCatalogPage
-              onNavigate={navigateToPhone}
-              comparisonPhoneIds={comparisonPhoneIds}
-              onComparisonChange={setComparisonPhoneIds}
-              onNavigateToComparison={navigateToComparison}
-              recentlyViewedPhones={recentlyViewedPhones}
-            />
-          ) : currentPhoneData ? (
-            <PhoneSpecPage
-              phoneData={currentPhoneData}
-              onNavigate={navigateToPhone}
-              onNavigateToComparison={navigateToComparison}
-              comparisonPhoneIds={comparisonPhoneIds}
-              onComparisonChange={setComparisonPhoneIds}
-              recentlyViewedPhones={recentlyViewedPhones}
-              onAddToRecentlyViewed={addPhoneToRecentlyViewed}
-              onNavigateToCatalog={handleCatalogClick}
-            />
-          ) : (
-            <div className="max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 pt-8">
-              <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-12 text-center">
-                <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-3">Phone Not Found</h2>
-                <p className="text-[#666] dark:text-[#a0a8b8]">The phone you're looking for doesn't exist.</p>
-              </div>
-            </div>
-          )}
+              {/* Discussions */}
+              <Route
+                path="/discussions"
+                element={<DiscussionsPage onNavigate={handleNavigateToPhone} onViewDiscussion={handleViewDiscussion} />}
+              />
+              <Route
+                path="/discussions/:discussionId"
+                element={<DiscussionDetailPage discussionId={currentDiscussionId} onBack={handleBackToDiscussions} />}
+              />
+
+              {/* Auth */}
+              <Route
+                path="/sign-in"
+                element={<SignInPage onSignInSuccess={handleSignInSuccess} onNavigateToSignUp={handleSignUpClick} />}
+              />
+              <Route
+                path="/sign-up"
+                element={<SignUpPage onSignUpSuccess={handleSignUpSuccess} onNavigateToSignIn={handleSignInClick} />}
+              />
+              <Route path="/profile" element={currentUser ? <UserProfilePage /> : <Navigate to="/sign-in" />} />
+
+              {/* Admin */}
+              <Route
+                path="/admin"
+                element={currentUser?.role === "admin" ? <AdminDashboardPage /> : <Navigate to="/" />}
+              />
+
+              {/* Password reset */}
+              <Route path="/password-reset" element={<PasswordResetPage onNavigateToSignIn={handleSignInClick} />} />
+
+              {/* Catch all */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
         </main>
 
         <div className="relative h-[60px] shrink-0 mt-12">
@@ -353,10 +366,10 @@ function AppContent() {
         </div>
 
         {/* AI Chat Widget */}
-        <AIChatWidget onNavigate={navigateToPhone} />
+        <AIChatWidget onNavigate={handleNavigateToPhone} />
 
-        {/* Firebase Connection Test - Remove this after testing */}
-        {/* <FirebaseConnectionTest /> */}
+        {/* Back to Top Button */}
+        <BackToTopButton />
       </div>
     </DarkModeProvider>
   );

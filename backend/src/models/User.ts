@@ -33,6 +33,7 @@ export interface IUser extends Document {
     };
   };
   wishlist: string[];
+  preferredCarrier: string;
   comparisonPhoneIds: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -70,11 +71,13 @@ const UserSchema: Schema = new Schema(
       },
     },
     wishlist: { type: [String], default: [] },
+    preferredCarrier: { type: String, default: "" },
     comparisonPhoneIds: { type: [String], default: [] },
   },
   {
     timestamps: true,
-  }
+    collection: "users",
+  },
 );
 
 export default mongoose.model<IUser>("User", UserSchema);

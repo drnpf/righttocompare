@@ -31,7 +31,6 @@ export const syncUserWithBackend = async (firebaseUser: User | null) => {
 
     // Returns user data
     const userData = await response.json();
-    console.log("Backend Sync Success:", userData);
     return userData;
   } catch (error) {
     console.error("Backend Sync Error:", error);
@@ -68,7 +67,6 @@ export const getUserProfile = async (uid: string, token: string) => {
 
     // Returns user data
     const userData = await response.json();
-    console.log("Backend Retrieval Success:", userData);
     return userData;
   } catch (error) {
     console.error("Error getting profile:", error);
@@ -96,6 +94,7 @@ export const updateUserProfile = async (uid: string, token: string, updates: Par
         preferences: updates.preferences,
         wishlist: updates.wishlist,
         comparisonPhoneIds: updates.comparisonPhoneIds,
+        preferredCarrier: updates.preferredCarrier,
       }),
     });
 
@@ -106,7 +105,6 @@ export const updateUserProfile = async (uid: string, token: string, updates: Par
 
     // Returns the updated user data
     const userData = await response.json();
-    console.log("Backend Update Success:", userData);
     return userData;
   } catch (error) {
     console.error("Backend Update Error:", error);

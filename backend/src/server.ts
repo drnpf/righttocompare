@@ -7,6 +7,9 @@ import userRoutes from "./routes/userRoutes";
 import phoneRoutes from "./routes/phoneRoutes";
 import reviewRoutes from "./routes/reviewRoutes";
 import discussionRoutes from "./routes/discussionRoutes";
+import scraperRoutes from "./routes/scraperRoutes";
+import chatbotRoutes from "./routes/chatbotRoutes";
+import analyticsRoutes from "./routes/analyticsRoutes";
 
 // Loading environment variables
 dotenv.config(); // THIS IS FOR DEVELOPMENT maybe we can use system environment variables on production
@@ -18,6 +21,9 @@ import "./config/firebase";
 // Initializing Express App (BACKEND SERVER)
 const app: Application = express();
 const PORT = process.env.PORT || 5001;
+
+// App settings
+app.set("trust proxy", true); // Gets client's real IP from x-forwarded-for header rather than IP of load balancer/server
 
 /**
  * Middleware Configurations (Express)
@@ -47,6 +53,9 @@ app.use("/api/users", userRoutes);
 app.use("/api/phones", phoneRoutes);
 app.use("/api/phones", reviewRoutes); // Review routes nested under phones
 app.use("/api/discussions", discussionRoutes); // Discussion thread routes
+app.use("/api/scraper", scraperRoutes);
+app.use("/api/chatbot", chatbotRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 // Health Check Route
 app.get("/", (req: Request, res: Response) => {

@@ -1,24 +1,36 @@
-import { Search, Grid3x3, List, ChevronDown, Plus, Check} from "lucide-react";
-import { useState } from "react";
-import { phonesData } from "../data/phoneData";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner@2.0.3";
+
+// UI Components
+import { Badge } from "./ui/badge";
+
+// Icons
+import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+
+// Custom Components & APIs
+import { PhoneCard, PhoneSummary } from "../types/phoneTypes";
+import { getPhonePage, getManufacturers, getPhoneSummaries } from "../api/phoneApi";
 import ComparisonCart from "./ComparisonCart";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
-import { toast } from "sonner@2.0.3";
-import { Badge } from "./ui/badge";
+import { CatalogFilters } from "./CatalogFilters";
 
 interface PhoneCatalogPageProps {
   onNavigate: (phoneId: string) => void;
   comparisonPhoneIds?: string[];
   onComparisonChange?: (phoneIds: string[]) => void;
-  onNavigateToComparison?: (phoneIds: string[]) => void;
+  onNavigateToComparison?: () => void;
   recentlyViewedPhones?: string[];
 }
 
-// Parses price string
-const parsePrice = (priceStr: string): number => {
-  return parseInt(priceStr.replace(/[^0-9]/g, "")) || 0;
-};
+// ------------------------------------------------------------
+// | CONFIGURATION CONSTANTS
+// ------------------------------------------------------------
+const SEARCH_DELAY_LOADING_MS = 150; // The time until loading UI displays on search
+const SEARCH_DEBOUNCE_MS = 300; // Time to wait after typing stops before sending search query to server
 
+// ------------------------------------------------------------
+// | PHONE CATALOG PAGE DEFINITION
+// ------------------------------------------------------------
 export default function PhoneCatalogPage({
   onNavigate,
   comparisonPhoneIds = [],
@@ -26,37 +38,199 @@ export default function PhoneCatalogPage({
   onNavigateToComparison,
   recentlyViewedPhones = [],
 }: PhoneCatalogPageProps) {
+  // ------------------------------------------------------------
+  // | HOOKS
+  // ------------------------------------------------------------
+  // --- Phone Data States ---
+  const [allPhones, setAllPhones] = useState<PhoneCard[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // --- Pagination States ---
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPrevPage, setHasPrevPage] = useState(false);
+  const itemsPerPage = 24;
+  const lastPageRef = useRef(currentPage);
+
+  // --- Filter States ---
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"name" | "price" | "release">("name");
-  const [manufacturerFilter, setManufacturerFilter] = useState<string>("all");
+  const [availableManufacturers, setAvailableManufacturers] = useState<string[]>([]);
+  const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>([]);
+  const [minPrice, setMinPrice] = useState<number>(0);
+  const [maxPrice, setMaxPrice] = useState<number>(2000);
+  const [selectedRAM, setSelectedRAM] = useState<number[]>([]);
+  const [selectedStorage, setSelectedStorage] = useState<number[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // --- Comparison States ---
   const [isCartMinimized, setIsCartMinimized] = useState(false);
+  const [comparisonData, setComparisonData] = useState<PhoneSummary[]>([]);
+
+  // --- UI States ---
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [activeTab, setActiveTab] = useState<"catalog" | "hot" | "popular">("catalog");
-  const [priceDropdownOpen, setPriceDropdownOpen] = useState(false);
 
-  // Price range filter  
-  const [minPrice, setMinPrice] = useState<string>("");
-  const [maxPrice, setMaxPrice] = useState<string>("");
+  // ------------------------------------------------------------
+  // | DATA SYNCHRONIZATION
+  // ------------------------------------------------------------
 
+  /**
+   * INITIAL COMPONENT MOUNT/REFRESH:
+   * Signal: On catalog page component mount or refresh
+   * Action: Fetches for all unique manufacturers in the database
+   */
+  useEffect(() => {
+    const loadManufacturers = async () => {
+      try {
+        setAvailableManufacturers(await getManufacturers());
+      } catch (error) {
+        console.error("Failed to load manufacturers");
+      }
+    };
+    loadManufacturers();
+  }, []);
 
-  // Get all phones as an array
-  const allPhones = Object.values(phonesData);
+  /**
+   * ON FILTER CHANGE CATALOG PAGE SYNC:
+   * Signal: On search query, filter, sort, or active tab changes
+   * Action: Resets current page to 1
+   */
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedManufacturers, sortBy, activeTab, maxPrice, minPrice, selectedRAM, selectedStorage]);
 
-  // Get unique manufacturers
-  const manufacturers = Array.from(new Set(allPhones.map((phone) => phone.manufacturer)));
+  /**
+   * PHONE CATALOG PAGE SYNC:
+   * Signal: Catalog page mount or when currentPage value changes
+   * Action: Fetches the phone catalog of the current page and
+   * pagination metadata for pagination system on home page
+   */
+  useEffect(() => {
+    let loadingTimer: ReturnType<typeof setTimeout>;
+    let debounceTimer: ReturnType<typeof setTimeout>;
+
+    const fetchPhones = async () => {
+      // --- HOT PAGE AND POPULAR PAGE SHORT CIRCUIT ---
+      if (activeTab !== "catalog") {
+        // Showing no phones on those pages for now until we figure out how we display things there
+        setAllPhones([]);
+        setTotalItems(0);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Setting loading state only after certain duration has passed on backend fetching
+        loadingTimer = setTimeout(() => setLoading(true), SEARCH_DELAY_LOADING_MS); // reduces UI flicker
+
+        // Building options object to query DB for phones
+        const options = {
+          search: searchQuery,
+          manufacturer: selectedManufacturers,
+          sortBy: sortBy === "release" ? "newest" : sortBy === "price" ? "price_desc" : "name_asc",
+          minPrice: minPrice,
+          maxPrice: maxPrice,
+          ram: selectedRAM,
+          storage: selectedStorage,
+        };
+        const { phones, pagination } = await getPhonePage(currentPage, itemsPerPage, options);
+
+        // Mounting phone card catalog page for use
+        setAllPhones(phones);
+
+        // Setting all pagination metadata values
+        setTotalItems(pagination.totalItems);
+        setTotalPages(pagination.totalPages);
+        setHasNextPage(pagination.hasNextPage);
+        setHasPrevPage(pagination.hasPrevPage);
+        setError(null);
+
+        // Scrolls to top on page mount/refresh/new pagination page
+        if (currentPage !== lastPageRef.current) {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          lastPageRef.current = currentPage; // Syncs the reference
+        }
+      } catch (error) {
+        setError("Failed to fetch phones");
+      } finally {
+        clearTimeout(loadingTimer);
+        setLoading(false);
+      }
+    };
+
+    // Add debounce time to delay the search until user finish typing
+    debounceTimer = setTimeout(fetchPhones, SEARCH_DEBOUNCE_MS);
+
+    // Clearing timers for next
+    return () => {
+      clearTimeout(debounceTimer);
+      clearTimeout(loadingTimer);
+    };
+  }, [
+    currentPage,
+    searchQuery,
+    selectedManufacturers,
+    sortBy,
+    activeTab,
+    maxPrice,
+    minPrice,
+    selectedRAM,
+    selectedStorage,
+  ]);
+
+  /**
+   * SYNC: Comparison Cart Refreshes
+   * Signal: Component mount or change in number of phones in comparisonPhoneIds list
+   * Action: Fetches phone details if IDs exist but local cache is empty
+   */
+  useEffect(() => {
+    const syncCart = async () => {
+      // Checks syncing is needed by comparing phone IDs passed by controller with cached comparison phone data
+      const missingIds = comparisonPhoneIds.filter((id) => !comparisonData.find((phone) => phone.id === id));
+
+      // Handles case if no missing IDs in comparisonData cache
+      if (missingIds.length === 0) return;
+
+      // Handles case if syncing needed of missing phones from comparisonData cache
+      try {
+        // Handles re-fetching phone summaries that should be in comparison cart into the comparison data
+        const newItems = await getPhoneSummaries(missingIds);
+        setComparisonData((prev) => {
+          const combined = [...prev, ...newItems];
+          return Array.from(new Map(combined.map((item) => [item.id, item])).values()); // Removes duplicates
+        });
+      } catch (error) {
+        console.error("Failed to sync comparison cart:", error);
+      }
+    };
+    syncCart();
+  }, [comparisonPhoneIds.length]);
+
+  // ------------------------------------------------------------
+  // | HOME PAGE LOGIC
+  // ------------------------------------------------------------
+
+  // Helper function to clear all filters on catalog filter
+  const handleClearAll = () => {
+    setSearchQuery("");
+    setSelectedManufacturers([]);
+    setMinPrice(0);
+    setMaxPrice(2000);
+    setSelectedRAM([]);
+    setSelectedStorage([]);
+    setSortBy("name");
+  };
 
   // Helper function to check if a phone was released within the past year
+  const parsePhoneDate = (dateStr: string) => new Date(dateStr);
   const isWithinPastYear = (releaseDate: string) => {
-    const currentDate = new Date();
     const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(currentDate.getFullYear() - 1);
-
-    // Parse release date (format: "Month Year")
-    const [month, year] = releaseDate.split(" ");
-    const monthIndex = new Date(Date.parse(month + " 1, 2000")).getMonth();
-    const phoneDate = new Date(parseInt(year), monthIndex);
-
-    return phoneDate >= oneYearAgo;
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    return parsePhoneDate(releaseDate) >= oneYearAgo;
   };
 
   // Get phones based on active tab
@@ -67,8 +241,12 @@ export default function PhoneCatalogPage({
         return allPhones
           .filter((phone) => isWithinPastYear(phone.releaseDate))
           .sort((a, b) => {
-            // Sort by release date (newest first)
-            return b.releaseDate.localeCompare(a.releaseDate);
+            // // Sort by release date (newest first)
+            // Better long-term solution would be to store dates in ISO format in database
+            const dateA = new Date(a.releaseDate).getTime();
+            const dateB = new Date(b.releaseDate).getTime();
+
+            return dateB - dateA;
           });
       case "popular":
         // Empty for now
@@ -79,49 +257,13 @@ export default function PhoneCatalogPage({
     }
   };
 
-  // Filter and sort phones
-  const filteredPhones = getPhonesForTab()
-    .filter((phone) => {
-      const matchesSearch =
-        phone.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        phone.manufacturer.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesManufacturer = manufacturerFilter === "all" || phone.manufacturer === manufacturerFilter;
-      
-      // Price range filtering
-      const phonePrice = parsePrice(phone.price);
-      const min = minPrice ? parseInt(minPrice) : 0;
-      const max = maxPrice ? parseInt(maxPrice) : Infinity;
-      const matchesPrice = phonePrice >= min && phonePrice <= max;
-
-      return matchesSearch && matchesManufacturer && matchesPrice;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "name":
-          return a.name.localeCompare(b.name);
-        case "price":
-          const priceA = parseInt(a.price.replace(/[^0-9]/g, ""));
-          const priceB = parseInt(b.price.replace(/[^0-9]/g, ""));
-          return priceB - priceA;
-        case "release":
-          return b.releaseDate.localeCompare(a.releaseDate);
-        default:
-          return 0;
-      }
-    });
-  
-  // Checks if price filter is on
-  const isPriceFilterActive = minPrice !== "" || maxPrice !== "";  
-
   const handleAddToComparison = (phoneId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const phone = phonesData[phoneId];
+    const phone = allPhones.find((p) => p.id === phoneId);
     if (!phone) return;
 
-    if (comparisonPhoneIds.includes(phoneId)) {
-      // Already in comparison, do nothing
-      return;
-    }
+    // Handles case if phone is already in comparison cart
+    if (comparisonPhoneIds.includes(phoneId)) return;
 
     // Check if comparison cart is full (max 3 phones)
     if (comparisonPhoneIds.length >= 3) {
@@ -132,6 +274,8 @@ export default function PhoneCatalogPage({
       return;
     }
 
+    // Locally caching the phone data in the comparison cart into React state
+    setComparisonData((prev) => [...prev, phone]);
     const newComparisonIds = [...comparisonPhoneIds, phoneId];
     onComparisonChange?.(newComparisonIds);
 
@@ -145,23 +289,57 @@ export default function PhoneCatalogPage({
     return comparisonPhoneIds.includes(phoneId);
   };
 
-  // Clears all filters 
-  const clearAllFilters = () => {
-    setSearchQuery("");
-    setManufacturerFilter("all");
-    setMinPrice("");
-    setMaxPrice("");
+  /**
+   * Generates an array of page numbers for pagination UI
+   *  The pattern is: [1, ..., current-1, current, current+1, ..., totalPages]
+   * @returns An array containing numbers (or string - the "...") for page buttons
+   */
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const pageRange = 2;
+
+    // Iterates through all possible page values
+    for (let i = 1; i <= totalPages; i++) {
+      // Getting pages to show in pagination
+      const isFirstPage = i === 1;
+      const isLastPage = i === totalPages;
+
+      // Getting the pages within window length of current page
+      const isWithinWindow = i >= currentPage - pageRange && i <= currentPage + pageRange;
+
+      // Determining which page number to push into list
+      if (isFirstPage || isLastPage || isWithinWindow) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== "...") {
+        pages.push("..."); // Only pushes "..." if previous item is not "..." or the (first, last, current, or neighbors)
+      }
+    }
+    return pages;
   };
 
+  // ------------------------------------------------------------
+  // | RENDER GUARDS
+  // ------------------------------------------------------------
+  // Handle loading and error views
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="animate-spin text-[#2c3968] dark:text-[#4a7cf6]" size={48} />
+        <p className="text-[#666] dark:text-[#a0a8b8]">Fetching live catalog...</p>
+      </div>
+    );
+  }
+
+  // ------------------------------------------------------------
+  // | UI SECTION
+  // ------------------------------------------------------------
   return (
     <>
       <div className="max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-[#2c3968] dark:text-[#4a7cf6] mb-2">Phone Catalog</h1>
-          <p className="text-[#666] dark:text-[#a0a8b8] mb-6">
-            Browse our collection of {allPhones.length} smartphones
-          </p>
+          <p className="text-[#666] dark:text-[#a0a8b8] mb-6">Browse our collection of {totalItems} smartphones</p>
 
           {/* Tab Buttons */}
           <div className="flex gap-3 flex-wrap">
@@ -214,134 +392,17 @@ export default function PhoneCatalogPage({
             </div>
 
             <div className="flex flex-wrap gap-3 items-center">
-              {/* Manufacturer Filter */}
-              <div className="relative">
-                <select
-                  value={manufacturerFilter}
-                  onChange={(e) => setManufacturerFilter(e.target.value)}
-                  className="appearance-none pl-4 pr-10 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all cursor-pointer"
-                >
-                  <option value="all">All Brands</option>
-                  {manufacturers.map((manufacturer) => (
-                    <option key={manufacturer} value={manufacturer}>
-                      {manufacturer}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] pointer-events-none"
-                  size={20}
-                />
-              </div>
-
-              {/* Price Range Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setPriceDropdownOpen(!priceDropdownOpen)}
-                  className={`appearance-none pl-4 pr-10 py-3 rounded-lg border ${
-                    isPriceFilterActive
-                      ? "border-[#2c3968] dark:border-[#4a7cf6] bg-[#2c3968]/5 dark:bg-[#4a7cf6]/5"
-                      : "border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e]"
-                  } text-[#1e1e1e] dark:text-white transition-all cursor-pointer text-left`}
-                >
-                  {isPriceFilterActive
-                    ? `$${minPrice || "0"} — $${maxPrice || "Any"}`
-                    : "Price Range"}
-                </button>
-                <ChevronDown
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] pointer-events-none"
-                  size={20}
-                />
-
-                {priceDropdownOpen && (
-                  <div className="absolute top-full mt-2 left-0 w-64 bg-white dark:bg-[#161b26] rounded-xl shadow-lg border border-[#e5e5e5] dark:border-[#2d3548] p-4 z-50">
-                    <p className="text-sm text-[#666] dark:text-[#a0a8b8] mb-3">Price Range</p>
-
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="relative flex-1">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#999] dark:text-[#707070] text-sm">$</span>
-                        <input
-                          type="number"
-                          placeholder="Min"
-                          value={minPrice}
-                          onChange={(e) => setMinPrice(e.target.value)}
-                          className="w-full pl-7 pr-2 py-1.5 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none text-sm"
-                        />
-                      </div>
-                      <span className="text-[#999] dark:text-[#707070]">—</span>
-                      <div className="relative flex-1">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#999] dark:text-[#707070] text-sm">$</span>
-                        <input
-                          type="number"
-                          placeholder="Max"
-                          value={maxPrice}
-                          onChange={(e) => setMaxPrice(e.target.value)}
-                          className="w-full pl-7 pr-2 py-1.5 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-[#999] dark:text-[#707070] mb-2">Quick ranges</p>
-                    <div className="grid grid-cols-2 gap-2 mb-3">
-                      <button
-                        onClick={() => { setMinPrice(""); setMaxPrice("500"); }}
-                        className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${
-                          maxPrice === "500" && minPrice === ""
-                            ? "border-[#2c3968] dark:border-[#4a7cf6] bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6]"
-                            : "border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] hover:border-[#2c3968] dark:hover:border-[#4a7cf6]"
-                        }`}
-                      >
-                        Under $500
-                      </button>
-                      <button
-                        onClick={() => { setMinPrice("500"); setMaxPrice("800"); }}
-                        className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${
-                          minPrice === "500" && maxPrice === "800"
-                            ? "border-[#2c3968] dark:border-[#4a7cf6] bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6]"
-                            : "border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] hover:border-[#2c3968] dark:hover:border-[#4a7cf6]"
-                        }`}
-                      >
-                        $500 - $800
-                      </button>
-                      <button
-                        onClick={() => { setMinPrice("800"); setMaxPrice("1000"); }}
-                        className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${
-                          minPrice === "800" && maxPrice === "1000"
-                            ? "border-[#2c3968] dark:border-[#4a7cf6] bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6]"
-                            : "border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] hover:border-[#2c3968] dark:hover:border-[#4a7cf6]"
-                        }`}
-                      >
-                        $800 - $1000
-                      </button>
-                      <button
-                        onClick={() => { setMinPrice("1000"); setMaxPrice(""); }}
-                        className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${
-                          minPrice === "1000" && maxPrice === ""
-                            ? "border-[#2c3968] dark:border-[#4a7cf6] bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6]"
-                            : "border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] hover:border-[#2c3968] dark:hover:border-[#4a7cf6]"
-                        }`}
-                      >
-                        $1000+
-                      </button>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => { setMinPrice(""); setMaxPrice(""); }}
-                        className="flex-1 py-2 text-sm border border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] rounded-lg hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] transition-all"
-                      >
-                        Clear
-                      </button>
-                      <button
-                        onClick={() => setPriceDropdownOpen(false)}
-                        className="flex-1 py-2 text-sm bg-[#2c3968] dark:bg-[#4a7cf6] text-white rounded-lg hover:opacity-90 transition-all"
-                      >
-                        Apply
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Toggle Filters Button */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`px-4 py-3 rounded-lg border text-sm font-bold transition-all ${
+                  showFilters
+                    ? "bg-[#2c3968] text-white border-transparent"
+                    : "border-[#d9d9d9] dark:border-[#2d3548] text-[#2c3968] dark:text-[#4a7cf6] hover:bg-gray-50"
+                }`}
+              >
+                {showFilters ? "Hide Filters" : "Filters"}
+              </button>
 
               {/* Sort By */}
               <div className="relative">
@@ -387,48 +448,95 @@ export default function PhoneCatalogPage({
           </div>
 
           {/* Active Filters */}
-          {(searchQuery || manufacturerFilter !== "all" || isPriceFilterActive) && (
+          {(searchQuery ||
+            selectedManufacturers.length > 0 ||
+            selectedRAM.length > 0 ||
+            selectedStorage.length > 0 ||
+            maxPrice < 2000) && (
             <div className="mt-4 pt-4 border-t border-[#e5e5e5] dark:border-[#2d3548]">
               <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-[#666] dark:text-[#a0a8b8]">Active filters:</span>
+                <span className="text-[12px] font-bold text-[#999] dark:text-[#707070] uppercase tracking-wider mr-2">
+                  Active filters:
+                </span>
+
+                {/* Search Query Badge */}
                 {searchQuery && (
-                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full">
-                    Search: "{searchQuery}"
+                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
+                    "{searchQuery}"
                   </span>
                 )}
-                {manufacturerFilter !== "all" && (
-                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full">
-                    Brand: {manufacturerFilter}
+
+                {/* Manufacturer Badges */}
+                {selectedManufacturers.length > 0 && (
+                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
+                    Brands: {selectedManufacturers.join(", ")}
                   </span>
                 )}
-                {isPriceFilterActive && (
-                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full">
-                    Price: {minPrice ? `$${minPrice}` : "$0"} — {maxPrice ? `$${maxPrice}` : "Any"}
-                    </span>
-                  )}
+
+                {/* RAM Badges */}
+                {selectedRAM.length > 0 && (
+                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
+                    RAM: {selectedRAM.map((r) => `${r}GB`).join(", ")}
+                  </span>
+                )}
+
+                {/* Storage Badges */}
+                {selectedStorage.length > 0 && (
+                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
+                    Storage: {selectedStorage.map((s) => (s >= 1024 ? "1TB" : `${s}GB`)).join(", ")}
+                  </span>
+                )}
+
+                {/* Price Badge */}
+                {(minPrice > 0 || maxPrice < 2000) && (
+                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium tabular-nums">
+                    Price: ${minPrice} - ${maxPrice}
+                  </span>
+                )}
+
+                {/* The Global Reset */}
                 <button
-                  onClick={clearAllFilters}
-                  className="text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] underline"
+                  onClick={handleClearAll}
+                  className="ml-2 text-xs font-bold text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-colors underline underline-offset-4"
                 >
-                  Clear all
+                  Reset All
                 </button>
               </div>
             </div>
           )}
         </div>
 
+        {/* 3. YOUR ADVANCED FILTER DRAWER */}
+        {showFilters && (
+          <CatalogFilters
+            availableManufacturers={availableManufacturers}
+            selectedManufacturers={selectedManufacturers}
+            setSelectedManufacturers={setSelectedManufacturers}
+            minPrice={minPrice}
+            setMinPrice={setMinPrice}
+            maxPrice={maxPrice}
+            setMaxPrice={setMaxPrice}
+            selectedRAM={selectedRAM}
+            setSelectedRAM={setSelectedRAM}
+            selectedStorage={selectedStorage}
+            setSelectedStorage={setSelectedStorage}
+            onClearAll={handleClearAll}
+          />
+        )}
+
         {/* Results Count */}
         <div className="mb-4">
           <p className="text-[#666] dark:text-[#a0a8b8]">
-            Showing {filteredPhones.length} {filteredPhones.length === 1 ? "phone" : "phones"}
+            Showing {allPhones.length} {allPhones.length === 1 ? "phone" : "phones"}
           </p>
         </div>
 
         {/* Phone Grid/List */}
-        {filteredPhones.length > 0 ? (
+        {allPhones.length > 0 ? (
           viewMode === "grid" ? (
+            // GRID VIEW
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredPhones.map((phone) => (
+              {allPhones.map((phone, index) => (
                 <button
                   key={phone.id}
                   onClick={() => onNavigate(phone.id)}
@@ -439,6 +547,8 @@ export default function PhoneCatalogPage({
                     <img
                       src={phone.images.main}
                       alt={phone.name}
+                      loading={index < 4 ? "eager" : "lazy"} // Lazy loads the images for phones after first row, or not in view
+                      fetchpriority={index < 4 ? "high" : "low"} // Images on first row have high priority to be downloaded first
                       className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
                     />
                   </div>
@@ -489,8 +599,9 @@ export default function PhoneCatalogPage({
               ))}
             </div>
           ) : (
+            // LIST VIEW
             <div className="space-y-4">
-              {filteredPhones.map((phone) => (
+              {allPhones.map((phone, index) => (
                 <button
                   key={phone.id}
                   onClick={() => onNavigate(phone.id)}
@@ -502,6 +613,8 @@ export default function PhoneCatalogPage({
                       <img
                         src={phone.images.main}
                         alt={phone.name}
+                        loading={index < 4 ? "eager" : "lazy"} // Lazy loads the images for phones after first row, or not in view
+                        fetchpriority={index < 4 ? "high" : "low"} // Images on first row have high priority to be downloaded first
                         className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
                       />
                     </div>
@@ -568,7 +681,7 @@ export default function PhoneCatalogPage({
                 We couldn't find any phones matching your search criteria. Try adjusting your filters.
               </p>
               <button
-                onClick={clearAllFilters}
+                onClick={handleClearAll}
                 className="px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-lg hover:shadow-lg hover:scale-[1.02] transition-all duration-200"
               >
                 Clear Filters
@@ -577,32 +690,71 @@ export default function PhoneCatalogPage({
           </div>
         )}
 
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-2 pb-8">
+            {/* Previous Arrow */}
+            <button
+              disabled={!hasPrevPage}
+              onClick={() => setCurrentPage((prev) => prev - 1)}
+              className="p-2 rounded-lg border border-[#e5e5e5] dark:border-[#2d3548] text-[#2c3968] dark:text-[#4a7cf6] disabled:opacity-30 hover:bg-[#f7f9fc] transition-all"
+            >
+              <ChevronLeft size={20} />
+            </button>
+
+            {/* Numeric Pages */}
+            <div className="flex items-center gap-2">
+              {getPageNumbers().map((pageNum, idx) => (
+                <button
+                  key={idx}
+                  disabled={pageNum === "..."}
+                  onClick={() => typeof pageNum === "number" && setCurrentPage(pageNum)}
+                  className={`min-w-[40px] h-[40px] rounded-lg border transition-all text-sm font-medium ${
+                    pageNum === currentPage
+                      ? "bg-[#2c3968] text-white border-[#2c3968] shadow-md"
+                      : pageNum === "..."
+                        ? "border-transparent cursor-default text-[#999]"
+                        : "border-[#e5e5e5] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] hover:border-[#2c3968] dark:hover:border-[#4a7cf6] hover:text-[#2c3968]"
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              ))}
+            </div>
+
+            {/* Next Arrow */}
+            <button
+              disabled={!hasNextPage}
+              onClick={() => setCurrentPage((prev) => prev + 1)}
+              className="p-2 rounded-lg border border-[#e5e5e5] dark:border-[#2d3548] text-[#2c3968] dark:text-[#4a7cf6] disabled:opacity-30 hover:bg-[#f7f9fc] transition-all"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        )}
+
         {/* Comparison Cart - Only show if there are phones in cart */}
-        {comparisonPhoneIds.length > 0 && onNavigateToComparison && onComparisonChange && (
+        {comparisonPhoneIds.length > 0 && (
           <ComparisonCart
             phones={comparisonPhoneIds.map((id) => {
-              const phone = phonesData[id];
+              // Attempts to find phone in catalog page or comparison cache before fetching
+              const cachedPhone = allPhones.find((p) => p.id === id) || comparisonData.find((p) => p.id === id);
               return {
-                id: phone.id,
-                name: phone.name,
-                manufacturer: phone.manufacturer,
-                image: phone.images.main,
-                price: phone.price,
+                id: id,
+                name: cachedPhone?.name || "Loading",
+                manufacturer: cachedPhone?.manufacturer || "",
+                images: { main: cachedPhone?.images?.main || "" },
+                price: cachedPhone?.price || "---",
               };
             })}
             onRemovePhone={(phoneId) => {
-              const updatedIds = comparisonPhoneIds.filter((id) => id !== phoneId);
-              onComparisonChange(updatedIds);
+              setComparisonData((prev) => prev.filter((p) => p.id !== phoneId));
+              onComparisonChange?.(comparisonPhoneIds.filter((id) => id !== phoneId));
             }}
-            onCompare={() => {
-              onNavigateToComparison(comparisonPhoneIds);
-            }}
-            onClose={() => {
-              // Don't actually close, just minimize
-              setIsCartMinimized(true);
-            }}
+            onCompare={() => onNavigateToComparison?.()}
             isMinimized={isCartMinimized}
             onMinimizedChange={setIsCartMinimized}
+            onClose={() => setIsCartMinimized(true)}
           />
         )}
       </div>

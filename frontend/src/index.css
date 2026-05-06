@@ -6043,3 +6043,81 @@ html {
       rotate(var(--tw-exit-rotate, 0));
   }
 }
+
+/* Double-knobbed horizontal filter slider for catalog page filter */
+/* The Container */
+.horizontal-slider {
+  width: 100% !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  position: relative !important;
+}
+
+/* The Bar (Track) */
+.price-track {
+  height: 4px !important;
+  border-radius: 2px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  position: absolute !important;
+}
+
+/* Unselected range (Light Gray) */
+.price-track-0,
+.price-track-2 {
+  background-color: #f1f5f9 !important;
+}
+
+/* Active range (Brand Blue) */
+.price-track-1 {
+  background-color: #2c3968 !important;
+}
+
+/* The Handles (Thumbs) */
+.price-thumb {
+  width: 18px !important;
+  height: 18px !important;
+  background-color: #2c3968 !important;
+  border-radius: 50% !important;
+  cursor: grab !important;
+  outline: none !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  transition: transform 0.2s ease !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.price-thumb:active {
+  cursor: grabbing !important;
+  transform: translateY(-50%) scale(1.2) !important;
+}
+
+/* The Floating Numbers (Label) */
+.thumb-label {
+  position: absolute !important;
+  top: -28px !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #2c3968 !important;
+  white-space: nowrap !important;
+  pointer-events: none !important;
+  font-family: inherit !important;
+}
+
+/* Loading bar for discussion loading */
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+.animate-infinite-loading {
+  width: 50%;
+  animation: loading-bar 1.5s infinite linear;
+}
