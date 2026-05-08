@@ -33,8 +33,12 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
       return;
     }
 
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    // Password policy regex (at least 1 lowercase, 1 uppercase, 1 special char, >=8 characters long)
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      toast.error(
+        "Password must be at least 8 characters long and include an uppercase letter, a number, and a special character (@$!%*?&).",
+      );
       return;
     }
 
@@ -156,7 +160,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] hover:text-[#2c3968] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] hover:text-[#2c3968] transition-colors cursor-pointer"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -182,7 +186,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] hover:text-[#2c3968] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] hover:text-[#2c3968] transition-colors cursor-pointer"
                   tabIndex={-1}
                 >
                   {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -194,7 +198,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white py-3.5 rounded-lg hover:shadow-lg hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 mt-6 flex items-center justify-center"
+              className="w-full bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white py-3.5 rounded-lg hover:shadow-lg hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 mt-6 flex items-center justify-center cursor-pointer"
             >
               {isLoading ? "Creating Account..." : "Create Account"}
             </button>
@@ -215,7 +219,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
             type="button"
             onClick={handleGoogleSignUp}
             disabled={isLoading}
-            className="w-full bg-white border border-[#d9d9d9] text-[#1e1e1e] py-3.5 rounded-lg hover:bg-[#f7f7f7] hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            className="w-full bg-white border border-[#d9d9d9] text-[#1e1e1e] py-3.5 rounded-lg hover:bg-[#f7f7f7] hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 cursor-pointer"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
@@ -242,7 +246,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
           <div className="text-center mt-6">
             <p className="text-[#666]">
               Already have an account?{" "}
-              <button onClick={onNavigateToSignIn} className="text-[#2c3968] hover:underline">
+              <button onClick={onNavigateToSignIn} className="text-[#2c3968] hover:underline cursor-pointer">
                 Sign In
               </button>
             </p>
