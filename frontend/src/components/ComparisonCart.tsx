@@ -6,7 +6,6 @@ import { X, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 
 // Custom Components
 import { PhoneSummary } from "../types/phoneTypes";
-import { logComparison } from "../api/analyticsApi";
 
 interface ComparisonCartProps {
   phones: PhoneSummary[];
