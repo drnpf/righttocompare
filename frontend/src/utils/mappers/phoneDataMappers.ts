@@ -1,6 +1,6 @@
 import { Smartphone, Camera, Cpu, Battery, HardDrive, Layers } from "lucide-react";
-import { PhoneData, PhoneCard, PhoneSummary, PhoneSpecification, PhoneCommunity } from "../../types/phoneTypes";
-import { mapJsonToSentimentSummary } from "./sentimentMappers";
+import { PhoneData, PhoneCard, PhoneSummary, PhoneSpecification } from "../../types/phoneTypes";
+import { ReviewMetaData } from "../../types/reviewTypes";
 
 /**
  * Maps raw phone data JSON to lightweight PhoneSummary object.
@@ -120,12 +120,12 @@ export const mapJsonToPhoneSpecification = (dbPhone: any): PhoneSpecification =>
   };
 };
 
-/** Maps raw phone data JSON to PhoneCommunity object. Handles user reviews
+/** Maps raw phone data JSON to ReviewMetaData object. Handles user reviews
  * and aggregated of sentiment summary.
  * @param dbPhone The raw phone JSON object from the database
  * @returns The community and sentiment data
  */
-export const mapJsonToPhoneCommunity = (dbPhone: any): PhoneCommunity => {
+export const mapJsonToReviewMetadata = (dbPhone: any): ReviewMetaData => {
   return {
     totalReviews: dbPhone.totalReviews ?? 0,
     aggregateRating: dbPhone.aggregateRating ?? 0,
@@ -136,6 +136,7 @@ export const mapJsonToPhoneCommunity = (dbPhone: any): PhoneCommunity => {
       performance: 0,
       value: 0,
     },
+    sentimentSummary: dbPhone.sentimentSummary || { pros: [], cons: [], totalAnalyzed: 0 },
   };
 };
 
@@ -148,6 +149,6 @@ export const mapJsonToPhoneCommunity = (dbPhone: any): PhoneCommunity => {
 export const mapJsonToPhoneData = (dbPhone: any): PhoneData => {
   return {
     ...mapJsonToPhoneSpecification(dbPhone),
-    ...mapJsonToPhoneCommunity(dbPhone),
+    ...mapJsonToReviewMetadata(dbPhone),
   };
 };

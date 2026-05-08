@@ -516,7 +516,7 @@ export default function PhoneCatalogPage({
           )}
         </div>
 
-        {/* 3. YOUR ADVANCED FILTER DRAWER */}
+        {/* ADVANCED FILTER DRAWER */}
         {showFilters && (
           <CatalogFilters
             availableManufacturers={availableManufacturers}
@@ -547,18 +547,18 @@ export default function PhoneCatalogPage({
             // GRID VIEW
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {allPhones.map((phone, index) => (
-                <button
+                <div
                   key={phone.id}
                   onClick={() => onNavigate(phone.id)}
-                  className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-200 text-left group"
+                  className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-200 text-left group cursor-pointer"
                 >
                   {/* Phone Image */}
                   <div className="aspect-square bg-gradient-to-br from-[#f7f7f7] to-[#e5e5e5] dark:from-[#1a1f2e] dark:to-[#252b3d] flex items-center justify-center p-8">
                     <img
                       src={phone.images.main}
                       alt={phone.name}
-                      loading={index < 4 ? "eager" : "lazy"} // Lazy loads the images for phones after first row, or not in view
-                      fetchpriority={index < 4 ? "high" : "low"} // Images on first row have high priority to be downloaded first
+                      loading={index < 4 ? "eager" : "lazy"}
+                      fetchpriority={index < 4 ? "high" : "low"}
                       className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
                     />
                   </div>
@@ -587,7 +587,6 @@ export default function PhoneCatalogPage({
                         </div>
                       ))}
                     </div>
-
                     <div className="mt-4 pt-4 border-t border-[#e5e5e5] dark:border-[#2d3548]">
                       {isPhoneInComparison(phone.id) ? (
                         <div className="flex items-center justify-center gap-2 text-[#10b981] dark:text-[#34d399]">
@@ -605,17 +604,17 @@ export default function PhoneCatalogPage({
                       )}
                     </div>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           ) : (
             // LIST VIEW
             <div className="space-y-4">
               {allPhones.map((phone, index) => (
-                <button
+                <div
                   key={phone.id}
                   onClick={() => onNavigate(phone.id)}
-                  className="w-full bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6 hover:shadow-lg hover:scale-[1.01] transition-all duration-200 text-left group"
+                  className="w-full bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6 hover:shadow-lg hover:scale-[1.01] transition-all duration-200 text-left group cursor-pointer"
                 >
                   <div className="flex gap-6 items-center">
                     {/* Phone Image */}
@@ -623,8 +622,6 @@ export default function PhoneCatalogPage({
                       <img
                         src={phone.images.main}
                         alt={phone.name}
-                        loading={index < 4 ? "eager" : "lazy"} // Lazy loads the images for phones after first row, or not in view
-                        fetchpriority={index < 4 ? "high" : "low"} // Images on first row have high priority to be downloaded first
                         className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
                       />
                     </div>
@@ -676,7 +673,7 @@ export default function PhoneCatalogPage({
                       )}
                     </div>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           )

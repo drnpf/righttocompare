@@ -10,6 +10,7 @@ import discussionRoutes from "./routes/discussionRoutes";
 import scraperRoutes from "./routes/scraperRoutes";
 import chatbotRoutes from "./routes/chatbotRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
+import trendsRoutes from "./routes/trendsRoutes";
 
 // Loading environment variables
 dotenv.config(); // THIS IS FOR DEVELOPMENT maybe we can use system environment variables on production
@@ -56,6 +57,7 @@ app.use("/api/discussions", discussionRoutes); // Discussion thread routes
 app.use("/api/scraper", scraperRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/trends", trendsRoutes);
 
 // Health Check Route
 app.get("/", (req: Request, res: Response) => {

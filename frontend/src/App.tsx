@@ -21,6 +21,7 @@ const SignUpPage = lazy(() => import("./components/SignUpPage"));
 const UserProfilePage = lazy(() => import("./components/UserProfilePage"));
 const AdminDashboardPage = lazy(() => import("./components/AdminDashboardPage"));
 const PasswordResetPage = lazy(() => import("./components/PasswordResetPage"));
+const TrendsPage = lazy(() => import("./components/TrendsPage"));
 
 // UI Component (Lazy Loaded)
 const AIChatWidget = lazy(() => import("./components/AIChatWidget"));
@@ -238,6 +239,10 @@ function AppContent() {
     navigate("/discussions");
   };
 
+  const handleTrendsClick = () => {
+    navigate("/trends");
+  };
+
   // ------------------------------------------------------------
   // | UI SECTION
   // -----------------------------------------------------------
@@ -251,6 +256,7 @@ function AppContent() {
             user={currentUser}
             onComparisonToolClick={handleNavigateToComparison}
             onDiscussionsClick={handleDiscussionsClick}
+            onTrendsClick={handleTrendsClick}
             onSignInClick={handleSignInClick}
             onSignOut={handleSignOut}
             onProfileClick={handleProfileClick}
@@ -324,16 +330,42 @@ function AppContent() {
                 path="/sign-up"
                 element={<SignUpPage onSignUpSuccess={handleSignUpSuccess} onNavigateToSignIn={handleSignInClick} />}
               />
-              <Route path="/profile" element={authLoading ? <LoadingSpinner /> : currentUser ? <UserProfilePage /> : <Navigate to="/sign-in" />} />
+              <Route
+                path="/profile"
+                element={
+                  authLoading ? <LoadingSpinner /> : currentUser ? <UserProfilePage /> : <Navigate to="/sign-in" />
+                }
+              />
 
               {/* Admin */}
               <Route
                 path="/admin"
-                element={authLoading ? <LoadingSpinner /> : currentUser?.role === "admin" ? <AdminDashboardPage /> : <Navigate to="/" />}
+                element={
+                  authLoading ? (
+                    <LoadingSpinner />
+                  ) : currentUser?.role === "admin" ? (
+                    <AdminDashboardPage />
+                  ) : (
+                    <Navigate to="/" />
+                  )
+                }
               />
 
               {/* Password reset */}
               <Route path="/password-reset" element={<PasswordResetPage onNavigateToSignIn={handleSignInClick} />} />
+
+              {/* Trends Page */}
+              <Route
+                path="/trends"
+                element={
+                  <TrendsPage
+                    comparisonPhoneIds={comparisonPhoneIds}
+                    onCompare={handleAddToComparison}
+                    onRemove={handleRemoveFromComparison}
+                    onViewDetails={handleNavigateToPhone}
+                  />
+                }
+              />
 
               {/* Catch all */}
               <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,4 +1,4 @@
-import { CategoryRatings } from "../components/MultiRatingInput";
+import { ReviewMetaData } from "./reviewTypes";
 
 // ------------------------------------------------------------
 // | PHONE DATA OBJECT
@@ -50,19 +50,10 @@ export interface PhoneSpecification extends PhoneCard {
 }
 
 /**
- * Contains metadata as a result of social features, on RTC, of the phone.
- */
-export interface PhoneCommunity {
-  totalReviews: number;
-  aggregateRating: number;
-  categoryAverages: CategoryRatings;
-}
-
-/**
  * The complete phone data object. Contains full phone specification and
  * all social data on the phone.
  */
-export interface PhoneData extends PhoneSpecification, PhoneCommunity {}
+export interface PhoneData extends PhoneSpecification, ReviewMetaData {}
 
 // ------------------------------------------------------------
 // | PAGINATION

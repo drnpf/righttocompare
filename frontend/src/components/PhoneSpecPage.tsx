@@ -84,8 +84,6 @@ import { ReviewData } from "../types/reviewTypes";
 import { getPhoneReviews, submitReview, voteOnReview, deleteReview } from "../api/reviewApi";
 import { PhoneSummary, PhoneData } from "../types/phoneTypes";
 import { getPhoneById, getPhoneSummaries } from "../api/phoneApi";
-import { SentimentSummary } from "../types/sentimentTypes";
-import { getPhoneReviewSentiment } from "../api/reviewApi";
 
 // Category icons mapping - minimalistic uniform color scheme
 const categoryConfig: Record<string, { icon: any }> = {
@@ -189,10 +187,6 @@ export default function PhoneSpecPage({
   const [priceSummary, setPriceSummary] = useState<PriceSummary | null>(null);
   const [isLoadingPriceData, setIsLoadingPriceData] = useState(false);
 
-  // -- Review Sentiment States --
-  const [sentimentSummary, setSentimentSummary] = useState<SentimentSummary | null>(null);
-  const [isLoadingSentiment, setIsLoadingSentiment] = useState(true);
-
   // -- Comparison Cart States --
   const [comparisonData, setComparisonData] = useState<PhoneSummary[]>([]);
   const [showComparisonCart, setShowComparisonCart] = useState(false);
@@ -254,6 +248,19 @@ export default function PhoneSpecPage({
         setReviews(response.reviews);
         setFilteredTotal(response.totalReviews);
         setTotalPages(response.totalPages);
+
+        // Syncing UI to update phone stats whenever phone reviews are fetched
+        setPhoneData((prev) =>
+          prev
+            ? {
+                ...prev,
+                totalReviews: response.totalReviews,
+                aggregateRating: response.aggregateRating,
+                categoryAverages: response.categoryAverages,
+                sentimentSummary: response.sentimentSummary || prev.sentimentSummary,
+              }
+            : null,
+        );
       }
     } catch (error) {
       console.error("Failed to fetch reviews:", error);
@@ -261,71 +268,6 @@ export default function PhoneSpecPage({
       setIsLoadingReviews(false);
     }
   }, []);
-
-  /**
-   * SYNC: Phone Review Sentiment Summary
-   * Action: Fetches the sentiment summary from the backend.
-   */
-  const fetchSentiment = useCallback(async (targetPhoneId: string) => {
-    if (!targetPhoneId) return;
-    setIsLoadingSentiment(true);
-    try {
-      const data = await getPhoneReviewSentiment(targetPhoneId);
-      setSentimentSummary(data);
-    } catch (error) {
-      console.error("Failed to fetch sentiment summary:", error);
-    } finally {
-      setIsLoadingSentiment(false);
-    }
-  }, []);
-
-  /**
-   * SYNC: Live Review Sentiment Tracking
-   * Signal: reviews list or filteredTotal changes
-   * Action: Recalculates sentiment summary (pros/cons) based on the
-   * reviews currently in state.
-   */
-  const liveSentiment = useMemo(() => {
-    const summary: SentimentSummary = {
-      pros: [],
-      cons: [],
-      totalAnalyzed: filteredTotal, // Anchor to the actual count from the backend
-    };
-
-    if (reviews.length === 0) return summary;
-
-    const prosMap: Record<string, number> = {};
-    const consMap: Record<string, number> = {};
-
-    reviews.forEach((review) => {
-      review.sentimentTags?.forEach((tag) => {
-        const topic = tag.slice(1);
-        if (tag.startsWith("+")) {
-          prosMap[topic] = (prosMap[topic] || 0) + 1;
-        } else if (tag.startsWith("-")) {
-          consMap[topic] = (consMap[topic] || 0) + 1;
-        }
-      });
-    });
-
-    summary.pros = Object.entries(prosMap)
-      .map(([topic, count]) => ({ topic, count }))
-      .sort((a, b) => b.count - a.count);
-    summary.cons = Object.entries(consMap)
-      .map(([topic, count]) => ({ topic, count }))
-      .sort((a, b) => b.count - a.count);
-
-    return summary;
-  }, [reviews, filteredTotal]);
-
-  /**
-   * SYNC: Phone Review Sentiment Summary
-   * Signal: phoneId change
-   * Action: Fetches the review sentiment summary from backend on current phone
-   */
-  useEffect(() => {
-    if (phoneId) fetchSentiment(phoneId);
-  }, [phoneId, fetchSentiment]);
 
   /**
    * SYNC: Phone Review Page
@@ -495,6 +437,8 @@ export default function PhoneSpecPage({
   // -- REVIEW SENTIMENT --
   // Handles filtering via sentiment pills
   const handleSentimentClick = (tag: string) => {
+    setIsLoadingReviews(true);
+
     setActiveSentiment((prev) => {
       const isAlreadySelected = prev.includes(tag);
       const nextSentiments = isAlreadySelected ? prev.filter((t) => t !== tag) : [...prev, tag];
@@ -530,7 +474,7 @@ export default function PhoneSpecPage({
   };
 
   // Handle voting on reviews via API
-  const handleVoteOnReview = async (reviewId: number, voteType: "helpful" | "notHelpful") => {
+  const handleVoteOnReview = async (reviewId: string, voteType: "helpful" | "notHelpful") => {
     if (!currentUser?.firebaseUser) {
       toast.error("Please sign in to vote on reviews");
       return;
@@ -539,9 +483,9 @@ export default function PhoneSpecPage({
     setIsVoting(true);
     try {
       const token = await currentUser.firebaseUser.getIdToken();
-      const updatedReview = await voteOnReview(phoneData.id, reviewId, voteType, token);
+      const updatedReview = await voteOnReview(phoneData!.id, reviewId, voteType, token);
       if (updatedReview) {
-        setReviews((prev) => prev.map((r) => (r.id === reviewId ? updatedReview : r)));
+        setReviews((prev) => prev.map((r) => (r._id === reviewId ? updatedReview : r)));
 
         // Fetches for reviews if a review was liked and the sort method is based on most helpful
         if (sortBy === "helpful") fetchReviews(phoneId!, currentPage, sortBy, activeSentiment);
@@ -565,13 +509,12 @@ export default function PhoneSpecPage({
       const token = await currentUser.firebaseUser.getIdToken();
       const result = await submitReview(phoneData!.id, data, token);
 
-      if (result) {
-        //  Refetch phone specs to get updated categoryAverages and aggregateRating
-        const updatedPhone = await getPhoneById(phoneData!.id);
-        if (updatedPhone) setPhoneData(updatedPhone);
+      if (result && result.review) {
+        setPhoneData((prev) => (prev ? { ...prev, ...result.meta } : null));
 
-        // Reanalyzing sentiment on adding new review
-        fetchSentiment(phoneData!.id);
+        // Getting the newly added review from metadata
+        const newReview = result.review;
+        setReviews((prev) => [newReview, ...prev]);
 
         // Reset list to page 1 to show the new review
         setCurrentPage(1);
@@ -587,24 +530,19 @@ export default function PhoneSpecPage({
   };
 
   // Handle deleting a review
-  const handleDeleteReview = async (reviewId: number) => {
+  const handleDeleteReview = async (reviewId: string) => {
     if (!currentUser?.firebaseUser) return;
 
     try {
       const token = await currentUser.firebaseUser.getIdToken();
-      await deleteReview(phoneData!.id, reviewId, token);
+      const result = await deleteReview(phoneData!.id, reviewId, token);
 
-      // Refetch phone specs to sync the consesus category ratings bars
-      const updatedPhone = await getPhoneById(phoneData!.id);
-      if (updatedPhone) setPhoneData(updatedPhone);
-
-      // Reanalyzing sentiment on adding new review
-      fetchSentiment(phoneData!.id);
-
-      // Refetch current review page
-      fetchReviews(phoneId!, currentPage, sortBy, activeSentiment);
-
-      toast.success("Review deleted successfully");
+      if (result) {
+        // Syncing phone stats and removing phone from local list
+        setPhoneData((prev) => (prev ? { ...prev, ...result.meta } : null));
+        setReviews((prev) => prev.filter((r) => r._id !== reviewId));
+        toast.success("Review deleted successfully");
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to delete review");
     }
@@ -1725,17 +1663,15 @@ export default function PhoneSpecPage({
 
             <CollapsibleContent>
               {/* Sentiment Summary (Pros/Cons + Filtering) */}
-              {sentimentSummary && (
-                <SentimentSummaryCard
-                  data={liveSentiment}
-                  isLoading={isLoadingSentiment}
-                  activeFilters={activeSentiment}
-                  onPillClick={handleSentimentClick}
-                  isCollapsible={true}
-                  defaultExpanded={true}
-                  matchedCount={filteredTotal}
-                />
-              )}
+              <SentimentSummaryCard
+                data={phoneData.sentimentSummary}
+                isLoading={isLoadingReviews}
+                activeFilters={activeSentiment}
+                onPillClick={handleSentimentClick}
+                isCollapsible={true}
+                defaultExpanded={true}
+                matchedCount={filteredTotal}
+              />
 
               {/* Global Community Statistics */}
               <div className="mb-8 bg-gradient-to-br from-[#f7f9fc] to-white dark:from-[#1a1f2e] dark:to-[#161b26] border-2 border-[#2c3968]/10 dark:border-[#4a7cf6]/10 rounded-2xl p-8">
@@ -1855,7 +1791,7 @@ export default function PhoneSpecPage({
                   ) : (
                     reviews.map((review) => (
                       <ReviewCard
-                        key={review.id}
+                        key={review._id}
                         review={review}
                         currentUserId={currentUser?.uid}
                         onVote={handleVoteOnReview}

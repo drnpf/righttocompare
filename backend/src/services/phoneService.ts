@@ -47,7 +47,6 @@ const PHONE_CARD_PROJECTION = {
  *  - ram: a list of ram size options to filter by
  *  - storage: a list of storage options to filter by
  *  - sortBy: string indicating how to sort phone listing
- *  -
  * @returns An object containing the list of phone JSON objects and the total
  * number of phones in the database.
  */
@@ -209,10 +208,7 @@ export interface ICreatePriceHistoryInput {
   recordedAt?: Date;
 }
 
-export const createPhonePriceHistoryEntry = async (
-  id: string,
-  input: ICreatePriceHistoryInput,
-) => {
+export const createPhonePriceHistoryEntry = async (id: string, input: ICreatePriceHistoryInput) => {
   const entry = new PriceHistory({
     phoneId: id,
     amount: input.amount,
@@ -320,5 +316,3 @@ export const deletePhoneById = async (id: string): Promise<boolean> => {
   const result = await Phone.findOneAndDelete({ id: id });
   return !!result; // Returns true if document was found and deleted
 };
-
-
