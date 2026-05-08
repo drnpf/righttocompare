@@ -11,6 +11,7 @@ import BackToTopButton from "./components/BackToTopButton";
 import LoadingSpinner from "./components/ui/LoadingSpinner";
 
 // Pages (Lazy Loaded)
+const ProtectedRoute = lazy(() => import("./components/ProtectedRoute"));
 const PhoneSpecPage = lazy(() => import("./components/PhoneSpecPage"));
 const PhoneComparisonPage = lazy(() => import("./components/PhoneComparisonPage"));
 const PhoneCatalogPage = lazy(() => import("./components/PhoneCatalogPage"));
@@ -127,6 +128,18 @@ function AppContent() {
       navigate("/password-reset", { replace: true });
     }
   }, []);
+
+  /**
+   * PROTECT SIGN-IN/SIGN-UP PAGES FROM AUTHENTICATED USERS
+   * Signal: Change to current user, URL path, or call of navigate function
+   * Action: On sign-in or sign-up page entry while an authorized user, navigates directly
+   * to current user's profile page
+   */
+  useEffect(() => {
+    // Navigates to profile if current user is already authorized user when accessing sign-in or sign-up
+    const isAuthPage = location.pathname === "/sign-in" || location.pathname === "/sign-up";
+    if (currentUser && isAuthPage) navigate("/profile", { replace: true });
+  }, [currentUser, location.pathname, navigate]);
 
   /**
    * COMPARISON PERSISTENCE:
@@ -333,7 +346,9 @@ function AppContent() {
               <Route
                 path="/profile"
                 element={
-                  authLoading ? <LoadingSpinner /> : currentUser ? <UserProfilePage /> : <Navigate to="/sign-in" />
+                  <ProtectedRoute onNavigateToSignIn={handleSignInClick}>
+                    <UserProfilePage />
+                  </ProtectedRoute>
                 }
               />
 
@@ -341,13 +356,13 @@ function AppContent() {
               <Route
                 path="/admin"
                 element={
-                  authLoading ? (
-                    <LoadingSpinner />
-                  ) : currentUser?.role === "admin" ? (
+                  <ProtectedRoute
+                    adminOnly
+                    onNavigateToCatalog={handleCatalogClick}
+                    onNavigateToSignIn={handleSignInClick}
+                  >
                     <AdminDashboardPage />
-                  ) : (
-                    <Navigate to="/" />
-                  )
+                  </ProtectedRoute>
                 }
               />
 
