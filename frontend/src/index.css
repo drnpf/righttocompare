@@ -157,6 +157,21 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 
+.thumb-label {
+  position: absolute !important;
+  top: -24px !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #2c3968 !important;
+  white-space: nowrap !important;
+  pointer-events: none !important;
+  font-family: inherit !important;
+}
+
+.dark .thumb-label {
+  color: oklch(0.985 0 0) !important;
+}
+
 html {
   font-size: var(--font-size);
 }
