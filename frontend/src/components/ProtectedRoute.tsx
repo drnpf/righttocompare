@@ -21,25 +21,6 @@ export default function ProtectedRoute({
   const { currentUser, loading } = useAuth();
 
   // ------------------------------------------------------------
-  // | DATA SYNCHRONIZATION
-  // ------------------------------------------------------------
-  /**
-   * ADMIN DASHBOARD ACCESS DENIED REDIRECT
-   * Signal: On entry of admin dashboard without necessary credentials
-   * Action: Redirects to main catalog page after 5000ms
-   */
-  const REDIRECT_MS = 5000;
-  useEffect(() => {
-    const shouldRedirect = adminOnly && (!currentUser || currentUser.role != "admin");
-    if (shouldRedirect && onNavigateToCatalog) {
-      const timer = setTimeout(() => {
-        onNavigateToCatalog();
-      }, REDIRECT_MS);
-      return () => clearTimeout(timer);
-    }
-  }, [currentUser, adminOnly, onNavigateToCatalog]);
-
-  // ------------------------------------------------------------
   // | RENDER GUARDS
   // ------------------------------------------------------------
   // CASE: Firebase Auth still loading
