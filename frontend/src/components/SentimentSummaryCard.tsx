@@ -172,6 +172,29 @@ export function SentimentSummaryCard({
     });
   };
 
+  // Render guard if loading
+  if (isLoading) {
+    return (
+      <div
+        className={`mb-8 p-6 rounded-2xl border animate-pulse ${
+          isDarkMode ? "bg-[#161b26] border-[#2d3548]" : "bg-white border-gray-100 shadow-sm"
+        }`}
+      >
+        <div className="h-4 w-32 bg-gray-300 dark:bg-gray-700 rounded mb-6"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-3">
+            <div className="h-8 w-full bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+          </div>
+          <div className="space-y-3">
+            <div className="h-8 w-full bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handles case if there is no analysis data
+  if (!data || data.totalAnalyzed === 0) return null;
   // Handles undefined data
   const pros = data.pros || [];
   const cons = data.cons || [];
@@ -196,7 +219,7 @@ export function SentimentSummaryCard({
   return (
     <div
       className={`mb-8 rounded-2xl border transition-all duration-300 ${
-        isDarkMode ? "bg-[#161b22] border-[#2d3748]" : "bg-white border-[#2c3968]/5 shadow-sm"
+        isDarkMode ? "bg-[#161b26] border-[#2d3548]" : "bg-white border-[#2c3968]/5 shadow-sm"
       } ${isCollapsible && !isExpanded ? "p-4" : "p-6"}`}
     >
       {/* --- 1. THE HEADER (ALWAYS VISIBLE) --- */}
@@ -235,7 +258,7 @@ export function SentimentSummaryCard({
               className={`flex items-center px-4 py-3 mb-6 rounded-xl transition-all duration-300 min-h-[58px] ${
                 activeFilters.length > 0
                   ? isDarkMode
-                    ? "bg-gray-900/40 border-dashed border-2 border-gray-700"
+                    ? "bg-[#1a1f2e] border-dashed border-2 border-[#2d3548]"
                     : "bg-gray-50 border-dashed border-2 border-gray-200"
                   : "border-2 border-transparent bg-transparent"
               }`}
@@ -278,7 +301,7 @@ export function SentimentSummaryCard({
             <div
               className={`p-5 rounded-xl border-l-4 ${
                 isDarkMode
-                  ? "bg-[#1e2533] border-[#4a7cf6] text-gray-300"
+                  ? "bg-[#1a1f2e] border-[#4a7cf6] text-[#a0a8b8]"
                   : "bg-[#f0f4ff] border-[#2c3968] text-[#2c3968]"
               } ${sourceType !== "discussions" ? "mb-8" : ""}`} // Add margin only if grid follows
             >
@@ -312,7 +335,7 @@ export function SentimentSummaryCard({
               </div>
 
               <div
-                className={`space-y-4 pt-6 md:pt-0 md:pl-8 md:border-l ${isDarkMode ? "border-gray-800" : "border-gray-100"}`}
+                className={`space-y-4 pt-6 md:pt-0 md:pl-8 md:border-l ${isDarkMode ? "border-[#2d3548]" : "border-gray-100"}`}
               >
                 <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
                   <TrendingDown size={16} />

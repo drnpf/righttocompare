@@ -112,6 +112,26 @@ interface PhoneSpecPageProps {
   onNavigateToComparison: () => void;
 }
 
+interface PriceHistoryPoint {
+  month: string;
+  price: number;
+  recordedAt: string;
+}
+
+interface PriceSummary {
+  phoneId: string;
+  currency: string;
+  latestPrice: number | null;
+  oldestPrice: number | null;
+  changeAmount: number | null;
+  changePercent: number | null;
+  lowestPrice: number | null;
+  lowestPriceMonth: string | null;
+  latestRecordedAt: string | null;
+}
+
+const API_BASE_URL = "http://localhost:5001/api";
+
 export default function PhoneSpecPage({
   comparisonPhoneIds,
   onComparisonChange,
@@ -163,6 +183,9 @@ export default function PhoneSpecPage({
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "helpful">("newest");
   const [activeSentiment, setActiveSentiment] = useState<string[]>([]);
+  const [priceHistory, setPriceHistory] = useState<PriceHistoryPoint[]>([]);
+  const [priceSummary, setPriceSummary] = useState<PriceSummary | null>(null);
+  const [isLoadingPriceData, setIsLoadingPriceData] = useState(false);
 
   // -- Comparison Cart States --
   const [comparisonData, setComparisonData] = useState<PhoneSummary[]>([]);
@@ -306,6 +329,43 @@ export default function PhoneSpecPage({
       }
     };
   }, [phoneId, fetchReviews, onAddToRecentlyViewed]);
+
+  useEffect(() => {
+    const fetchPriceTrackingData = async () => {
+      if (!phoneId) return;
+
+      setIsLoadingPriceData(true);
+
+      try {
+        const [historyResponse, summaryResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/phones/${phoneId}/price-history`),
+          fetch(`${API_BASE_URL}/phones/${phoneId}/price-summary`),
+        ]);
+
+        if (!historyResponse.ok) {
+          throw new Error("Failed to fetch price history");
+        }
+
+        if (!summaryResponse.ok) {
+          throw new Error("Failed to fetch price summary");
+        }
+
+        const historyData = await historyResponse.json();
+        const summaryData = await summaryResponse.json();
+
+        setPriceHistory(Array.isArray(historyData) ? historyData : []);
+        setPriceSummary(summaryData);
+      } catch (error) {
+        console.error("Failed to fetch price tracking data:", error);
+        setPriceHistory([]);
+        setPriceSummary(null);
+      } finally {
+        setIsLoadingPriceData(false);
+      }
+    };
+
+    fetchPriceTrackingData();
+  }, [phoneId]);
 
   /**
    * SYNC: Comparison Cart Metadata Cache
@@ -488,47 +548,33 @@ export default function PhoneSpecPage({
     }
   };
 
+  // -- PRICE HISTORY --
+  const currentPrice =
+    priceSummary?.latestPrice ??
+    parseFloat(String(phoneData.price).replace("$", "").replace(",", ""));
+
+  const oldestPrice = priceSummary?.oldestPrice ?? null;
+  const priceChange = priceSummary?.changeAmount ?? 0;
+  const priceChangePercent =
+    priceSummary?.changePercent !== null && priceSummary?.changePercent !== undefined
+      ? priceSummary.changePercent.toFixed(1)
+      : "0.0";
+
+  const lowestPrice = priceSummary?.lowestPrice ?? null;
+  const lowestPriceMonth = priceSummary?.lowestPriceMonth ?? "N/A";
+
+  const latestRecordedAt = priceSummary?.latestRecordedAt
+    ? new Date(priceSummary.latestRecordedAt).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+    : "No price history yet";
+
   // Handle canceling the review form
   const handleCancelReview = () => {
     setShowReviewForm(false);
   };
-
-  // -- PRICE HISTORY --
-  // Generate price history data (mock data for demonstration)
-  const generatePriceHistory = () => {
-    const currentPrice = parseFloat(phoneData.price.replace("$", "").replace(",", ""));
-    const history = [];
-    const monthsBack = 6;
-
-    for (let i = monthsBack; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const monthName = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-
-      // Generate price variation (random fluctuation around current price)
-      let price;
-      if (i === 0) {
-        price = currentPrice; // Current month uses actual price
-      } else {
-        // Earlier prices tend to be higher, with some random variation
-        const variation = (Math.random() - 0.3) * (currentPrice * 0.15);
-        const baseIncrease = (i / monthsBack) * (currentPrice * 0.1);
-        price = Math.round(currentPrice + baseIncrease + variation);
-      }
-
-      history.push({
-        month: monthName,
-        price: price,
-      });
-    }
-    return history;
-  };
-
-  const priceHistory = generatePriceHistory();
-  const currentPrice = parseFloat(phoneData.price.replace("$", "").replace(",", ""));
-  const oldestPrice = priceHistory[0].price;
-  const priceChange = currentPrice - oldestPrice;
-  const priceChangePercent = ((priceChange / oldestPrice) * 100).toFixed(1);
 
   const toggleSpec = (category: string, specName: string) => {
     setSelectedSpecs((prev) => {
@@ -694,10 +740,10 @@ export default function PhoneSpecPage({
             <p className="text-[#2c3968] dark:text-[#4a7cf6] mb-2">{phoneData.manufacturer}</p>
             <h1 className="dark:text-white mb-3">{phoneData.name}</h1>
             <div className="flex items-center justify-center gap-4">
-              <Badge variant="secondary" className="bg-[#2c3968] text-white hover:bg-[#2c3968]/90">
+              <Badge variant="secondary" className="bg-[#2c3968] dark:bg-[#4a7cf6] text-white hover:bg-[#2c3968]/90 dark:hover:bg-[#4a7cf6]/90">
                 {phoneData.releaseDate}
               </Badge>
-              <span className="text-[#2c3968]">{phoneData.price}</span>
+              <span className="text-[#2c3968] dark:text-[#4a7cf6]">{phoneData.price}</span>
             </div>
           </div>
 
@@ -723,19 +769,19 @@ export default function PhoneSpecPage({
                   onClick={() => navigate("/")}
                 >
                   {/* Decorative Corner Accents */}
-                  <div className="absolute top-0 left-0 w-3 h-3 border-t-4 border-l-4 border-[#2c3968] rounded-tl-sm"></div>
-                  <div className="absolute top-0 right-0 w-3 h-3 border-t-4 border-r-4 border-[#2c3968] rounded-tr-sm"></div>
-                  <div className="absolute bottom-0 left-0 w-3 h-3 border-b-4 border-l-4 border-[#2c3968] rounded-bl-sm"></div>
-                  <div className="absolute bottom-0 right-0 w-3 h-3 border-b-4 border-r-4 border-[#2c3968] rounded-br-sm"></div>
+                  <div className="absolute top-0 left-0 w-3 h-3 border-t-4 border-l-4 border-[#2c3968] dark:border-[#4a7cf6] rounded-tl-sm"></div>
+                  <div className="absolute top-0 right-0 w-3 h-3 border-t-4 border-r-4 border-[#2c3968] dark:border-[#4a7cf6] rounded-tr-sm"></div>
+                  <div className="absolute bottom-0 left-0 w-3 h-3 border-b-4 border-l-4 border-[#2c3968] dark:border-[#4a7cf6] rounded-bl-sm"></div>
+                  <div className="absolute bottom-0 right-0 w-3 h-3 border-b-4 border-r-4 border-[#2c3968] dark:border-[#4a7cf6] rounded-br-sm"></div>
 
                   {/* Label */}
                   <div className="absolute top-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1">
-                    <span className="text-xs text-[#2c3968]/70 tracking-wide">CATALOG</span>
+                    <span className="text-xs text-[#2c3968]/70 dark:text-[#4a7cf6]/70 tracking-wide">CATALOG</span>
                   </div>
 
                   {/* Browse Button */}
                   <button
-                    className="group relative bg-white border-2 border-[#2c3968] text-[#2c3968] rounded-xl px-6 py-4 shadow-lg hover:bg-[#2c3968] hover:text-white transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+                    className="group relative bg-white dark:bg-[#161b26] border-2 border-[#2c3968] dark:border-[#4a7cf6] text-[#2c3968] dark:text-[#4a7cf6] rounded-xl px-6 py-4 shadow-lg hover:bg-[#2c3968] dark:hover:bg-[#4a7cf6] hover:text-white transition-all duration-300 hover:scale-105 hover:shadow-2xl"
                     title="Browse Phone Catalog"
                   >
                     <div className="flex flex-col items-center gap-2">
@@ -759,7 +805,7 @@ export default function PhoneSpecPage({
 
                   {/* Bottom Label */}
                   <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-center">
-                    <span className="text-[10px] text-[#2c3968]/50 tracking-wide">ALL PHONES</span>
+                    <span className="text-[10px] text-[#2c3968]/50 dark:text-[#4a7cf6]/50 tracking-wide">ALL PHONES</span>
                   </div>
                 </div>
               </div>
@@ -771,7 +817,7 @@ export default function PhoneSpecPage({
             <div className="inline-block">
               <div className="flex items-center gap-3 justify-center">
                 <div className="flex items-baseline">
-                  <span className="text-[#2c3968]">{overallRating}</span>
+                  <span className="text-[#2c3968] dark:text-[#4a7cf6]">{overallRating}</span>
                 </div>
                 <div className="flex gap-1">
                   {[...Array(5)].map((_, i) => {
@@ -781,12 +827,12 @@ export default function PhoneSpecPage({
                     );
                   })}
                 </div>
-                <span className="text-[#666]">
+                <span className="text-[#666] dark:text-[#a0a8b8]">
                   ({ratingsCount} {ratingsCount === 1 ? "Rating" : "Ratings"})
                 </span>
               </div>
               <div className="text-center mt-2">
-                <button onClick={handleLeaveReviewClick} className="text-[#2c3968] hover:underline cursor-pointer">
+                <button onClick={handleLeaveReviewClick} className="text-[#2c3968] dark:text-[#4a7cf6] hover:underline cursor-pointer">
                   Leave a Review
                 </button>
               </div>
@@ -795,7 +841,7 @@ export default function PhoneSpecPage({
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 mt-4 w-full sm:w-auto px-4 sm:px-0">
                 <Button
                   variant="outline"
-                  className={`border-2 ${isWishlisted ? "bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] text-white border-[#2c3968] hover:from-[#243059] hover:to-[#354368] shadow-lg hover:shadow-xl" : "border-[#2c3968] text-[#2c3968] bg-white hover:bg-gradient-to-r hover:from-[#2c3968]/5 hover:to-[#2c3968]/10 shadow-md hover:shadow-lg"} w-full sm:w-auto transition-all duration-300 hover:scale-105 group`}
+                  className={`border-2 ${isWishlisted ? "bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white border-[#2c3968] dark:border-[#4a7cf6] hover:from-[#243059] hover:to-[#354368] dark:hover:from-[#3d6be5] dark:hover:to-[#4a7cf6] shadow-lg hover:shadow-xl" : "border-[#2c3968] dark:border-[#4a7cf6] text-[#2c3968] dark:text-[#4a7cf6] bg-white dark:bg-[#161b26] hover:bg-gradient-to-r hover:from-[#2c3968]/5 hover:to-[#2c3968]/10 dark:hover:from-[#4a7cf6]/5 dark:hover:to-[#4a7cf6]/10 shadow-md hover:shadow-lg"} w-full sm:w-auto transition-all duration-300 hover:scale-105 group`}
                   onClick={handleWishlistToggle}
                 >
                   <Heart
@@ -809,45 +855,46 @@ export default function PhoneSpecPage({
                   <DialogTrigger asChild>
                     <Button
                       variant="outline"
-                      className="border-2 border-[#2c3968] text-[#2c3968] bg-white hover:bg-gradient-to-r hover:from-[#2c3968]/5 hover:to-[#2c3968]/10 shadow-md hover:shadow-lg w-full sm:w-auto transition-all duration-300 hover:scale-105 group"
+                      className="border-2 border-[#2c3968] dark:border-[#4a7cf6] text-[#2c3968] dark:text-[#4a7cf6] bg-white dark:bg-[#161b26] hover:bg-gradient-to-r hover:from-[#2c3968]/5 hover:to-[#2c3968]/10 dark:hover:from-[#4a7cf6]/5 dark:hover:to-[#4a7cf6]/10 shadow-md hover:shadow-lg w-full sm:w-auto transition-all duration-300 hover:scale-105 group"
                     >
                       <Bell className="w-4 h-4 mr-2 transition-transform group-hover:scale-110 group-hover:rotate-12" />
                       <span className="hidden sm:inline">Set Price Alert</span>
                       <span className="sm:hidden">Price Alert</span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
+                  <DialogContent className="sm:max-w-[425px] dark:bg-[#161b26] dark:border-[#2d3548]">
                     <DialogHeader>
-                      <DialogTitle className="text-[#2c3968]">Set Price Alert</DialogTitle>
-                      <DialogDescription>
+                      <DialogTitle className="text-[#2c3968] dark:text-[#4a7cf6]">Set Price Alert</DialogTitle>
+                      <DialogDescription className="dark:text-[#a0a8b8]">
                         Get notified when the {phoneData.name} drops to your target price.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email Address</Label>
+                        <Label htmlFor="email" className="dark:text-white">Email Address</Label>
                         <Input
                           id="email"
                           type="email"
                           placeholder="your@email.com"
+                          className="dark:bg-[#1a1f2e] dark:border-[#2d3548] dark:text-white dark:placeholder:text-[#6b7280]"
                           value={priceAlertEmail}
                           onChange={(e) => setPriceAlertEmail(e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="targetPrice">Target Price (USD)</Label>
+                        <Label htmlFor="targetPrice" className="dark:text-white">Target Price (USD)</Label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666]">$</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8]">$</span>
                           <Input
                             id="targetPrice"
                             type="number"
                             placeholder="999"
-                            className="pl-7"
+                            className="pl-7 dark:bg-[#1a1f2e] dark:border-[#2d3548] dark:text-white dark:placeholder:text-[#6b7280]"
                             value={targetPrice}
                             onChange={(e) => setTargetPrice(e.target.value)}
                           />
                         </div>
-                        <p className="text-sm text-[#666]">Current price: {phoneData.price}</p>
+                        <p className="text-sm text-[#666] dark:text-[#a0a8b8]">Current price: {phoneData.price}</p>
                       </div>
                     </div>
                     <DialogFooter>
@@ -898,19 +945,19 @@ export default function PhoneSpecPage({
                   onClick={() => navigate("/")}
                 >
                   {/* Decorative Corner Accents */}
-                  <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-3 border-l-3 border-[#2c3968] rounded-tl-sm"></div>
-                  <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t-3 border-r-3 border-[#2c3968] rounded-tr-sm"></div>
-                  <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-3 border-l-3 border-[#2c3968] rounded-bl-sm"></div>
-                  <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-3 border-r-3 border-[#2c3968] rounded-br-sm"></div>
+                  <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-3 border-l-3 border-[#2c3968] dark:border-[#4a7cf6] rounded-tl-sm"></div>
+                  <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t-3 border-r-3 border-[#2c3968] dark:border-[#4a7cf6] rounded-tr-sm"></div>
+                  <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-3 border-l-3 border-[#2c3968] dark:border-[#4a7cf6] rounded-bl-sm"></div>
+                  <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-3 border-r-3 border-[#2c3968] dark:border-[#4a7cf6] rounded-br-sm"></div>
 
                   {/* Top Label */}
                   <div className="flex items-center gap-2 mb-4">
-                    <span className="text-xs text-[#2c3968]/70 tracking-wide">BROWSE PHONE CATALOG</span>
+                    <span className="text-xs text-[#2c3968]/70 dark:text-[#4a7cf6]/70 tracking-wide">BROWSE PHONE CATALOG</span>
                   </div>
 
                   {/* Browse Button */}
                   <button
-                    className="group relative bg-white border-2 border-[#2c3968] text-[#2c3968] rounded-xl px-8 py-3 shadow-lg hover:bg-[#2c3968] hover:text-white transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+                    className="group relative bg-white dark:bg-[#161b26] border-2 border-[#2c3968] dark:border-[#4a7cf6] text-[#2c3968] dark:text-[#4a7cf6] rounded-xl px-8 py-3 shadow-lg hover:bg-[#2c3968] dark:hover:bg-[#4a7cf6] hover:text-white transition-all duration-300 hover:scale-105 hover:shadow-2xl"
                     title="Browse Phone Catalog"
                   >
                     <div className="flex items-center gap-3">
@@ -968,14 +1015,14 @@ export default function PhoneSpecPage({
                             </TooltipTrigger>
                             <TooltipContent
                               side="bottom"
-                              className="max-w-xs bg-white text-[#1e1e1e] border-2 border-[#2c3968]/20 shadow-xl px-4 py-3 rounded-xl"
+                              className="max-w-xs bg-white dark:bg-[#161b26] text-[#1e1e1e] dark:text-white border-2 border-[#2c3968]/20 dark:border-[#4a7cf6]/20 shadow-xl px-4 py-3 rounded-xl"
                               sideOffset={8}
                             >
-                              <p className="text-sm font-medium text-[#2c3968] mb-1">{spec.label}</p>
+                              <p className="text-sm font-medium text-[#2c3968] dark:text-[#4a7cf6] mb-1">{spec.label}</p>
                               <p className="text-sm leading-relaxed mb-2">{specGlossary[spec.label].definition}</p>
-                              <div className="flex items-start gap-1.5 bg-[#fffbeb] border border-amber-200 rounded-lg px-2.5 py-1.5">
+                              <div className="flex items-start gap-1.5 bg-[#fffbeb] dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-lg px-2.5 py-1.5">
                                 <Lightbulb className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />
-                                <p className="text-xs text-amber-700 leading-relaxed">{specGlossary[spec.label].tip}</p>
+                                <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">{specGlossary[spec.label].tip}</p>
                               </div>
                             </TooltipContent>
                           </Tooltip>
@@ -1012,16 +1059,15 @@ export default function PhoneSpecPage({
               <div className="space-y-6">
                 {/* Current Price and Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gradient-to-br from-[#2c3968] to-[#3d4b7d] rounded-xl p-6 text-white">
+                  <div className="bg-gradient-to-br from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] rounded-xl p-6 text-white">
                     <div className="flex items-center gap-2 mb-2">
                       <DollarSign className="w-5 h-5" />
                       <p className="text-sm opacity-90">Current Price</p>
                     </div>
-                    <p className="text-3xl mb-1">{phoneData.price}</p>
-                    <p className="text-xs opacity-75">
-                      As of{" "}
-                      {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    <p className="text-3xl mb-1">
+                      {currentPrice ? `$${currentPrice.toLocaleString()}` : "No data"}
                     </p>
+                    <p className="text-xs opacity-75">As of {latestRecordedAt}</p>
                   </div>
 
                   <div
@@ -1043,7 +1089,7 @@ export default function PhoneSpecPage({
                     </p>
                     <p className="text-xs text-[#666] dark:text-[#a0a8b8]">
                       {priceChange < 0 ? "" : "+"}
-                      {priceChangePercent}% from ${oldestPrice}
+                      {priceChangePercent}% from {oldestPrice ? `$${oldestPrice.toLocaleString()}` : "N/A"}
                     </p>
                   </div>
 
@@ -1053,10 +1099,10 @@ export default function PhoneSpecPage({
                       <p className="text-sm text-[#666] dark:text-[#a0a8b8]">Lowest Price</p>
                     </div>
                     <p className="text-3xl text-[#2c3968] dark:text-[#4a7cf6] mb-1">
-                      ${Math.min(...priceHistory.map((h) => h.price))}
+                      {lowestPrice ? `$${lowestPrice.toLocaleString()}` : "No data"}
                     </p>
                     <p className="text-xs text-[#666] dark:text-[#a0a8b8]">
-                      In {priceHistory.find((h) => h.price === Math.min(...priceHistory.map((p) => p.price)))?.month}
+                      In {lowestPriceMonth}
                     </p>
                   </div>
                 </div>
@@ -1064,31 +1110,42 @@ export default function PhoneSpecPage({
                 {/* Price Chart */}
                 <div className="border border-[#e0e0e0] dark:border-[#2d3548] rounded-xl p-6 dark:bg-[#1a1f2e]">
                   <h3 className="text-lg text-[#2c3968] dark:text-[#4a7cf6] mb-4">Price History (Last 6 Months)</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={priceHistory} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                      <XAxis dataKey="month" stroke="#666" style={{ fontSize: "12px" }} />
-                      <YAxis stroke="#666" style={{ fontSize: "12px" }} tickFormatter={(value) => `$${value}`} />
-                      <RechartsTooltip
-                        contentStyle={{
-                          backgroundColor: "white",
-                          border: "2px solid #2c3968",
-                          borderRadius: "8px",
-                          padding: "8px 12px",
-                        }}
-                        formatter={(value: any) => [`$${value}`, "Price"]}
-                        labelStyle={{ color: "#2c3968", fontWeight: "bold" }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="price"
-                        stroke="#2c3968"
-                        strokeWidth={3}
-                        dot={{ fill: "#2c3968", r: 5 }}
-                        activeDot={{ r: 7, fill: "#2c3968" }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  {isLoadingPriceData ? (
+                    <div className="h-[300px] flex items-center justify-center text-[#666] dark:text-[#a0a8b8]">
+                      <Loader2 className="animate-spin mr-2" size={24} />
+                      Loading price history...
+                    </div>
+                  ) : priceHistory.length === 0 ? (
+                    <div className="h-[300px] flex items-center justify-center text-[#666] dark:text-[#a0a8b8] text-center">
+                      No price history available yet.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={priceHistory} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                        <XAxis dataKey="month" stroke="#666" style={{ fontSize: "12px" }} />
+                        <YAxis stroke="#666" style={{ fontSize: "12px" }} tickFormatter={(value) => `$${value}`} />
+                        <RechartsTooltip
+                          contentStyle={{
+                            backgroundColor: "white",
+                            border: "2px solid #2c3968",
+                            borderRadius: "8px",
+                            padding: "8px 12px",
+                          }}
+                          formatter={(value: any) => [`$${value}`, "Price"]}
+                          labelStyle={{ color: "#2c3968", fontWeight: "bold" }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="price"
+                          stroke="#2c3968"
+                          strokeWidth={3}
+                          dot={{ fill: "#2c3968", r: 5 }}
+                          activeDot={{ r: 7, fill: "#2c3968" }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
                   <p className="text-xs text-[#666] dark:text-[#a0a8b8] mt-4 text-center">
                     💡 Tip: Set a price alert above to get notified when the price drops to your target
                   </p>
@@ -1116,11 +1173,11 @@ export default function PhoneSpecPage({
                 </CollapsibleTrigger>
               </div>
               <div className="flex gap-2">
-                <button onClick={selectAllSpecs} className="text-[#2c3968] hover:underline">
+                <button onClick={selectAllSpecs} className="text-[#2c3968] dark:text-[#4a7cf6] hover:underline">
                   Select All
                 </button>
-                <span className="text-[#666]">|</span>
-                <button onClick={clearAllSpecs} className="text-[#2c3968] hover:underline">
+                <span className="text-[#666] dark:text-[#a0a8b8]">|</span>
+                <button onClick={clearAllSpecs} className="text-[#2c3968] dark:text-[#4a7cf6] hover:underline">
                   Clear All
                 </button>
               </div>
@@ -1141,21 +1198,21 @@ export default function PhoneSpecPage({
                       open={openCategories[category]}
                       onOpenChange={() => toggleCategoryOpen(category)}
                     >
-                      <div className="group border border-[#e0e0e0] rounded-lg hover:border-[#2c3968]/20 transition-all duration-200 bg-white relative">
-                        <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-[#f7f9fc] transition-colors duration-200">
+                      <div className="group border border-[#e0e0e0] dark:border-[#2d3548] rounded-lg hover:border-[#2c3968]/20 dark:hover:border-[#4a7cf6]/20 transition-all duration-200 bg-white dark:bg-[#161b26] relative">
+                        <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-[#f7f9fc] dark:hover:bg-[#1a1f2e] transition-colors duration-200">
                           <div className="flex items-center gap-3 flex-1">
                             {/* Category Icon - minimalistic */}
-                            <div className="w-9 h-9 rounded-lg bg-[#f5f7fa] flex items-center justify-center">
-                              <CategoryIcon className="w-4 h-4 text-[#2c3968]" />
+                            <div className="w-9 h-9 rounded-lg bg-[#f5f7fa] dark:bg-[#4a7cf6]/10 flex items-center justify-center">
+                              <CategoryIcon className="w-4 h-4 text-[#2c3968] dark:text-[#4a7cf6]" />
                             </div>
 
                             <div className="flex-1">
                               <CollapsibleTrigger className="flex items-center gap-2 text-left w-full">
-                                <span className="capitalize text-[#2c3968]">{category}</span>
+                                <span className="capitalize text-[#2c3968] dark:text-[#4a7cf6]">{category}</span>
                                 {(isFullySelected || isPartiallySelected) && (
                                   <Badge
                                     variant="secondary"
-                                    className="text-xs px-2 py-0.5 bg-[#2c3968]/10 text-[#2c3968] border border-[#2c3968]/20"
+                                    className="text-xs px-2 py-0.5 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] border border-[#2c3968]/20 dark:border-[#4a7cf6]/20"
                                   >
                                     {categorySelectedSpecs.length}/{specs.length}
                                   </Badge>
@@ -1182,7 +1239,7 @@ export default function PhoneSpecPage({
                             <CollapsibleTrigger>
                               <ChevronDown
                                 className={`w-5 h-5 transition-all duration-200 ${
-                                  openCategories[category] ? "rotate-180 text-[#2c3968]" : "text-[#999]"
+                                  openCategories[category] ? "rotate-180 text-[#2c3968] dark:text-[#4a7cf6]" : "text-[#999] dark:text-[#6b7280]"
                                 }`}
                               />
                             </CollapsibleTrigger>
@@ -1190,12 +1247,12 @@ export default function PhoneSpecPage({
                         </div>
 
                         <CollapsibleContent>
-                          <div className="absolute top-full left-0 right-0 z-50 border border-[#e0e0e0] rounded-lg bg-white shadow-lg mt-1">
-                            <div className="bg-[#fafbfc] p-4 space-y-1 max-h-[300px] overflow-y-auto">
+                          <div className="absolute top-full left-0 right-0 z-50 border border-[#e0e0e0] dark:border-[#2d3548] rounded-lg bg-white dark:bg-[#161b26] shadow-lg mt-1">
+                            <div className="bg-[#fafbfc] dark:bg-[#1a1f2e] p-4 space-y-1 max-h-[300px] overflow-y-auto">
                               {specs.map((specName) => (
                                 <div
                                   key={specName}
-                                  className="flex items-center gap-3 py-2 px-3 rounded-md hover:bg-white transition-colors duration-150"
+                                  className="flex items-center gap-3 py-2 px-3 rounded-md hover:bg-white dark:hover:bg-[#161b26] transition-colors duration-150"
                                 >
                                   <Checkbox
                                     checked={categorySelectedSpecs.includes(specName)}
@@ -1204,7 +1261,7 @@ export default function PhoneSpecPage({
                                   />
                                   <label
                                     htmlFor={`${category}-${specName}`}
-                                    className="text-[#1e1e1e] cursor-pointer flex-1 flex items-center gap-1.5"
+                                    className="text-[#1e1e1e] dark:text-white cursor-pointer flex-1 flex items-center gap-1.5"
                                   >
                                     {specName}
                                     {specTooltips[specName] && (
@@ -1213,15 +1270,15 @@ export default function PhoneSpecPage({
                                           <TooltipTrigger asChild>
                                             <button
                                               type="button"
-                                              className="w-4 h-4 rounded-full bg-[#f5f7fa] hover:bg-[#2c3968]/10 flex items-center justify-center transition-colors flex-shrink-0"
+                                              className="w-4 h-4 rounded-full bg-[#f5f7fa] dark:bg-[#2d3548] hover:bg-[#2c3968]/10 dark:hover:bg-[#4a7cf6]/10 flex items-center justify-center transition-colors flex-shrink-0"
                                               onClick={(e) => e.preventDefault()}
                                             >
-                                              <HelpCircle className="w-3 h-3 text-[#2c3968]" />
+                                              <HelpCircle className="w-3 h-3 text-[#2c3968] dark:text-[#4a7cf6]" />
                                             </button>
                                           </TooltipTrigger>
                                           <TooltipContent
                                             side="right"
-                                            className="max-w-sm bg-white text-[#1e1e1e] border-2 border-[#2c3968]/20 shadow-xl px-4 py-3 rounded-xl"
+                                            className="max-w-sm bg-white dark:bg-[#161b26] text-[#1e1e1e] dark:text-white border-2 border-[#2c3968]/20 dark:border-[#4a7cf6]/20 shadow-xl px-4 py-3 rounded-xl"
                                             sideOffset={8}
                                           >
                                             <p className="text-sm leading-relaxed">{specTooltips[specName]}</p>
@@ -1246,18 +1303,18 @@ export default function PhoneSpecPage({
 
         {/* 5. Full Specifications */}
         <Collapsible open={isFullSpecsOpen} onOpenChange={setIsFullSpecsOpen}>
-          <Card id="full-specs" className="shadow-sm">
+          <Card id="full-specs" className="shadow-sm dark:bg-[#161b26] dark:border-[#2d3548]">
             <CardHeader>
               <div className="mb-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3">
                     <div>
-                      <h2 className="text-[#2c3968] mb-2">Full Specifications</h2>
-                      <div className="h-1 w-20 bg-[#2c3968] rounded-full"></div>
+                      <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-2">Full Specifications</h2>
+                      <div className="h-1 w-20 bg-[#2c3968] dark:bg-[#4a7cf6] rounded-full"></div>
                     </div>
                     <CollapsibleTrigger className="ml-2">
                       <ChevronDown
-                        className={`w-6 h-6 text-[#2c3968] transition-transform ${isFullSpecsOpen ? "rotate-180" : ""}`}
+                        className={`w-6 h-6 text-[#2c3968] dark:text-[#4a7cf6] transition-transform ${isFullSpecsOpen ? "rotate-180" : ""}`}
                       />
                     </CollapsibleTrigger>
                   </div>
@@ -1276,33 +1333,33 @@ export default function PhoneSpecPage({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex items-center gap-2 border-[#2c3968]/30 text-[#2c3968] hover:bg-[#2c3968] hover:text-white transition-colors"
+                        className="flex items-center gap-2 border-[#2c3968]/30 dark:border-[#4a7cf6]/30 text-[#2c3968] dark:text-[#4a7cf6] hover:bg-[#2c3968] dark:hover:bg-[#4a7cf6] hover:text-white transition-colors"
                       >
                         <BookOpen className="w-4 h-4" />
                         <span className="hidden sm:inline">Spec Glossary</span>
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0">
-                      <DialogHeader className="p-6 pb-4 border-b border-[#e0e0e0] flex-shrink-0">
-                        <DialogTitle className="text-[#2c3968] text-xl flex items-center gap-2">
+                    <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0 gap-0 dark:bg-[#161b26] dark:border-[#2d3548]">
+                      <DialogHeader className="p-6 pb-4 border-b border-[#e0e0e0] dark:border-[#2d3548] flex-shrink-0">
+                        <DialogTitle className="text-[#2c3968] dark:text-[#4a7cf6] text-xl flex items-center gap-2">
                           <BookOpen className="w-5 h-5" />
                           Specification Glossary
                         </DialogTitle>
-                        <DialogDescription className="text-[#666]">
-                          Hover over any <HelpCircle className="w-3 h-3 inline text-[#2c3968]" /> icon on the page for
+                        <DialogDescription className="text-[#666] dark:text-[#a0a8b8]">
+                          Hover over any <HelpCircle className="w-3 h-3 inline text-[#2c3968] dark:text-[#4a7cf6]" /> icon on the page for
                           quick definitions. Use this glossary to browse all {Object.keys(specGlossary).length} terms
                           with buying tips.
                         </DialogDescription>
                         {/* Search + Category Filter */}
                         <div className="flex flex-col sm:flex-row gap-3 mt-3">
                           <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#999]" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#999] dark:text-[#6b7280]" />
                             <input
                               type="text"
                               placeholder="Search specifications..."
                               value={glossarySearch}
                               onChange={(e) => setGlossarySearch(e.target.value)}
-                              className="w-full pl-9 pr-4 py-2 border border-[#e0e0e0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2c3968]/30 focus:border-[#2c3968]"
+                              className="w-full pl-9 pr-4 py-2 border border-[#e0e0e0] dark:border-[#2d3548] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2c3968]/30 dark:focus:ring-[#4a7cf6]/20 focus:border-[#2c3968] dark:focus:border-[#4a7cf6] dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280]"
                             />
                           </div>
                           <div className="flex gap-1.5 flex-wrap">
@@ -1313,8 +1370,8 @@ export default function PhoneSpecPage({
                                   onClick={() => setGlossaryCategory(cat)}
                                   className={`px-3 py-1.5 rounded-lg text-xs capitalize font-medium transition-colors ${
                                     glossaryCategory === cat
-                                      ? "bg-[#2c3968] text-white"
-                                      : "bg-[#f5f7fa] text-[#666] hover:bg-[#2c3968]/10 hover:text-[#2c3968]"
+                                      ? "bg-[#2c3968] dark:bg-[#4a7cf6] text-white"
+                                      : "bg-[#f5f7fa] dark:bg-[#1a1f2e] text-[#666] dark:text-[#a0a8b8] hover:bg-[#2c3968]/10 dark:hover:bg-[#4a7cf6]/10 hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
                                   }`}
                                 >
                                   {cat === "all" ? "All" : cat}
@@ -1338,8 +1395,8 @@ export default function PhoneSpecPage({
 
                           if (filtered.length === 0) {
                             return (
-                              <div className="text-center py-12 text-[#666]">
-                                <Search className="w-8 h-8 mx-auto mb-3 text-[#ccc]" />
+                              <div className="text-center py-12 text-[#666] dark:text-[#a0a8b8]">
+                                <Search className="w-8 h-8 mx-auto mb-3 text-[#ccc] dark:text-[#6b7280]" />
                                 <p>No matching terms found.</p>
                               </div>
                             );
@@ -1356,22 +1413,22 @@ export default function PhoneSpecPage({
                             <div className="space-y-8">
                               {Object.entries(grouped).map(([cat, entries]) => (
                                 <div key={cat}>
-                                  <h3 className="text-sm font-semibold text-[#2c3968] capitalize mb-3 flex items-center gap-2">
-                                    <div className="w-1 h-4 bg-[#2c3968] rounded-full" />
+                                  <h3 className="text-sm font-semibold text-[#2c3968] dark:text-[#4a7cf6] capitalize mb-3 flex items-center gap-2">
+                                    <div className="w-1 h-4 bg-[#2c3968] dark:bg-[#4a7cf6] rounded-full" />
                                     {cat}
-                                    <span className="text-xs text-[#999] font-normal">({entries.length})</span>
+                                    <span className="text-xs text-[#999] dark:text-[#6b7280] font-normal">({entries.length})</span>
                                   </h3>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {entries.map(([name, entry]) => (
                                       <div
                                         key={name}
-                                        className="border border-[#e0e0e0] rounded-xl p-4 hover:border-[#2c3968]/30 hover:bg-[#f7f9fc] transition-all"
+                                        className="border border-[#e0e0e0] dark:border-[#2d3548] rounded-xl p-4 hover:border-[#2c3968]/30 dark:hover:border-[#4a7cf6]/30 hover:bg-[#f7f9fc] dark:hover:bg-[#1a1f2e] transition-all"
                                       >
-                                        <p className="font-medium text-[#1e1e1e] mb-1.5">{name}</p>
-                                        <p className="text-sm text-[#666] leading-relaxed mb-2">{entry.definition}</p>
-                                        <div className="flex items-start gap-1.5 bg-[#fffbeb] border border-amber-200 rounded-lg px-3 py-2">
+                                        <p className="font-medium text-[#1e1e1e] dark:text-white mb-1.5">{name}</p>
+                                        <p className="text-sm text-[#666] dark:text-[#a0a8b8] leading-relaxed mb-2">{entry.definition}</p>
+                                        <div className="flex items-start gap-1.5 bg-[#fffbeb] dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-lg px-3 py-2">
                                           <Lightbulb className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
-                                          <p className="text-xs text-amber-700 leading-relaxed">{entry.tip}</p>
+                                          <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">{entry.tip}</p>
                                         </div>
                                       </div>
                                     ))}
@@ -1391,7 +1448,7 @@ export default function PhoneSpecPage({
               <CardContent>
                 {Object.values(selectedSpecs).every((specs) => specs.length === 0) ? (
                   <div className="text-center py-12">
-                    <p className="text-[#666]">
+                    <p className="text-[#666] dark:text-[#a0a8b8]">
                       No specifications selected. Please select at least one specification to view.
                     </p>
                   </div>
@@ -1415,9 +1472,9 @@ export default function PhoneSpecPage({
                             {/* Category Header */}
                             <div
                               id={`spec-${category}`}
-                              className="bg-gradient-to-r from-[#2c3968]/5 to-transparent border-l-4 border-[#2c3968] px-6 py-4 -mx-6 mb-6"
+                              className="bg-gradient-to-r from-[#2c3968]/5 to-transparent dark:from-[#4a7cf6]/5 dark:to-transparent border-l-4 border-[#2c3968] dark:border-[#4a7cf6] px-6 py-4 -mx-6 mb-6"
                             >
-                              <h3 className="text-2xl text-[#2c3968] capitalize font-medium">{category}</h3>
+                              <h3 className="text-2xl text-[#2c3968] dark:text-[#4a7cf6] capitalize font-medium">{category}</h3>
                             </div>
 
                             {/* Specifications List */}
@@ -1427,29 +1484,29 @@ export default function PhoneSpecPage({
                                   <div className="grid md:grid-cols-3 gap-4 py-3">
                                     <div className="md:col-span-1">
                                       <div className="flex items-center gap-2">
-                                        <p className="text-[#666]">{key}</p>
+                                        <p className="text-[#666] dark:text-[#a0a8b8]">{key}</p>
                                         {specGlossary[key] && (
                                           <TooltipProvider delayDuration={200}>
                                             <Tooltip>
                                               <TooltipTrigger asChild>
                                                 <button
-                                                  className="w-4 h-4 rounded-full bg-[#f5f7fa] hover:bg-[#2c3968]/10 flex items-center justify-center transition-colors duration-200 flex-shrink-0"
+                                                  className="w-4 h-4 rounded-full bg-[#f5f7fa] dark:bg-[#2d3548] hover:bg-[#2c3968]/10 dark:hover:bg-[#4a7cf6]/10 flex items-center justify-center transition-colors duration-200 flex-shrink-0"
                                                   type="button"
                                                 >
-                                                  <HelpCircle className="w-3 h-3 text-[#2c3968]" />
+                                                  <HelpCircle className="w-3 h-3 text-[#2c3968] dark:text-[#4a7cf6]" />
                                                 </button>
                                               </TooltipTrigger>
                                               <TooltipContent
                                                 side="right"
-                                                className="max-w-sm bg-white text-[#1e1e1e] border-2 border-[#2c3968]/20 shadow-xl px-4 py-3 rounded-xl"
+                                                className="max-w-sm bg-white dark:bg-[#161b26] text-[#1e1e1e] dark:text-white border-2 border-[#2c3968]/20 dark:border-[#4a7cf6]/20 shadow-xl px-4 py-3 rounded-xl"
                                                 sideOffset={8}
                                               >
                                                 <p className="text-sm leading-relaxed mb-2">
                                                   {specGlossary[key].definition}
                                                 </p>
-                                                <div className="flex items-start gap-1.5 bg-[#fffbeb] border border-amber-200 rounded-lg px-2.5 py-1.5 mt-2">
+                                                <div className="flex items-start gap-1.5 bg-[#fffbeb] dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-lg px-2.5 py-1.5 mt-2">
                                                   <Lightbulb className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />
-                                                  <p className="text-xs text-amber-700 leading-relaxed">
+                                                  <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
                                                     {specGlossary[key].tip}
                                                   </p>
                                                 </div>
@@ -1460,10 +1517,10 @@ export default function PhoneSpecPage({
                                       </div>
                                     </div>
                                     <div className="md:col-span-2">
-                                      <p className="text-[#1e1e1e]">{value}</p>
+                                      <p className="text-[#1e1e1e] dark:text-white">{value}</p>
                                     </div>
                                   </div>
-                                  {idx < filteredSpecs.length - 1 && <Separator className="bg-[#e0e0e0]" />}
+                                  {idx < filteredSpecs.length - 1 && <Separator className="bg-[#e0e0e0] dark:bg-[#2d3548]" />}
                                 </div>
                               ))}
                             </div>
@@ -1487,34 +1544,34 @@ export default function PhoneSpecPage({
 
         {/* 5. Carrier Compatibility */}
         <Collapsible open={isCarrierCompatOpen} onOpenChange={setIsCarrierCompatOpen}>
-          <div id="carrier-compat" className="bg-white rounded-2xl shadow-sm p-8 mb-8 mt-8">
+          <div id="carrier-compat" className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-8 mb-8 mt-8">
             <div className="mb-6">
               <div className="flex items-center gap-3">
                 <div>
-                  <h2 className="text-[#2c3968] mb-2">Carrier Compatibility</h2>
-                  <div className="h-1 w-20 bg-[#2c3968] rounded-full"></div>
+                  <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-2">Carrier Compatibility</h2>
+                  <div className="h-1 w-20 bg-[#2c3968] dark:bg-[#4a7cf6] rounded-full"></div>
                 </div>
                 <CollapsibleTrigger className="ml-2">
                   <ChevronDown
-                    className={`w-6 h-6 text-[#2c3968] transition-transform ${isCarrierCompatOpen ? "rotate-180" : ""}`}
+                    className={`w-6 h-6 text-[#2c3968] dark:text-[#4a7cf6] transition-transform ${isCarrierCompatOpen ? "rotate-180" : ""}`}
                   />
                 </CollapsibleTrigger>
               </div>
             </div>
             <CollapsibleContent>
               <div className="space-y-6">
-                <p className="text-[#666]">Network support for {phoneData.name}</p>
+                <p className="text-[#666] dark:text-[#a0a8b8]">Network support for {phoneData.name}</p>
 
                 <div className="space-y-3">
                   {phoneData.carrierCompatibility.map((carrier, idx) => (
                     <div
                       key={idx}
-                      className="group flex items-center justify-between p-4 rounded-xl border border-[#e0e0e0] hover:border-[#2c3968]/20 bg-white hover:bg-gradient-to-r hover:from-[#f7f9fc] hover:to-white transition-all duration-200"
+                      className="group flex items-center justify-between p-4 rounded-xl border border-[#e0e0e0] dark:border-[#2d3548] hover:border-[#2c3968]/20 dark:hover:border-[#4a7cf6]/20 bg-white dark:bg-[#161b26] hover:bg-gradient-to-r hover:from-[#f7f9fc] hover:to-white dark:hover:from-[#1a1f2e] dark:hover:to-[#161b26] transition-all duration-200"
                     >
                       <div className="flex items-center gap-4 flex-1">
                         <div
                           className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            carrier.compatible ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"
+                            carrier.compatible ? "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400" : "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400"
                           }`}
                         >
                           {carrier.compatible ? (
@@ -1533,13 +1590,13 @@ export default function PhoneSpecPage({
                           )}
                         </div>
                         <div className="flex-1">
-                          <p className="text-[#1e1e1e]">{carrier.name}</p>
-                          {carrier.notes && <p className="text-sm text-[#999] mt-0.5">{carrier.notes}</p>}
+                          <p className="text-[#1e1e1e] dark:text-white">{carrier.name}</p>
+                          {carrier.notes && <p className="text-sm text-[#999] dark:text-[#6b7280] mt-0.5">{carrier.notes}</p>}
                         </div>
                       </div>
                       <div
                         className={`px-3 py-1 rounded-full text-xs ${
-                          carrier.compatible ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                          carrier.compatible ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400" : "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400"
                         }`}
                       >
                         {carrier.compatible ? "Supported" : "Not Supported"}
@@ -1548,11 +1605,11 @@ export default function PhoneSpecPage({
                   ))}
                 </div>
 
-                <div className="flex items-start gap-3 p-4 bg-[#f7f9fc] rounded-xl border border-[#2c3968]/10">
-                  <div className="w-5 h-5 rounded-full bg-[#2c3968]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <HelpCircle className="w-3 h-3 text-[#2c3968]" />
+                <div className="flex items-start gap-3 p-4 bg-[#f7f9fc] dark:bg-[#1a1f2e] rounded-xl border border-[#2c3968]/10 dark:border-[#4a7cf6]/10">
+                  <div className="w-5 h-5 rounded-full bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <HelpCircle className="w-3 h-3 text-[#2c3968] dark:text-[#4a7cf6]" />
                   </div>
-                  <p className="text-sm text-[#666]">
+                  <p className="text-sm text-[#666] dark:text-[#a0a8b8]">
                     Compatibility may vary by model variant and region. Verify with your carrier before purchase.
                   </p>
                 </div>
@@ -1563,16 +1620,16 @@ export default function PhoneSpecPage({
 
         {/* 6. Reviews Section */}
         <Collapsible open={isReviewsOpen} onOpenChange={setIsReviewsOpen}>
-          <div id="reviews" ref={reviewsSectionRef} className="bg-white rounded-2xl shadow-sm p-8 mb-8 mt-8">
+          <div id="reviews" ref={reviewsSectionRef} className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-8 mb-8 mt-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
               <div className="flex items-center gap-3">
                 <div>
-                  <h2 className="text-[#2c3968] mb-2">User Reviews</h2>
-                  <div className="h-1 w-20 bg-[#2c3968] rounded-full"></div>
+                  <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-2">User Reviews</h2>
+                  <div className="h-1 w-20 bg-[#2c3968] dark:bg-[#4a7cf6] rounded-full"></div>
                 </div>
                 <CollapsibleTrigger className="ml-2">
                   <ChevronDown
-                    className={`w-6 h-6 text-[#2c3968] transition-transform ${isReviewsOpen ? "rotate-180" : ""}`}
+                    className={`w-6 h-6 text-[#2c3968] dark:text-[#4a7cf6] transition-transform ${isReviewsOpen ? "rotate-180" : ""}`}
                   />
                 </CollapsibleTrigger>
               </div>
@@ -1585,7 +1642,7 @@ export default function PhoneSpecPage({
                     setSortBy(e.target.value as any);
                     setCurrentPage(1);
                   }}
-                  className="text-sm bg-transparent border-b-2 border-[#2c3968]/20 focus:border-[#2c3968] outline-none py-1 cursor-pointer transition-colors"
+                  className="text-sm bg-transparent dark:text-white border-b-2 border-[#2c3968]/20 dark:border-[#4a7cf6]/20 focus:border-[#2c3968] dark:focus:border-[#4a7cf6] outline-none py-1 cursor-pointer transition-colors"
                 >
                   <option value="newest">Newest First</option>
                   <option value="oldest">Oldest First</option>
@@ -1594,7 +1651,7 @@ export default function PhoneSpecPage({
 
                 {!showReviewForm && (
                   <Button
-                    className="bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] hover:from-[#2c3968]/90 hover:to-[#3d4b7f]/90 shadow-md hover:shadow-lg transition-all"
+                    className="bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] dark:from-[#4a7cf6] dark:to-[#5b8df7] hover:from-[#2c3968]/90 hover:to-[#3d4b7f]/90 dark:hover:from-[#3d6be5] dark:hover:to-[#4a7cf6] shadow-md hover:shadow-lg transition-all"
                     onClick={() => setShowReviewForm(true)}
                   >
                     <PenSquare className="w-4 h-4 mr-2" />
@@ -1617,16 +1674,16 @@ export default function PhoneSpecPage({
               />
 
               {/* Global Community Statistics */}
-              <div className="mb-8 bg-gradient-to-br from-[#f7f9fc] to-white border-2 border-[#2c3968]/10 rounded-2xl p-8">
+              <div className="mb-8 bg-gradient-to-br from-[#f7f9fc] to-white dark:from-[#1a1f2e] dark:to-[#161b26] border-2 border-[#2c3968]/10 dark:border-[#4a7cf6]/10 rounded-2xl p-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   {/* Overall Score */}
-                  <div className="lg:col-span-1 flex flex-col items-center justify-center bg-white rounded-xl p-6 shadow-sm border border-[#2c3968]/10">
-                    <p className="text-sm text-[#666] mb-2 uppercase tracking-tighter font-bold opacity-60">
+                  <div className="lg:col-span-1 flex flex-col items-center justify-center bg-white dark:bg-[#161b26] rounded-xl p-6 shadow-sm border border-[#2c3968]/10 dark:border-[#4a7cf6]/10">
+                    <p className="text-sm text-[#666] dark:text-[#a0a8b8] mb-2 uppercase tracking-tighter font-bold opacity-60">
                       Overall Rating
                     </p>
                     <div className="flex items-baseline gap-2 mb-3">
-                      <span className="text-5xl text-[#2c3968] font-bold">{overallRating}</span>
-                      <span className="text-xl text-[#666]">/5</span>
+                      <span className="text-5xl text-[#2c3968] dark:text-[#4a7cf6] font-bold">{overallRating}</span>
+                      <span className="text-xl text-[#666] dark:text-[#a0a8b8]">/5</span>
                     </div>
                     <div className="flex gap-1 mb-3">
                       {[...Array(5)].map((_, i) => {
@@ -1642,14 +1699,14 @@ export default function PhoneSpecPage({
                         );
                       })}
                     </div>
-                    <p className="text-xs text-[#666] text-center">
+                    <p className="text-xs text-[#666] dark:text-[#a0a8b8] text-center">
                       Based on <strong>{ratingsCount}</strong> community insights
                     </p>
                   </div>
 
                   {/* Direct mapping of Denormalized Category Averages */}
                   <div className="lg:col-span-2">
-                    <p className="text-sm text-[#666] mb-4 uppercase tracking-tighter font-bold opacity-60">
+                    <p className="text-sm text-[#666] dark:text-[#a0a8b8] mb-4 uppercase tracking-tighter font-bold opacity-60">
                       Community Consensus
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1665,18 +1722,18 @@ export default function PhoneSpecPage({
                         return (
                           <div
                             key={cat.key}
-                            className="bg-white rounded-lg p-4 border border-[#e0e0e0] hover:border-[#2c3968]/30 transition-colors shadow-sm"
+                            className="bg-white dark:bg-[#161b26] rounded-lg p-4 border border-[#e0e0e0] dark:border-[#2d3548] hover:border-[#2c3968]/30 dark:hover:border-[#4a7cf6]/30 transition-colors shadow-sm"
                           >
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-2">
-                                <cat.icon className="w-4 h-4 text-[#2c3968]" />
+                                <cat.icon className="w-4 h-4 text-[#2c3968] dark:text-[#4a7cf6]" />
                                 <span className="text-sm font-medium">{cat.name}</span>
                               </div>
-                              <span className="text-sm font-bold text-[#2c3968]">{avg.toFixed(1)}</span>
+                              <span className="text-sm font-bold text-[#2c3968] dark:text-[#4a7cf6]">{avg.toFixed(1)}</span>
                             </div>
-                            <div className="w-full bg-[#e0e0e0] rounded-full h-2 overflow-hidden">
+                            <div className="w-full bg-[#e0e0e0] dark:bg-[#2d3548] rounded-full h-2 overflow-hidden">
                               <div
-                                className="h-full bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] transition-all duration-700"
+                                className="h-full bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] dark:from-[#4a7cf6] dark:to-[#5b8df7] transition-all duration-700"
                                 style={{ width: `${(avg / 5) * 100}%` }}
                               />
                             </div>
@@ -1692,8 +1749,8 @@ export default function PhoneSpecPage({
               {showReviewForm && (
                 <div className="mb-6">
                   {!currentUser ? (
-                    <div className="bg-[#f7f7f7] border-2 border-[#2c3968] rounded-lg p-6 text-center">
-                      <p className="text-[#666] mb-4">Please sign in to write a review</p>
+                    <div className="bg-[#f7f7f7] dark:bg-[#1a1f2e] border-2 border-[#2c3968] dark:border-[#4a7cf6] rounded-lg p-6 text-center">
+                      <p className="text-[#666] dark:text-[#a0a8b8] mb-4">Please sign in to write a review</p>
                       <Button className="bg-[#2c3968] hover:bg-[#2c3968]/90">Sign In</Button>
                     </div>
                   ) : (
