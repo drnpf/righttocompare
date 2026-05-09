@@ -69,7 +69,7 @@ export const getCommunitySentiment = async (req: AuthRequest, res: Response) => 
  */
 export const getThreadSentiment = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const sentiment = await discussionService.getThreadSentiment(id);
     if (!sentiment) return res.status(404).json({ message: "Discussion not found" });
     res.status(200).json(sentiment);
@@ -115,7 +115,7 @@ export const getDiscussions = async (req: AuthRequest, res: Response) => {
  */
 export const getUserDiscussions = async (req: AuthRequest, res: Response) => {
   try {
-    const { userId } = req.params;
+    const userId = String(req.params.userId);
     const discussions = await discussionService.getDiscussionsByUser(userId);
     res.status(200).json(discussions);
   } catch (err) {
@@ -130,7 +130,7 @@ export const getUserDiscussions = async (req: AuthRequest, res: Response) => {
  */
 export const getDiscussion = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const discussion = await discussionService.getDiscussionById(id);
     if (!discussion) {
@@ -150,7 +150,7 @@ export const getDiscussion = async (req: AuthRequest, res: Response) => {
  */
 export const voteOnDiscussion = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { voteType } = req.body;
 
     if (!voteType || !["up", "down"].includes(voteType)) {
@@ -182,7 +182,7 @@ export const voteOnDiscussion = async (req: AuthRequest, res: Response) => {
  */
 export const deleteDiscussion = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const userId = req.user?.uid;
     if (!userId) {
@@ -210,7 +210,7 @@ export const deleteDiscussion = async (req: AuthRequest, res: Response) => {
  */
 export const getReplies = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const replies = await discussionService.getRepliesForDiscussion(id);
     res.status(200).json(replies);
@@ -226,7 +226,7 @@ export const getReplies = async (req: AuthRequest, res: Response) => {
  */
 export const createReply = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { content, images, parentReplyId } = req.body;
 
     if (!content || !content.trim()) {
@@ -271,7 +271,7 @@ export const createReply = async (req: AuthRequest, res: Response) => {
  */
 export const voteOnReply = async (req: AuthRequest, res: Response) => {
   try {
-    const { replyId } = req.params;
+    const replyId = String(req.params.replyId);
     const { voteType } = req.body;
 
     if (!voteType || !["up", "down"].includes(voteType)) {
@@ -303,7 +303,7 @@ export const voteOnReply = async (req: AuthRequest, res: Response) => {
  */
 export const deleteReply = async (req: AuthRequest, res: Response) => {
   try {
-    const { replyId } = req.params;
+    const replyId = String(req.params.replyId);
 
     const userId = req.user?.uid;
     if (!userId) {
