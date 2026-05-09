@@ -13,7 +13,7 @@ import {
   deleteReply,
   getThreadSentiment,
 } from "../controllers/discussionController";
-import { protect } from "../middleware/authMiddleware";
+import { protect } from "../middleware/authentication";
 
 const router = Router();
 

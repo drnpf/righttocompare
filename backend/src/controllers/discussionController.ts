@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { AuthRequest } from "../middleware/authMiddleware";
+import { AuthRequest } from "../middleware/authentication";
 import * as discussionService from "../services/discussionService";
 import { analyzeSentiment } from "../utils/sentimentAnalyzer";
 

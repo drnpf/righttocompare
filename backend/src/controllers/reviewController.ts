@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { AuthRequest } from "../middleware/authMiddleware";
+import { AuthRequest } from "../middleware/authentication";
 import * as reviewService from "../services/reviewService";
 import Phone from "../models/Phone";
 
