@@ -61,6 +61,6 @@ export const updateUserProfile = async (uid: string, data: Partial<IUser>): Prom
   return await User.findOneAndUpdate(
     { firebaseUid: uid },
     { $set: data }, // Applies the updates
-    { new: true, runValidators: true } // Returns the new user doc and does a schema check
+    { returnDocument: "after", runValidators: true }, // Returns the new user doc and does a schema check
   );
 };

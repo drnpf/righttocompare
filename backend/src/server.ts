@@ -53,7 +53,6 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: "Too many requests. Please try again later.",
-  skip: (req) => req.headers["x-admin-key"] === process.env.ADMIN_SECRET_KEY,
   standardHeaders: true,
   legacyHeaders: true,
 });

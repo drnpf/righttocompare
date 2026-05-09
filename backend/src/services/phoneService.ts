@@ -304,7 +304,7 @@ export const createNewPhone = async (phoneData: Partial<IPhone>): Promise<IPhone
  * @returns The updated phone document
  */
 export const updatePhoneById = async (id: string, updateData: Partial<IPhone>): Promise<IPhone | null> => {
-  return await Phone.findOneAndUpdate({ id: id }, updateData, { new: true, runValidators: true });
+  return await Phone.findOneAndUpdate({ id: id }, updateData, { returnDocument: "after", runValidators: true });
 };
 
 /**
