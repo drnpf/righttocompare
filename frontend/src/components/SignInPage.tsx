@@ -10,6 +10,11 @@ interface SignInPageProps {
   onNavigateToSignUp: () => void;
 }
 
+// --- CONFIGURATIONS ---
+const EMAIL_MAX = 254;
+const PASSWORD_MIN = 8;
+const PASSWORD_MAX = 128;
+
 export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: SignInPageProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,26 +28,38 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Trimming leading and trailing whitespaces
+    const cleanEmail = email.trim();
+
     // Basic validation
-    if (!email || !password) {
-      toast.error("Please fill in all fields");
+    if (!cleanEmail || !password) {
+      toast.error("Please enter both email and password.");
       return;
     }
 
-    if (!email.includes("@")) {
+    // Email policy regex (maintains RFC 5321/5322 compliance)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!emailRegex.test(cleanEmail)) {
       toast.error("Please enter a valid email address");
       return;
     }
+    if (cleanEmail.length > EMAIL_MAX) {
+      toast.error(`Email address cannot exceed ${EMAIL_MAX} characters.`);
+      return;
+    }
 
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    // Password policy regex (at least 1 lowercase, 1 uppercase, 1 special char, 8<=password_length<=128 characters long maintains NIST password security standards)
+    const passwordPattern = `^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?& ]{${PASSWORD_MIN},${PASSWORD_MAX}}$`;
+    const passwordRegex = new RegExp(passwordPattern);
+    if (!passwordRegex.test(password)) {
+      toast.error("Invalid email or password.");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      await signIn(email, password);
+      await signIn(cleanEmail, password);
       toast.success("Welcome back!");
       onSignInSuccess();
     } catch (error) {
@@ -149,6 +166,8 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
               <input
                 id="email"
                 type="email"
+                autoComplete="username"
+                maxLength={EMAIL_MAX}
                 value={email}
                 autoFocus
                 onChange={(e) => setEmail(e.target.value)}
@@ -167,6 +186,8 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
+                  maxLength={PASSWORD_MAX}
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
@@ -265,25 +286,26 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
 
       {/* Password Recovery Dialog */}
       <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
-        <DialogContent className="bg-white dark:bg-[#1a1f2e] border-[#e5e5e5] dark:border-[#2d3548]">
+        <DialogContent className="bg-white dark:bg-[#161b26] border-[#e5e5e5] dark:border-[#2d3548]">
           <DialogHeader>
-            <DialogTitle className="text-[#2c3968] dark:text-[#4a7cf6]">Reset Password</DialogTitle>
+            <DialogTitle className="text-[#2c3968] dark:text-[#4a7cf6] text-2xl font-bold">Reset Password</DialogTitle>
             <DialogDescription className="text-[#666] dark:text-[#a0a8b8]">
-              Enter your email address and we'll send you a link to reset your password.
+              Enter your email address and we'll send you a secure link to reset your password.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handlePasswordReset} className="space-y-4 mt-4">
             <div>
-              <label htmlFor="reset-email" className="block mb-2 text-[#1e1e1e] dark:text-white">
+              <label htmlFor="reset-email" className="block mb-2 text-[#1e1e1e] dark:text-white font-medium">
                 Email Address
               </label>
               <input
                 id="reset-email"
                 type="email"
+                autoComplete="off"
                 value={resetEmail}
                 onChange={(e) => setResetEmail(e.target.value)}
-                placeholder="Enter your email"
-                className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#161b26] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
+                placeholder="Enter your registered email"
+                className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 disabled={isResetting}
               />
             </div>
@@ -299,9 +321,9 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
               <button
                 type="submit"
                 disabled={isResetting}
-                className="px-4 py-2 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-lg hover:shadow-lg hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 cursor-pointer"
+                className="px-6 py-2 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-lg hover:shadow-lg transition-all font-bold cursor-pointer"
               >
-                {isResetting ? "Sending..." : "Send Reset Link"}
+                {isResetting ? "Sending..." : "Send Link"}
               </button>
             </div>
           </form>

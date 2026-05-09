@@ -147,6 +147,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
               <input
                 id="name"
                 type="text"
+                autoComplete="off"
                 autoFocus
                 maxLength={DISPLAY_NAME_MAX}
                 value={name}
@@ -183,6 +184,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   maxLength={PASSWORD_MAX}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -210,6 +212,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
                 <input
                   id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   maxLength={PASSWORD_MAX}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
