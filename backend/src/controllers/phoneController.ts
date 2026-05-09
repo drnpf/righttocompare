@@ -28,35 +28,34 @@ export const getPhonePage = async (req: Request, res: Response) => {
     // Input sanitization for findAllPhones function
     const page = parseInt(req.query.page as string) || PAGE_DEFAULT;
     const limit = Math.min(parseInt(req.query.limit as string) || DEFAULT_LIMIT, MAX_LIMIT);
-    const search = (req.query.search as string) || "";
-    const sortBy = (req.query.sortBy as string) || "newest";
+    const search = String(req.query.search || "");
+    const sortBy = String(req.query.sortBy || "newest");
 
     // Sanitization of max and min price
-    const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined;
-    const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined;
+    const minPrice = req.query.minPrice ? parseFloat(String(req.query.minPrice)) : undefined;
+    const maxPrice = req.query.maxPrice ? parseFloat(String(req.query.maxPrice)) : undefined;
 
     // Sanitization of RAM
     let ram: number[] = [];
     if (req.query.ram) {
-      const rawRam = Array.isArray(req.query.ram) ? (req.query.ram as string[]) : [req.query.ram as string];
-      ram = rawRam.map(Number);
+      const rawRam = Array.isArray(req.query.ram) ? (req.query.ram as any[]) : [req.query.ram];
+      ram = rawRam.map((val) => Number(String(val)));
     }
 
     // Sanitization of storage
     let storage: number[] = [];
     if (req.query.storage) {
-      const rawStorage = Array.isArray(req.query.storage)
-        ? (req.query.storage as string[])
-        : [req.query.storage as string];
-      storage = rawStorage.map(Number);
+      const rawStorage = Array.isArray(req.query.storage) ? (req.query.storage as any[]) : [req.query.storage];
+      storage = rawStorage.map((val) => Number(String(val)));
     }
 
     // Sanitization of brands if multiple brands chosen
     let manufacturer: string[] = [];
     if (req.query.manufacturer) {
-      manufacturer = Array.isArray(req.query.manufacturer)
-        ? (req.query.manufacturer as string[])
-        : [req.query.manufacturer as string];
+      const rawManufacturer = Array.isArray(req.query.manufacturer)
+        ? (req.query.manufacturer as any[])
+        : [req.query.manufacturer];
+      manufacturer = rawManufacturer.map((val) => String(val));
     }
 
     // Searching for phones with options applied (if any)
@@ -99,7 +98,7 @@ export const getPhonePage = async (req: Request, res: Response) => {
  */
 export const getPhoneById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const phone = await phoneService.findPhoneById(id);
     if (!phone) {
       return res.status(404).json({ message: `Phone with ID '${id}' not found` });
@@ -120,7 +119,7 @@ export const getPhoneById = async (req: Request, res: Response) => {
  */
 export const getPhoneBatch = async (req: Request, res: Response) => {
   try {
-    const idsString = req.query.ids as string;
+    const idsString = req.query.ids ? String(req.query.ids) : "";
 
     // Handles case of no IDs passed to request parameter
     if (!idsString) {
@@ -152,7 +151,7 @@ export const getPhoneBatch = async (req: Request, res: Response) => {
  */
 export const getPhoneSummaries = async (req: Request, res: Response) => {
   try {
-    const idsString = req.query.ids as string;
+    const idsString = req.query.ids ? String(req.query.ids) : "";
     if (!idsString) {
       return res.status(400).json({ message: "Missing 'ids' query parameter" });
     }
@@ -174,7 +173,7 @@ export const getPhoneSummaries = async (req: Request, res: Response) => {
  */
 export const getPhoneSummaryById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const phoneSummary = await phoneService.findPhoneSummaryById(id);
     if (!phoneSummary) {
       return res.status(404).json({ message: `Phone Summary with ID '${id}' not found` });
@@ -195,7 +194,7 @@ export const getPhoneSummaryById = async (req: Request, res: Response) => {
  */
 export const getPhoneCardById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const phoneCard = await phoneService.findPhoneCardById(id);
     if (!phoneCard) {
       return res.status(404).json({ message: `Phone Card with ID '${id}' not found` });
@@ -260,7 +259,7 @@ export const createPhone = async (req: Request, res: Response) => {
  */
 export const updatePhone = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const updatedPhone = await phoneService.updatePhoneById(id, req.body);
 
     if (!updatedPhone) {
@@ -283,7 +282,7 @@ export const updatePhone = async (req: Request, res: Response) => {
  */
 export const deletePhone = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const success = await phoneService.deletePhoneById(id);
 
     if (!success) {
@@ -299,7 +298,7 @@ export const deletePhone = async (req: Request, res: Response) => {
 
 export const getPhonePriceHistory = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const phone = await phoneService.findPhoneById(id);
     if (!phone) {
@@ -316,7 +315,7 @@ export const getPhonePriceHistory = async (req: Request, res: Response) => {
 
 export const getPhonePriceSummary = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const phone = await phoneService.findPhoneById(id);
     if (!phone) {
@@ -333,7 +332,7 @@ export const getPhonePriceSummary = async (req: Request, res: Response) => {
 
 export const createPhonePriceHistory = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { amount, currency, source, raw, recordedAt } = req.body;
 
     const phone = await phoneService.findPhoneById(id);
