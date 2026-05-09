@@ -9,6 +9,13 @@ interface SignUpPageProps {
   onNavigateToSignIn: () => void;
 }
 
+// --- CONFIGURATIONS ---
+const DISPLAY_NAME_MIN = 2;
+const DISPLAY_NAME_MAX = 50;
+const EMAIL_MAX = 254;
+const PASSWORD_MIN = 8;
+const PASSWORD_MAX = 128;
+
 export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: SignUpPageProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -22,22 +29,44 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Trimming leading and trailing whitespaces
+    const cleanName = name.trim();
+    const cleanEmail = email.trim();
+
     // Basic validation
-    if (!name || !email || !password || !confirmPassword) {
+    if (!cleanName || !cleanEmail || !password || !confirmPassword) {
       toast.error("Please fill in all fields");
       return;
     }
 
-    if (!email.includes("@")) {
-      toast.error("Please enter a valid email address");
+    // Name policy regex (prevents SQL or XSS attacks)
+    const nameRegex = /^[a-zA-z0-9 ]+$/;
+    if (!nameRegex.test(cleanName)) {
+      toast.error("Name can only contain letters, numbers, and spaces.");
+      return;
+    }
+    if (cleanName.length < DISPLAY_NAME_MIN || cleanName.length > 50) {
+      toast.error(`Display Name must be between ${DISPLAY_NAME_MIN} and ${DISPLAY_NAME_MAX} characters long.`);
       return;
     }
 
-    // Password policy regex (at least 1 lowercase, 1 uppercase, 1 special char, >=8 characters long)
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    // Email policy regex (maintains RFC 5321/5322 compliance)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!emailRegex.test(cleanEmail)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    if (cleanEmail.length > EMAIL_MAX) {
+      toast.error(`Email address cannot exceed ${EMAIL_MAX} characters.`);
+      return;
+    }
+
+    // Password policy regex (at least 1 lowercase, 1 uppercase, 1 special char, 8<=password_length<=128 characters long maintains NIST password security standards)
+    const passwordPattern = `^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?& ]{${PASSWORD_MIN},${PASSWORD_MAX}}$`;
+    const passwordRegex = new RegExp(passwordPattern);
     if (!passwordRegex.test(password)) {
       toast.error(
-        "Password must be at least 8 characters long and include an uppercase letter, a number, and a special character (@$!%*?&).",
+        `Password must be between ${PASSWORD_MIN} and ${PASSWORD_MAX} characters long and include an uppercase letter, a number, and a special character.`,
       );
       return;
     }
@@ -50,7 +79,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
     setIsLoading(true);
 
     try {
-      await signUp(email, password, name);
+      await signUp(cleanEmail, password, cleanName);
       toast.success("Account created successfully!");
       onSignUpSuccess();
     } catch (error) {
@@ -119,6 +148,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
                 id="name"
                 type="text"
                 autoFocus
+                maxLength={DISPLAY_NAME_MAX}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your display name"
@@ -135,6 +165,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
               <input
                 id="email"
                 type="email"
+                maxLength={EMAIL_MAX}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
@@ -152,6 +183,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
+                  maxLength={PASSWORD_MAX}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Create a password"
@@ -178,6 +210,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
                 <input
                   id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
+                  maxLength={PASSWORD_MAX}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm your password"
