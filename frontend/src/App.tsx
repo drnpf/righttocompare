@@ -95,29 +95,29 @@ function AppContent() {
   }, []);
 
   /**
-   * APP INITIALIZATION: Runs once on mount to handle fetching from
-   * local storage and URL-based routing like password resetting
+   * APP INITIALIZATION: Runs once on mount to handle fetching recently
+   * viewed and comparisons from local storage
    * Action: Fetching recently viewed phones and comparison from local
-   * storage and checking URL for OOB code for password resetting.
+   * storage
    */
   useEffect(() => {
-    /**
-     * RECENTLY VIEWED
-     */
+    // Recently viewed from local storage
     const stored = getRecentlyViewedFromStorage();
     setRecentlyViewedPhones(stored);
 
-    /**
-     * COMPARISONS
-     */
+    // Comparisons from local storage
     const storedCompare = getComparisonFromStorage();
     if (storedCompare.length > 0) {
       setComparisonPhoneIds(storedCompare);
     }
+  }, []);
 
-    /**
-     * PASSWORD RESET
-     */
+  /**
+   * PASSWORD RESET DETECTION
+   * Signal: Detects Firebase Auth OOB code for password reset in URL
+   * Action: Navigates to password reset page
+   */
+  useEffect(() => {
     // Check if URL contains password reset code
     const urlParams = new URLSearchParams(window.location.search);
     const oobCode = urlParams.get("oobCode");
@@ -125,9 +125,9 @@ function AppContent() {
 
     // If there's a password reset code in the URL, navigate to password reset page
     if (oobCode && mode === "resetPassword") {
-      navigate("/password-reset", { replace: true });
+      navigate({ pathname: "/password-reset", search: window.location.search }, { replace: true });
     }
-  }, []);
+  }, [navigate]);
 
   /**
    * PROTECT SIGN-IN/SIGN-UP PAGES FROM AUTHENTICATED USERS
