@@ -7,7 +7,7 @@ import User, { IUser } from "../models/User";
  * @returns The User document, if found, or null
  */
 export const findUserByUid = async (uid: string): Promise<IUser | null> => {
-  return await User.findOne({ firebaseUid: uid });
+  return await User.findOne({ firebaseUid: uid }).lean();
 };
 
 /**
@@ -17,7 +17,7 @@ export const findUserByUid = async (uid: string): Promise<IUser | null> => {
  * @returns The User document, if found, or null
  */
 export const findUserByEmail = async (email: string): Promise<IUser | null> => {
-  return await User.findOne({ email: email });
+  return await User.findOne({ email: email }).lean();
 };
 
 /**
@@ -62,5 +62,5 @@ export const updateUserProfile = async (uid: string, data: Partial<IUser>): Prom
     { firebaseUid: uid },
     { $set: data }, // Applies the updates
     { returnDocument: "after", runValidators: true }, // Returns the new user doc and does a schema check
-  );
+  ).lean();
 };
