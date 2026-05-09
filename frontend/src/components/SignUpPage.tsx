@@ -166,6 +166,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
               <input
                 id="email"
                 type="email"
+                autoComplete="username"
                 maxLength={EMAIL_MAX}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

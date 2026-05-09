@@ -186,8 +186,8 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  maxLength={PASSWORD_MAX}
                   autoComplete="current-password"
+                  maxLength={PASSWORD_MAX}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
