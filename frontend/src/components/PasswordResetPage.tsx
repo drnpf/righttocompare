@@ -24,6 +24,7 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -184,6 +185,7 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
               <label className="block text-[#1e1e1e] dark:text-white mb-2">New Password</label>
               <div className="relative">
                 <input
+                  id="new-password"
                   type={showPassword ? "text" : "password"}
                   value={newPassword}
                   autoComplete="new-password"
@@ -210,6 +212,7 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
               <label className="block text-[#1e1e1e] dark:text-white mb-2">Confirm New Password</label>
               <div className="relative">
                 <input
+                  id="confirm-password"
                   type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   autoComplete="new-password"

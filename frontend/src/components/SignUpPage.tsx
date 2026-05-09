@@ -183,7 +183,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
               </label>
               <div className="relative">
                 <input
-                  id="password"
+                  id="new-password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="new-password"
                   maxLength={PASSWORD_MAX}
@@ -211,7 +211,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
               </label>
               <div className="relative">
                 <input
-                  id="confirmPassword"
+                  id="confirm-password"
                   type={showConfirmPassword ? "text" : "password"}
                   autoComplete="new-password"
                   maxLength={PASSWORD_MAX}
