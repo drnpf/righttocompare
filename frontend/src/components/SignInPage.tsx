@@ -150,6 +150,7 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
                 id="email"
                 type="email"
                 value={email}
+                autoFocus
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
@@ -175,7 +176,7 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-colors cursor-pointer"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -187,7 +188,7 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
             <div className="text-right">
               <button
                 type="button"
-                className="text-[#2c3968] dark:text-[#4a7cf6] hover:underline transition-colors"
+                className="text-[#2c3968] dark:text-[#4a7cf6] hover:underline transition-colors cursor-pointer"
                 onClick={() => setShowForgotPassword(true)}
               >
                 Forgot password?
@@ -198,7 +199,7 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white py-3.5 rounded-lg hover:shadow-lg hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center"
+              className="w-full bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white py-3.5 rounded-lg hover:shadow-lg hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center cursor-pointer"
             >
               {isLoading ? "Signing In..." : "Sign In"}
             </button>
@@ -219,7 +220,7 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
             type="button"
             onClick={handleGoogleSignIn}
             disabled={isLoading}
-            className="w-full bg-white border border-[#d9d9d9] text-[#1e1e1e] py-3.5 rounded-lg hover:bg-[#f7f7f7] hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            className="w-full bg-white dark:bg-[#1a1f2e] border border-[#d9d9d9] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white py-3.5 rounded-lg hover:bg-[#f7f7f7] dark:hover:bg-[#252b3d] hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 cursor-pointer"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
@@ -246,7 +247,10 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
           <div className="text-center">
             <p className="text-[#666] dark:text-[#a0a8b8]">
               Don't have an account?{" "}
-              <button onClick={onNavigateToSignUp} className="text-[#2c3968] dark:text-[#4a7cf6] hover:underline">
+              <button
+                onClick={onNavigateToSignUp}
+                className="text-[#2c3968] dark:text-[#4a7cf6] hover:underline cursor-pointer"
+              >
                 Sign Up
               </button>
             </p>
@@ -287,7 +291,7 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
               <button
                 type="button"
                 onClick={() => setShowForgotPassword(false)}
-                className="px-4 py-2 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] hover:bg-[#f7f7f7] dark:hover:bg-[#252b3d] transition-colors"
+                className="px-4 py-2 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] hover:bg-[#f7f7f7] dark:hover:bg-[#252b3d] transition-colors cursor-pointer"
                 disabled={isResetting}
               >
                 Cancel
@@ -295,7 +299,7 @@ export default function SignInPage({ onSignInSuccess, onNavigateToSignUp }: Sign
               <button
                 type="submit"
                 disabled={isResetting}
-                className="px-4 py-2 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-lg hover:shadow-lg hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                className="px-4 py-2 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-lg hover:shadow-lg hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 cursor-pointer"
               >
                 {isResetting ? "Sending..." : "Send Reset Link"}
               </button>
