@@ -57,7 +57,9 @@ export default function PhoneCatalogPage({
 
   // --- Filter States ---
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"name" | "name_desc" | "price" | "price_asc" | "release" | "oldest" | "rating">("name");
+  const [sortBy, setSortBy] = useState<"name" | "name_desc" | "price" | "price_asc" | "release" | "oldest" | "rating">(
+    "name",
+  );
   const [availableManufacturers, setAvailableManufacturers] = useState<string[]>([]);
   const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>([]);
   const [minPrice, setMinPrice] = useState<number>(0);
@@ -131,13 +133,20 @@ export default function PhoneCatalogPage({
         const options = {
           search: searchQuery,
           manufacturer: selectedManufacturers,
-          sortBy: sortBy === "release" ? "newest"
-            : sortBy === "oldest" ? "oldest"
-            : sortBy === "price" ? "price_desc"
-            : sortBy === "price_asc" ? "price_asc"
-            : sortBy === "name_desc" ? "name_desc"
-            : sortBy === "rating" ? "rating_desc"
-            : "name_asc",
+          sortBy:
+            sortBy === "release"
+              ? "newest"
+              : sortBy === "oldest"
+                ? "oldest"
+                : sortBy === "price"
+                  ? "price_desc"
+                  : sortBy === "price_asc"
+                    ? "price_asc"
+                    : sortBy === "name_desc"
+                      ? "name_desc"
+                      : sortBy === "rating"
+                        ? "rating_desc"
+                        : "name_asc",
           minPrice: minPrice,
           maxPrice: maxPrice,
           ram: selectedRAM,
@@ -596,7 +605,7 @@ export default function PhoneCatalogPage({
                       ) : (
                         <button
                           onClick={(e) => handleAddToComparison(phone.id, e)}
-                          className="w-full py-2 px-3 bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 group/btn hover:scale-105"
+                          className="w-full py-2 px-3 bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 group/btn hover:scale-105 cursor-pointer"
                         >
                           <Plus size={16} className="transition-transform group-hover/btn:rotate-90" />
                           <span className="text-[14px]">Add to Compare</span>
@@ -665,7 +674,7 @@ export default function PhoneCatalogPage({
                       ) : (
                         <button
                           onClick={(e) => handleAddToComparison(phone.id, e)}
-                          className="px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all duration-200 flex items-center gap-2 group/btn hover:scale-105"
+                          className="px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all duration-200 flex items-center gap-2 group/btn hover:scale-105 cursor-pointer"
                         >
                           <Plus size={18} className="transition-transform group-hover/btn:rotate-90" />
                           <span className="whitespace-nowrap">Add to Compare</span>
