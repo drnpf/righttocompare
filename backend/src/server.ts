@@ -1,6 +1,10 @@
 import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import hpp from "hpp";
+import { noSqlSanitizer } from "./middleware/security";
 
 // Importing routes
 import userRoutes from "./routes/userRoutes";
@@ -24,13 +28,31 @@ const app: Application = express();
 const PORT = process.env.PORT || 5001;
 
 // App settings
-app.set("trust proxy", true); // Gets client's real IP from x-forwarded-for header rather than IP of load balancer/server
+app.set("trust proxy", 1); // Gets client's real IP from x-forwarded-for header rather than IP of load balancer/server
 
 /**
  * Middleware Configurations (Express)
+ * Helmet: Hides sensitive header information that is not needed in request
+ * Express-Rate-Limit: Rate limits requests based on IP
  * CORS: Allows requests to come in from Frontend (or different servers)
  * JSON: Allows Express to read JSON from HTTP requests
+ * Express-Mongo-Sanitize: Prevents NoSQL injection attacks by stripping $ and .
+ * HPP: Protects against HTTP parameter input manipulation attacks
  */
+// HTML header information minimization
+app.use(helmet());
+
+// Rate limiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests from this IP, please try again after 15 minutes",
+  standardHeaders: true,
+  legacyHeaders: true,
+});
+app.use("/api", limiter);
+
+// CORS setup
 app.use(
   cors({
     // Allows request from the following server URLs
@@ -40,7 +62,13 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
-app.use(express.json());
+
+// JSON parser
+app.use(express.json({ limit: "10kb" })); // Guard against large payload DoS
+
+// Data sanitization
+app.use(noSqlSanitizer); // NoSQL query sanitization against injection attacks
+app.use(hpp()); // HTTP sanitization against input manipulation attacks
 
 /**
  * Database Connection (MongoDB)
