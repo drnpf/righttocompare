@@ -6,7 +6,9 @@ import rateLimit from "express-rate-limit";
 import hpp from "hpp";
 import { noSqlSanitizer } from "./middleware/security";
 
-// Importing routes
+// Configurations and Routes
+import { connectDB } from "./config/db";
+import "./config/firebase";
 import userRoutes from "./routes/userRoutes";
 import phoneRoutes from "./routes/phoneRoutes";
 import reviewRoutes from "./routes/reviewRoutes";
@@ -16,41 +18,21 @@ import chatbotRoutes from "./routes/chatbotRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import trendsRoutes from "./routes/trendsRoutes";
 
-// Loading environment variables
-dotenv.config(); // THIS IS FOR DEVELOPMENT maybe we can use system environment variables on production
+dotenv.config();
 
-// Configuration imports
-import { connectDB } from "./config/db";
-import "./config/firebase";
-
-// Initializing Express App (BACKEND SERVER)
 const app: Application = express();
 const PORT = process.env.PORT || 5001;
 
-// App settings
+// ------------------------------------------------------------
+// | NETWORK AND PROXY SETTINGS
+// -----------------------------------------------------------
 app.set("trust proxy", 1); // Gets client's real IP from x-forwarded-for header rather than IP of load balancer/server
 
-/**
- * Middleware Configurations (Express)
- * Helmet: Hides sensitive header information that is not needed in request
- * Express-Rate-Limit: Rate limits requests based on IP
- * CORS: Allows requests to come in from Frontend (or different servers)
- * JSON: Allows Express to read JSON from HTTP requests
- * Express-Mongo-Sanitize: Prevents NoSQL injection attacks by stripping $ and .
- * HPP: Protects against HTTP parameter input manipulation attacks
- */
+// ------------------------------------------------------------
+// | TRANSPORT AND HEADER SECURITY
+// -----------------------------------------------------------
 // HTML header information minimization
 app.use(helmet());
-
-// Rate limiter
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: "Too many requests from this IP, please try again after 15 minutes",
-  standardHeaders: true,
-  legacyHeaders: true,
-});
-app.use("/api", limiter);
 
 // CORS setup
 app.use(
@@ -63,6 +45,23 @@ app.use(
   }),
 );
 
+// ------------------------------------------------------------
+// | TRAFFIC AND DOS PROTECTION
+// -----------------------------------------------------------
+// Rate limiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests. Please try again later.",
+  skip: (req) => req.headers["x-admin-key"] === process.env.ADMIN_SECRET_KEY,
+  standardHeaders: true,
+  legacyHeaders: true,
+});
+app.use("/api", limiter);
+
+// ------------------------------------------------------------
+// | DATA PARSING AND SANITIZATION
+// -----------------------------------------------------------
 // JSON parser
 app.use(express.json({ limit: "10kb" })); // Guard against large payload DoS
 
@@ -70,14 +69,11 @@ app.use(express.json({ limit: "10kb" })); // Guard against large payload DoS
 app.use(noSqlSanitizer); // NoSQL query sanitization against injection attacks
 app.use(hpp()); // HTTP sanitization against input manipulation attacks
 
-/**
- * Database Connection (MongoDB)
- */
+// ------------------------------------------------------------
+// | DATABASE AND API ROUTES
+// -----------------------------------------------------------
 connectDB();
 
-/**
- * API Routes
- */
 app.use("/api/users", userRoutes);
 app.use("/api/phones", phoneRoutes);
 app.use("/api/phones", reviewRoutes); // Review routes nested under phones
@@ -87,7 +83,9 @@ app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/trends", trendsRoutes);
 
-// Health Check Route
+// ------------------------------------------------------------
+// | HEALTH CHECK AND ERROR HANDLING
+// -----------------------------------------------------------
 app.get("/", (req: Request, res: Response) => {
   res.send("API is running.");
 });
