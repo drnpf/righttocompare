@@ -65,6 +65,7 @@ def newest_sort_urls(
 
     for u in urls:
         try:
+            print(f"   [sorting] Checking date for: {u.split('/')[-1]}", flush=True) # DEBUG
             tables = gsm_quick_tables(http, u)
 
             if not gsm_is_phone_only(tables):
@@ -114,7 +115,7 @@ def scrape_and_insert(
             if not gsm_is_phone_only(raw_tables, model_name=model_name):
                 print(
                     f"[gsmarena {i}/{len(urls_sorted)}] skipped non-phone: "
-                    f"{doc.get('sourceId')} ({model_name})"
+                    f"{doc.get('sourceId')} ({model_name})", flush=True
                 )
                 continue
 
@@ -122,11 +123,11 @@ def scrape_and_insert(
             inserted += 1
             print(
                 f"[gsmarena {i}/{len(urls_sorted)}] upserted: "
-                f"{doc['sourceId']} ({doc.get('extracted', {}).get('modelName')})"
+                f"{doc['sourceId']} ({doc.get('extracted', {}).get('modelName')})", flush=True
             )
 
         except Exception as e:
-            print(f"[gsmarena {i}/{len(urls_sorted)}] ERROR scraping {url}: {e}")
+            print(f"[gsmarena {i}/{len(urls_sorted)}] ERROR scraping {url}: {e}", flush=True)
 
     return inserted
 

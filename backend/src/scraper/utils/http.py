@@ -53,7 +53,7 @@ class HttpClient:
 
         for attempt in range(1, self.retries + 1):
             try:
-                # polite delay between requests - randomized delay
+                # polite delay between requests -- randomized delay
                 if self.delay_seconds > 0:
                     time.sleep(self.delay_seconds * random.uniform(0.8, 1.2))
 
@@ -62,7 +62,7 @@ class HttpClient:
                 # Check for failure status code (rate limits/failure to comm wit server)
                 if resp.status_code in [403, 429]:
                     wait = self.delay_seconds * 15
-                    print(f"Blocked ({resp.status_code}). Sleeping for {wait}s.")
+                    print(f"\tBlocked ({resp.status_code}). Sleeping for {wait}s.", flush=True)
                     time.sleep(wait)
                     self._reset_session()
                     continue
@@ -80,9 +80,9 @@ class HttpClient:
 
             except Exception as e:
                 last_err = e
-                # small backoff
+                # exponential backoff based on attempt
                 wait = 2.0**attempt + random.random()
-                print(f"Attempt {attempt} failed for {url}: {e}. Retrying in {wait}s.")
+                print(f"\tAttempt {attempt} failed for {url}: {e}. Retrying in {wait}s.", flush=True)
                 time.sleep(wait)
 
         raise RuntimeError(f"GET failed after {self.retries} retries: {url} :: {last_err}")
