@@ -1,5 +1,5 @@
 import express, { Router } from "express";
-import { syncUser, getUser, updateUser } from "../controllers/userController";
+import { syncUser, getUser, updateUser, sendTestNotificationEmail } from "../controllers/userController";
 import { protect } from "../middleware/authentication";
 
 const router: Router = express.Router();
@@ -21,6 +21,12 @@ router.get("/:uid", protect, getUser);
  * @route PUT /api/users/:uid
  */
 router.put("/:uid", protect, updateUser);
+
+/**
+ * Send a test notification email immediately for the specified user
+ * @route POST /api/users/:uid/notifications/test-digest
+ */
+router.post("/:uid/notifications/test-digest", sendTestNotificationEmail);
 
 // Add more routes here related to USER
 

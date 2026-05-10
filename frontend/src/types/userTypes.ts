@@ -35,5 +35,8 @@ export interface AppUser {
       push: boolean;
     };
   };
+  notificationState: {
+    dailyDigestLastSentAt?: string | null;
+  };
   wishlist: string[];
 }

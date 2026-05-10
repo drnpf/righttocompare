@@ -32,6 +32,9 @@ export interface IUser extends Document {
       push: boolean;
     };
   };
+  notificationState: {
+    dailyDigestLastSentAt?: Date | null;
+  };
   wishlist: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -67,6 +70,9 @@ const UserSchema: Schema = new Schema(
         email: { type: Boolean, default: true },
         push: { type: Boolean, default: true },
       },
+    },
+    notificationState: {
+      dailyDigestLastSentAt: { type: Date, default: null },
     },
     wishlist: { type: [String], default: [] },
   },

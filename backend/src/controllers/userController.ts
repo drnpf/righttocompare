@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/authentication";
 import * as UserService from "../services/userService";
+import { sendUserNotificationDigest } from "../services/notificationService";
 
 /**
  * Sync Firebase User to MongoDB (for Retrieval or Creation).
@@ -126,5 +127,38 @@ export const updateUser = async (req: AuthRequest, res: Response): Promise<void>
   } catch (error) {
     console.error("Error updating user:", error);
     res.status(500).json({ message: "Server Error updating user" });
+  }
+};
+
+export const sendTestNotificationEmail = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const paramUid = req.params.uid;
+
+    const user = await UserService.findUserByUid(paramUid);
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    const result = await sendUserNotificationDigest(user, {
+      forceSend: true,
+      allowEmpty: true,
+    });
+
+    if (!result.sent) {
+      res.status(400).json({
+        message: "Test notification email was not sent",
+        reason: result.reason,
+      });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Test notification email sent successfully",
+      payload: result.payload,
+    });
+  } catch (error) {
+    console.error("Error sending test notification email:", error);
+    res.status(500).json({ message: "Server Error sending test notification email" });
   }
 };
