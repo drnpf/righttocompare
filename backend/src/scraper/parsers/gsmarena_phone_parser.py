@@ -268,6 +268,42 @@ def _extract_benchmarks(raw_tables: Dict[str, Dict[str, str]]) -> dict:
 def parse_phone_page(http: HttpClient, url: str) -> ScrapeOutput:
     html = http.get_text(url)
     soup = BeautifulSoup(html, "lxml")
+    
+    # Brute force regex method of getting image
+    image_url = None
+    raw_match = re.search(r'src=["\']?(https://fdn2\.gsmarena\.com/vv/bigpic/[^"\'>\s]+)', html)
+    
+    if raw_match:
+        image_url = raw_match.group(1).strip()
+        print(f"\tSuccess (Regex): {image_url}")
+
+    # Targetting specs-photo-main div where image link resides (fallback)
+    soup = BeautifulSoup(html, "lxml")
+    if not image_url:
+        photo_div = soup.find("div", class_="specs-photo-main")
+        if photo_div:
+            img = photo_div.find("img")
+            if img:
+                val = img.get("src") or img.get("data-src")
+                image_url = str(val[0]) if isinstance(val, list) else str(val)
+                print(f"\tSuccess (BS4): {image_url}")
+
+    # Getting image from metadata (fallback)
+    if not image_url:
+        og_tag = soup.find("meta", attrs={"property": "og:image"})
+        if og_tag:
+            image_url = str(og_tag.get("content", ""))
+            print(f"\tSuccess: {image_url}")
+
+    # URL cleaning
+    if image_url:
+        clean = str(image_url).strip()
+        if clean.startswith('//'):
+            image_url = "https:" + clean
+        elif clean.startswith('/'):
+            image_url = "https://www.gsmarena.com" + clean
+        else:
+            image_url = clean
 
     raw_tables = _parse_spec_tables(soup)
     brand, model_name = _title_brand_model(soup)
@@ -283,6 +319,7 @@ def parse_phone_page(http: HttpClient, url: str) -> ScrapeOutput:
     extracted: Dict[str, Any] = {
         "brand": brand,
         "modelName": model_name,
+        "imageUrl": image_url,
         "os": platform.get("OS"),
         "has5g": _infer_has5g(raw_tables),
 
