@@ -224,13 +224,20 @@ def _extract_network_bands(raw_tables: Dict[str, Dict[str, str]]) -> dict:
 
 
 def _extract_benchmarks(raw_tables: Dict[str, Dict[str, str]]) -> dict:
-    tests = raw_tables.get("Tests", {}) or {}
+    # GSMArena now commonly uses "Tests" OR "OurTests"
+    tests = (
+        raw_tables.get("OurTests")
+        or raw_tables.get("Tests")
+        or {}
+    )
 
     benchmark_text = " ".join(str(v) for v in tests.values())
 
     antutu = None
     geekbench = None
 
+    # Handles:
+    # "AnTuTu: 1540346 (v10)"
     antutu_match = re.search(
         r"AnTuTu[:\s]*([\d,]+)",
         benchmark_text,
@@ -239,6 +246,8 @@ def _extract_benchmarks(raw_tables: Dict[str, Dict[str, str]]) -> dict:
     if antutu_match:
         antutu = int(antutu_match.group(1).replace(",", ""))
 
+    # Handles:
+    # "GeekBench: 7238 (v6)"
     geekbench_match = re.search(
         r"GeekBench[:\s]*([\d,]+)",
         benchmark_text,
