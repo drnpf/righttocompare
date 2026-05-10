@@ -459,14 +459,51 @@ export default function PhoneComparisonPage({
   // ------------------------------------------------------------
   return (
     <div className="max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-3 sm:px-6 py-4 sm:py-8">
+      {/* Sticky Header */}
+      <div
+        className={`fixed top-[80px] left-0 right-0 bg-white/95 dark:bg-[#161b26]/95 backdrop-blur-md border-b border-border shadow-lg z-50 transition-all duration-300 ${
+          stickyHeader ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
+        }`}
+      >
+        <div className="max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-6">
+          <div className="flex items-center gap-4 py-4">
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="w-1.5 h-6 bg-gradient-to-b from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] rounded-full"></div>
+              <span className="text-[#2c3968] dark:text-[#4a7cf6] font-bold text-base bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] bg-clip-text text-transparent">
+                Currently Comparing
+              </span>
+            </div>
+
+            {/* Phone cards */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {phones.map((phone) => (
+                <div
+                  key={phone.id}
+                  className="flex items-center gap-2.5 px-4 py-2 bg-gradient-to-br from-white to-[#f7f9fc] dark:from-[#1a1f2e] dark:to-[#161b26] rounded-xl border-2 border-[#2c3968]/20 dark:border-[#4a7cf6]/20 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
+                >
+                  <div className="w-10 h-10 bg-white dark:bg-[#161b26] rounded-lg p-1 shadow-sm">
+                    <img src={phone.images.main} alt={phone.name} className="w-full h-full object-contain" />
+                  </div>
+                  <span className="text-sm font-medium text-[#2c3968] dark:text-[#4a7cf6] truncate max-w-[200px]">
+                    {phone.manufacturer} {phone.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex gap-3 lg:gap-6 relative">
         {/* Left Sidebar - Filter */}
         <div
-          className={`sticky transition-all duration-300 ${
+          className={`transition-all duration-300 ${
             filterVisible ? "w-[280px] sm:w-[340px] opacity-100" : "w-0 opacity-0"
-          } ${stickyHeader ? "top-[165px]" : "top-[0px]"} ${
-            filterVisible ? "fixed lg:relative left-0 h-full lg:h-auto z-[40]" : ""
-          }`}
+          } ${filterVisible ? "fixed lg:sticky left-0 z-40" : ""}`}
+          style={{
+            top: stickyHeader ? "180px" : "95px",
+            height: stickyHeader ? "calc(100vh - 200px)" : "0px",
+          }}
         >
           {/* Mobile Overlay */}
           {filterVisible && (
@@ -567,7 +604,7 @@ export default function PhoneComparisonPage({
                             >
                               <Checkbox
                                 checked={isFullySelected}
-                                className={`border-[#2c3968] dark:border-[#4a7cf6] data-[state=checked]:bg-[#2c3968] dark:data-[state=checked]:bg-[#4a7cf6] transition-colors ${
+                                className={`border-[#2c3968] dark:border-[#4a7cf6] data-[state=checked]:bg-[#2c3968] dark:data-[state=checked]:bg-[#4a7cf6] data-[state=checked]:text-white transition-colors ${
                                   isPartiallySelected ? "opacity-50" : ""
                                 }`}
                               />
@@ -596,7 +633,7 @@ export default function PhoneComparisonPage({
                                   checked={categorySelectedSpecs.includes(specName)}
                                   onCheckedChange={() => toggleSpec(category, specName)}
                                   id={`${category}-${specName}`}
-                                  className="border-[#2c3968] dark:border-[#4a7cf6] data-[state=checked]:bg-[#2c3968] dark:data-[state=checked]:bg-[#4a7cf6] dark:data-[state=checked]:text-white"
+                                  className="border-[#2c3968] dark:border-[#4a7cf6] data-[state=checked]:bg-[#2c3968] dark:data-[state=checked]:bg-[#4a7cf6] data-[state=checked]:text-white transition-colors"
                                 />
                                 <label
                                   htmlFor={`${category}-${specName}`}
@@ -619,41 +656,6 @@ export default function PhoneComparisonPage({
 
         {/* Right Content - Comparison Table */}
         <div className="flex-1 min-w-0">
-          {/* Sticky Header */}
-          <div
-            className={`fixed top-[80px] left-0 right-0 bg-white/90 dark:bg-background/90 backdrop-blur-xl border-b border-border shadow-xl z-40 transition-all duration-300 ${
-              stickyHeader ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
-            }`}
-          >
-            <div className="max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-6">
-              <div className="flex items-center gap-4 py-4">
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="w-1.5 h-6 bg-gradient-to-b from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] rounded-full"></div>
-                  <span className="text-[#2c3968] dark:text-[#4a7cf6] font-bold text-base bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] bg-clip-text text-transparent">
-                    Currently Comparing
-                  </span>
-                </div>
-
-                {/* Phone cards */}
-                <div className="flex items-center gap-3 flex-wrap">
-                  {phones.map((phone) => (
-                    <div
-                      key={phone.id}
-                      className="flex items-center gap-2.5 px-4 py-2 bg-gradient-to-br from-white to-[#f7f9fc] dark:from-[#1a1f2e] dark:to-[#161b26] rounded-xl border-2 border-[#2c3968]/20 dark:border-[#4a7cf6]/20 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
-                    >
-                      <div className="w-10 h-10 bg-white dark:bg-[#161b26] rounded-lg p-1 shadow-sm">
-                        <img src={phone.images.main} alt={phone.name} className="w-full h-full object-contain" />
-                      </div>
-                      <span className="text-sm font-medium text-[#2c3968] dark:text-[#4a7cf6] truncate max-w-[200px]">
-                        {phone.manufacturer} {phone.name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Header */}
           <div id="comparison-header" className="mb-12 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-[#2c3968]/5 via-transparent to-[#2c3968]/5 dark:from-[#4a7cf6]/5 dark:to-[#4a7cf6]/5 rounded-3xl"></div>
