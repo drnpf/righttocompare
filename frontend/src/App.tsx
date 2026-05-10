@@ -11,6 +11,7 @@ import BackToTopButton from "./components/BackToTopButton";
 import LoadingSpinner from "./components/ui/LoadingSpinner";
 
 // Pages (Lazy Loaded)
+const ProtectedRoute = lazy(() => import("./components/ProtectedRoute"));
 const PhoneSpecPage = lazy(() => import("./components/PhoneSpecPage"));
 const PhoneComparisonPage = lazy(() => import("./components/PhoneComparisonPage"));
 const PhoneCatalogPage = lazy(() => import("./components/PhoneCatalogPage"));
@@ -21,6 +22,7 @@ const SignUpPage = lazy(() => import("./components/SignUpPage"));
 const UserProfilePage = lazy(() => import("./components/UserProfilePage"));
 const AdminDashboardPage = lazy(() => import("./components/AdminDashboardPage"));
 const PasswordResetPage = lazy(() => import("./components/PasswordResetPage"));
+const TrendsPage = lazy(() => import("./components/TrendsPage"));
 
 // UI Component (Lazy Loaded)
 const AIChatWidget = lazy(() => import("./components/AIChatWidget"));
@@ -67,7 +69,7 @@ function AppContent() {
   // ------------------------------------------------------------
   // | HOOKS
   // -----------------------------------------------------------
-  const { currentUser, signOut } = useAuth();
+  const { currentUser, loading: authLoading, signOut } = useAuth();
 
   // React Router hook
   const navigate = useNavigate();
@@ -93,29 +95,29 @@ function AppContent() {
   }, []);
 
   /**
-   * APP INITIALIZATION: Runs once on mount to handle fetching from
-   * local storage and URL-based routing like password resetting
+   * APP INITIALIZATION: Runs once on mount to handle fetching recently
+   * viewed and comparisons from local storage
    * Action: Fetching recently viewed phones and comparison from local
-   * storage and checking URL for OOB code for password resetting.
+   * storage
    */
   useEffect(() => {
-    /**
-     * RECENTLY VIEWED
-     */
+    // Recently viewed from local storage
     const stored = getRecentlyViewedFromStorage();
     setRecentlyViewedPhones(stored);
 
-    /**
-     * COMPARISONS
-     */
+    // Comparisons from local storage
     const storedCompare = getComparisonFromStorage();
     if (storedCompare.length > 0) {
       setComparisonPhoneIds(storedCompare);
     }
+  }, []);
 
-    /**
-     * PASSWORD RESET
-     */
+  /**
+   * PASSWORD RESET DETECTION
+   * Signal: Detects Firebase Auth OOB code for password reset in URL
+   * Action: Navigates to password reset page
+   */
+  useEffect(() => {
     // Check if URL contains password reset code
     const urlParams = new URLSearchParams(window.location.search);
     const oobCode = urlParams.get("oobCode");
@@ -123,9 +125,21 @@ function AppContent() {
 
     // If there's a password reset code in the URL, navigate to password reset page
     if (oobCode && mode === "resetPassword") {
-      navigate("/password-reset", { replace: true });
+      navigate({ pathname: "/password-reset", search: window.location.search }, { replace: true });
     }
-  }, []);
+  }, [navigate]);
+
+  /**
+   * PROTECT SIGN-IN/SIGN-UP PAGES FROM AUTHENTICATED USERS
+   * Signal: Change to current user, URL path, or call of navigate function
+   * Action: On sign-in or sign-up page entry while an authorized user, navigates directly
+   * to current user's profile page
+   */
+  useEffect(() => {
+    // Navigates to profile if current user is already authorized user when accessing sign-in or sign-up
+    const isAuthPage = location.pathname === "/sign-in" || location.pathname === "/sign-up";
+    if (currentUser && isAuthPage) navigate("/profile", { replace: true });
+  }, [currentUser, location.pathname, navigate]);
 
   /**
    * COMPARISON PERSISTENCE:
@@ -238,6 +252,10 @@ function AppContent() {
     navigate("/discussions");
   };
 
+  const handleTrendsClick = () => {
+    navigate("/trends");
+  };
+
   // ------------------------------------------------------------
   // | UI SECTION
   // -----------------------------------------------------------
@@ -251,6 +269,7 @@ function AppContent() {
             user={currentUser}
             onComparisonToolClick={handleNavigateToComparison}
             onDiscussionsClick={handleDiscussionsClick}
+            onTrendsClick={handleTrendsClick}
             onSignInClick={handleSignInClick}
             onSignOut={handleSignOut}
             onProfileClick={handleProfileClick}
@@ -324,16 +343,44 @@ function AppContent() {
                 path="/sign-up"
                 element={<SignUpPage onSignUpSuccess={handleSignUpSuccess} onNavigateToSignIn={handleSignInClick} />}
               />
-              <Route path="/profile" element={currentUser ? <UserProfilePage /> : <Navigate to="/sign-in" />} />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute onNavigateToSignIn={handleSignInClick}>
+                    <UserProfilePage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Admin */}
               <Route
                 path="/admin"
-                element={currentUser?.role === "admin" ? <AdminDashboardPage /> : <Navigate to="/" />}
+                element={
+                  <ProtectedRoute
+                    adminOnly
+                    onNavigateToCatalog={handleCatalogClick}
+                    onNavigateToSignIn={handleSignInClick}
+                  >
+                    <AdminDashboardPage />
+                  </ProtectedRoute>
+                }
               />
 
               {/* Password reset */}
               <Route path="/password-reset" element={<PasswordResetPage onNavigateToSignIn={handleSignInClick} />} />
+
+              {/* Trends Page */}
+              <Route
+                path="/trends"
+                element={
+                  <TrendsPage
+                    comparisonPhoneIds={comparisonPhoneIds}
+                    onCompare={handleAddToComparison}
+                    onRemove={handleRemoveFromComparison}
+                    onViewDetails={handleNavigateToPhone}
+                  />
+                }
+              />
 
               {/* Catch all */}
               <Route path="*" element={<Navigate to="/" replace />} />

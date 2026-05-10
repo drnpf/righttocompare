@@ -1,6 +1,7 @@
-import svgPaths from "./svg-caqd896ugm";
-import { User, LogOut, UserCircle, Shield, Moon } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { User, LogOut, UserCircle, Shield, Moon } from "lucide-react";
+import svgPaths from "./svg-caqd896ugm";
 import { useDarkMode } from "../components/DarkModeContext";
 import { AppUser } from "../types/userTypes";
 
@@ -34,6 +35,7 @@ function LogoButton({ className, onClick }: { className?: string; onClick?: () =
 function NavigationBarLinks({
   onComparisonToolClick,
   onDiscussionsClick,
+  onTrendsClick,
   isAuthenticated,
   user,
   onSignInClick,
@@ -44,6 +46,7 @@ function NavigationBarLinks({
 }: {
   onComparisonToolClick?: () => void;
   onDiscussionsClick?: () => void;
+  onTrendsClick?: () => void;
   isAuthenticated: boolean;
   user: AppUser | null;
   onSignInClick?: () => void;
@@ -77,6 +80,21 @@ function NavigationBarLinks({
     return user.displayName || user.email?.split("@")[0] || "User";
   };
   const displayName = getDisplayName();
+
+  /**
+   * Helper function to handle refresh if same page logic
+   * @param path Path to the page being navigated to
+   * @param originalCallback The original callback
+   */
+  const handleNavInteraction = (path: string, originalCallback?: () => void) => {
+    if (location.pathname === path) {
+      // Force hard refresh to clear all states/filters/scroll
+      window.location.href = path;
+    } else {
+      // Otherwise use the standard navigation provided by the parent
+      originalCallback?.();
+    }
+  };
 
   return (
     <div className="content-stretch flex gap-[20px] items-center relative shrink-0" data-name="Navigation Bar Links">
@@ -112,8 +130,9 @@ function NavigationBarLinks({
         className="content-start flex flex-wrap gap-[8px] items-center relative shrink-0"
         data-name="Navigation Bar Pill List"
       >
+        {/* Catalog Page */}
         <button
-          onClick={onCatalogClick}
+          onClick={() => handleNavInteraction("/", onCatalogClick)}
           className="box-border content-stretch flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
           data-name="Catalog"
         >
@@ -121,8 +140,21 @@ function NavigationBarLinks({
             <p className="font-['Inter:Bold',sans-serif] font-bold leading-none text-[16px] whitespace-pre">Catalog</p>
           </div>
         </button>
+
+        {/* Trends Page */}
         <button
-          onClick={onComparisonToolClick}
+          onClick={() => handleNavInteraction("/trends", onTrendsClick)}
+          className="box-border content-stretch flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
+          data-name="Trends"
+        >
+          <div className="flex flex-col font-['Inter:Bold',sans-serif] font-bold justify-center leading-none text-[16px] text-[#1e1e1e] dark:text-white whitespace-pre">
+            Trends
+          </div>
+        </button>
+
+        {/* Comparison Tool Page */}
+        <button
+          onClick={() => handleNavInteraction("/compare", onComparisonToolClick)}
           className="box-border content-stretch flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
           data-name="Comparison Tool"
         >
@@ -132,8 +164,10 @@ function NavigationBarLinks({
             </p>
           </div>
         </button>
+
+        {/* Discussion Page */}
         <button
-          onClick={onDiscussionsClick}
+          onClick={() => handleNavInteraction("/discussions", onDiscussionsClick)}
           className="box-border content-stretch hidden lg:flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
           data-name="Discussions"
         >
@@ -205,7 +239,7 @@ function NavigationBarLinks({
           </div>
         ) : (
           <button
-            onClick={onSignInClick}
+            onClick={() => handleNavInteraction("/sign-in", onSignInClick)}
             className="bg-[#2c3968] box-border flex items-center justify-center px-[16px] md:px-[24px] py-[12px] relative rounded-[100px] shrink-0 hover:bg-[#3d4a7a] transition-colors cursor-pointer"
             data-name="Navigation Pill"
           >
@@ -222,6 +256,7 @@ function NavigationBarLinks({
 function NavigationBarLayout({
   onComparisonToolClick,
   onDiscussionsClick,
+  onTrendsClick,
   isAuthenticated,
   user,
   onSignInClick,
@@ -233,6 +268,7 @@ function NavigationBarLayout({
 }: {
   onComparisonToolClick?: () => void;
   onDiscussionsClick?: () => void;
+  onTrendsClick?: () => void;
   isAuthenticated: boolean;
   user: AppUser | null;
   onSignInClick?: () => void;
@@ -242,17 +278,27 @@ function NavigationBarLayout({
   onCatalogClick?: () => void;
   onLogoClick?: () => void;
 }) {
+  const navigate = useNavigate();
   return (
     <div
       className="absolute content-stretch flex h-[80px] items-center justify-between left-0 right-0 top-1/2 translate-y-[-50%] w-full max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 gap-2 md:gap-4"
       data-name="Navigation Bar Layout"
     >
-      <LogoButton className="h-[50px] md:h-[70px] relative shrink-0 w-[250px] md:w-[388px]" onClick={onLogoClick} />
-      {/* Spacer to maintain layout spacing where search bar was */}
+      <LogoButton
+        className="h-[50px] md:h-[70px] relative shrink-0 w-[250px] md:w-[388px]"
+        onClick={() => {
+          if (window.location.pathname === "/") {
+            window.location.href = "/";
+          } else {
+            navigate("/");
+          }
+        }}
+      />
       <div className="relative shrink-0 w-full max-w-[300px] md:max-w-[400px] hidden sm:block" />
       <NavigationBarLinks
         onComparisonToolClick={onComparisonToolClick}
         onDiscussionsClick={onDiscussionsClick}
+        onTrendsClick={onTrendsClick}
         isAuthenticated={isAuthenticated}
         user={user}
         onSignInClick={onSignInClick}
@@ -268,6 +314,7 @@ function NavigationBarLayout({
 export default function NavigationBar({
   onComparisonToolClick,
   onDiscussionsClick,
+  onTrendsClick,
   isAuthenticated,
   user,
   onSignInClick,
@@ -279,6 +326,7 @@ export default function NavigationBar({
 }: {
   onComparisonToolClick?: () => void;
   onDiscussionsClick?: () => void;
+  onTrendsClick?: () => void;
   isAuthenticated: boolean;
   user: AppUser | null;
   onSignInClick?: () => void;
@@ -296,6 +344,7 @@ export default function NavigationBar({
       <NavigationBarLayout
         onComparisonToolClick={onComparisonToolClick}
         onDiscussionsClick={onDiscussionsClick}
+        onTrendsClick={onTrendsClick}
         isAuthenticated={isAuthenticated}
         user={user}
         onSignInClick={onSignInClick}

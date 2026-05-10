@@ -6,7 +6,7 @@ import {
   voteOnReview,
   deleteReview,
 } from "../controllers/reviewController";
-import { protect } from "../middleware/authMiddleware";
+import { protect } from "../middleware/authentication";
 
 const router = Router();
 

@@ -9,6 +9,13 @@ interface SignUpPageProps {
   onNavigateToSignIn: () => void;
 }
 
+// --- CONFIGURATIONS ---
+const DISPLAY_NAME_MIN = 2;
+const DISPLAY_NAME_MAX = 50;
+const EMAIL_MAX = 254;
+const PASSWORD_MIN = 8;
+const PASSWORD_MAX = 128;
+
 export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: SignUpPageProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -22,19 +29,45 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Trimming leading and trailing whitespaces
+    const cleanName = name.trim();
+    const cleanEmail = email.trim();
+
     // Basic validation
-    if (!name || !email || !password || !confirmPassword) {
+    if (!cleanName || !cleanEmail || !password || !confirmPassword) {
       toast.error("Please fill in all fields");
       return;
     }
 
-    if (!email.includes("@")) {
-      toast.error("Please enter a valid email address");
+    // Name policy regex (prevents SQL or XSS attacks)
+    const nameRegex = /^[a-zA-z0-9 ]+$/;
+    if (!nameRegex.test(cleanName)) {
+      toast.error("Name can only contain letters, numbers, and spaces.");
+      return;
+    }
+    if (cleanName.length < DISPLAY_NAME_MIN || cleanName.length > 50) {
+      toast.error(`Display Name must be between ${DISPLAY_NAME_MIN} and ${DISPLAY_NAME_MAX} characters long.`);
       return;
     }
 
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    // Email policy regex (maintains RFC 5321/5322 compliance)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!emailRegex.test(cleanEmail)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    if (cleanEmail.length > EMAIL_MAX) {
+      toast.error(`Email address cannot exceed ${EMAIL_MAX} characters.`);
+      return;
+    }
+
+    // Password policy regex (at least 1 lowercase, 1 uppercase, 1 special char, 8<=password_length<=128 characters long maintains NIST password security standards)
+    const passwordPattern = `^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?& ]{${PASSWORD_MIN},${PASSWORD_MAX}}$`;
+    const passwordRegex = new RegExp(passwordPattern);
+    if (!passwordRegex.test(password)) {
+      toast.error(
+        `Password must be between ${PASSWORD_MIN} and ${PASSWORD_MAX} characters long and include an uppercase letter, a number, and a special character.`,
+      );
       return;
     }
 
@@ -46,7 +79,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
     setIsLoading(true);
 
     try {
-      await signUp(email, password, name);
+      await signUp(cleanEmail, password, cleanName);
       toast.success("Account created successfully!");
       onSignUpSuccess();
     } catch (error) {
@@ -95,68 +128,75 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
   };
 
   return (
-    <div className="min-h-[calc(100vh-140px)] flex items-center justify-center px-6 py-12">
+    <div className="min-h-[calc(100vh-140px)] flex items-center justify-center px-6 py-12 transition-colors duration-300">
       <div className="w-full max-w-[440px]">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-[#2c3968] mb-3">Create Account</h1>
-          <p className="text-[#666]">Join our community of phone enthusiasts</p>
+          <h1 className="text-[#2c3968] dark:text-[#4a7cf6] mb-3 font-bold">Create Account</h1>
+          <p className="text-[#666] dark:text-[#a0a8b8]">Join our community of phone enthusiasts</p>
         </div>
 
         {/* Sign Up Form */}
-        <div className="bg-white rounded-2xl shadow-lg border border-[#e5e5e5] p-8">
+        <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-lg border border-[#e5e5e5] dark:border-[#2d3548] p-8 transition-all">
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Name Field */}
             <div>
-              <label htmlFor="name" className="block mb-2 text-[#1e1e1e]">
+              <label htmlFor="name" className="block mb-2 text-[#1e1e1e] dark:text-white font-medium">
                 Display Name
               </label>
               <input
                 id="name"
                 type="text"
+                autoComplete="off"
+                autoFocus
+                maxLength={DISPLAY_NAME_MAX}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your display name"
-                className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 disabled={isLoading}
               />
             </div>
 
             {/* Email Field */}
             <div>
-              <label htmlFor="email" className="block mb-2 text-[#1e1e1e]">
+              <label htmlFor="email" className="block mb-2 text-[#1e1e1e] dark:text-white font-medium">
                 Email Address
               </label>
               <input
                 id="email"
                 type="email"
+                autoComplete="username"
+                maxLength={EMAIL_MAX}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
-                className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 disabled={isLoading}
               />
             </div>
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block mb-2 text-[#1e1e1e]">
+              <label htmlFor="password" className="block mb-2 text-[#1e1e1e] dark:text-white font-medium">
                 Password
               </label>
               <div className="relative">
                 <input
-                  id="password"
+                  id="new-password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  maxLength={PASSWORD_MAX}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Create a password"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all pr-12"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all pr-12"
                   disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] hover:text-[#2c3968] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-colors cursor-pointer"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -166,23 +206,25 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
 
             {/* Confirm Password Field */}
             <div>
-              <label htmlFor="confirmPassword" className="block mb-2 text-[#1e1e1e]">
+              <label htmlFor="confirmPassword" className="block mb-2 text-[#1e1e1e] dark:text-white font-medium">
                 Confirm Password
               </label>
               <div className="relative">
                 <input
-                  id="confirmPassword"
+                  id="confirm-password"
                   type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  maxLength={PASSWORD_MAX}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm your password"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all pr-12"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all pr-12"
                   disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] hover:text-[#2c3968] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-colors cursor-pointer"
                   tabIndex={-1}
                 >
                   {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -194,7 +236,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white py-3.5 rounded-lg hover:shadow-lg hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 mt-6 flex items-center justify-center"
+              className="w-full bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white py-3.5 rounded-lg hover:shadow-lg hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 mt-6 flex items-center justify-center cursor-pointer font-bold"
             >
               {isLoading ? "Creating Account..." : "Create Account"}
             </button>
@@ -203,10 +245,10 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#e5e5e5]"></div>
+              <div className="w-full border-t border-[#e5e5e5] dark:border-[#2d3548]"></div>
             </div>
             <div className="relative flex justify-center">
-              <span className="bg-white px-4 text-[#999]">or</span>
+              <span className="bg-white dark:bg-[#161b26] px-4 text-[#999] dark:text-[#707070]">or</span>
             </div>
           </div>
 
@@ -215,7 +257,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
             type="button"
             onClick={handleGoogleSignUp}
             disabled={isLoading}
-            className="w-full bg-white border border-[#d9d9d9] text-[#1e1e1e] py-3.5 rounded-lg hover:bg-[#f7f7f7] hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            className="w-full bg-white dark:bg-[#1a1f2e] border border-[#d9d9d9] dark:border-[#2d3548] text-[#1e1e1e] dark:text-white py-3.5 rounded-lg hover:bg-[#f7f7f7] dark:hover:bg-[#252b3d] hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 cursor-pointer"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
@@ -240,9 +282,12 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
 
           {/* Sign In Link */}
           <div className="text-center mt-6">
-            <p className="text-[#666]">
+            <p className="text-[#666] dark:text-[#a0a8b8]">
               Already have an account?{" "}
-              <button onClick={onNavigateToSignIn} className="text-[#2c3968] hover:underline">
+              <button
+                onClick={onNavigateToSignIn}
+                className="text-[#2c3968] dark:text-[#4a7cf6] hover:underline cursor-pointer font-medium"
+              >
                 Sign In
               </button>
             </p>
@@ -250,7 +295,7 @@ export default function SignUpPage({ onSignUpSuccess, onNavigateToSignIn }: Sign
         </div>
 
         {/* Additional Info */}
-        <p className="text-center text-[#999] mt-6">
+        <p className="text-center text-[#999] dark:text-[#707070] mt-6 text-sm">
           By creating an account, you agree to our Terms of Service and Privacy Policy
         </p>
       </div>

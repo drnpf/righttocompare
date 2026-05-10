@@ -171,26 +171,23 @@ export default function AdminDashboardPage() {
       const seconds = totalSeconds % 60;
       const duration = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 
-      const phonesFound =
-        typeof data.totalInserted === "number" ? data.totalInserted : 0;
+      const phonesFound = typeof data.totalInserted === "number" ? data.totalInserted : 0;
 
       setScrapingJobs((prev) =>
         prev.map((job) =>
           job.id === newJob.id
             ? {
-              ...job,
-              status: "completed",
-              phonesFound,
-              duration,
-              output: data.output || "",
-            }
+                ...job,
+                status: "completed",
+                phonesFound,
+                duration,
+                output: data.output || "",
+              }
             : job,
         ),
       );
 
-      toast.success(
-        `Scraping completed! Inserted ${phonesFound} phone${phonesFound === 1 ? "" : "s"}.`,
-      );
+      toast.success(`Scraping completed! Inserted ${phonesFound} phone${phonesFound === 1 ? "" : "s"}.`);
     } catch (error: any) {
       const elapsedMs = Date.now() - startedAt;
       const totalSeconds = Math.max(1, Math.round(elapsedMs / 1000));
@@ -202,11 +199,11 @@ export default function AdminDashboardPage() {
         prev.map((job) =>
           job.id === newJob.id
             ? {
-              ...job,
-              status: "failed",
-              duration,
-              error: error.message || "Scraper failed",
-            }
+                ...job,
+                status: "failed",
+                duration,
+                error: error.message || "Scraper failed",
+              }
             : job,
         ),
       );
@@ -265,18 +262,19 @@ export default function AdminDashboardPage() {
   };
 
   const renderSidebar = () => (
-    <div className="w-64 bg-white border-r border-[#e5e5e5] min-h-screen">
-      <div className="p-6 border-b border-[#e5e5e5]">
-        <h2 className="text-[#2c3968]">Admin Panel</h2>
+    <div className="w-64 bg-white dark:bg-[#161b26] border-r border-[#e5e5e5] dark:border-[#2d3548] min-h-screen">
+      <div className="p-6 border-b border-[#e5e5e5] dark:border-[#2d3548]">
+        <h2 className="text-[#2c3968] dark:text-[#4a7cf6]">Admin Panel</h2>
       </div>
 
       <nav className="p-4">
         <button
           onClick={() => setCurrentView("dashboard")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${currentView === "dashboard"
-              ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white shadow-md"
-              : "text-[#666] hover:bg-[#f7f7f7] hover:text-[#2c3968]"
-            }`}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 cursor-pointer ${
+            currentView === "dashboard"
+              ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white shadow-md"
+              : "text-[#666] dark:text-[#a0a8b8] hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
+          }`}
         >
           <LayoutDashboard size={20} />
           <span>Dashboard</span>
@@ -284,10 +282,11 @@ export default function AdminDashboardPage() {
 
         <button
           onClick={() => setCurrentView("manual")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${currentView === "manual"
-              ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white shadow-md"
-              : "text-[#666] hover:bg-[#f7f7f7] hover:text-[#2c3968]"
-            }`}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 cursor-pointer ${
+            currentView === "manual"
+              ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white shadow-md"
+              : "text-[#666] dark:text-[#a0a8b8] hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
+          }`}
         >
           <FileEdit size={20} />
           <span>Manual Specs</span>
@@ -295,10 +294,11 @@ export default function AdminDashboardPage() {
 
         <button
           onClick={() => setCurrentView("scraping")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${currentView === "scraping"
-              ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white shadow-md"
-              : "text-[#666] hover:bg-[#f7f7f7] hover:text-[#2c3968]"
-            }`}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 cursor-pointer ${
+            currentView === "scraping"
+              ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white shadow-md"
+              : "text-[#666] dark:text-[#a0a8b8] hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
+          }`}
         >
           <Globe size={20} />
           <span>Web Scraping</span>
@@ -306,10 +306,11 @@ export default function AdminDashboardPage() {
 
         <button
           onClick={() => setCurrentView("priceTracking")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${currentView === "priceTracking"
-              ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white shadow-md"
-              : "text-[#666] hover:bg-[#f7f7f7] hover:text-[#2c3968]"
-            }`}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2  cursor-pointer ${
+            currentView === "priceTracking"
+              ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white shadow-md"
+              : "text-[#666] dark:text-[#a0a8b8] hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
+          }`}
         >
           <DollarSign size={20} />
           <span>Price Tracking</span>
@@ -317,10 +318,11 @@ export default function AdminDashboardPage() {
 
         <button
           onClick={() => setCurrentView("chatbot")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${currentView === "chatbot"
-              ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white shadow-md"
-              : "text-[#666] hover:bg-[#f7f7f7] hover:text-[#2c3968]"
-            }`}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all cursor-pointer ${
+            currentView === "chatbot"
+              ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white shadow-md"
+              : "text-[#666] dark:text-[#a0a8b8] hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
+          }`}
         >
           <MessageSquare size={20} />
           <span>Chatbot Logs</span>
@@ -332,94 +334,93 @@ export default function AdminDashboardPage() {
   const renderDashboard = () => (
     <div>
       <div className="mb-8">
-        <h1 className="text-[#2c3968] mb-2">Dashboard Overview</h1>
-        <p className="text-[#666]">Monitor and manage phone specifications</p>
+        <h1 className="text-[#2c3968] dark:text-[#4a7cf6] mb-2">Dashboard Overview</h1>
+        <p className="text-[#666] dark:text-[#a0a8b8]">Monitor and manage phone specifications</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-6">
+        <div className="bg-white dark:bg-[#161b26] rounded-xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6">
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#2c3968] to-[#3d4a7a] rounded-lg flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] rounded-lg flex items-center justify-center">
               <FileEdit className="text-white" size={24} />
             </div>
           </div>
-          <h3 className="text-[#1e1e1e] mb-1">Total Phones</h3>
-          <p className="text-[#666]">125 devices</p>
+          <h3 className="text-[#1e1e1e] dark:text-white mb-1">Total Phones</h3>
+          <p className="text-[#666] dark:text-[#a0a8b8]">125 devices</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-6">
+        <div className="bg-white dark:bg-[#161b26] rounded-xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6">
           <div className="flex items-center justify-between mb-3">
             <div className="w-12 h-12 bg-gradient-to-br from-[#4caf50] to-[#66bb6a] rounded-lg flex items-center justify-center">
               <CheckCircle className="text-white" size={24} />
             </div>
           </div>
-          <h3 className="text-[#1e1e1e] mb-1">Recent Updates</h3>
-          <p className="text-[#666]">18 this week</p>
+          <h3 className="text-[#1e1e1e] dark:text-white mb-1">Recent Updates</h3>
+          <p className="text-[#666] dark:text-[#a0a8b8]">18 this week</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-6">
+        <div className="bg-white dark:bg-[#161b26] rounded-xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6">
           <div className="flex items-center justify-between mb-3">
             <div className="w-12 h-12 bg-gradient-to-br from-[#ff9800] to-[#ffa726] rounded-lg flex items-center justify-center">
               <Globe className="text-white" size={24} />
             </div>
           </div>
-          <h3 className="text-[#1e1e1e] mb-1">Scraping Jobs</h3>
-          <p className="text-[#666]">{scrapingJobs.length} total</p>
+          <h3 className="text-[#1e1e1e] dark:text-white mb-1">Scraping Jobs</h3>
+          <p className="text-[#666] dark:text-[#a0a8b8]">{scrapingJobs.length} total</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-6">
+        <div className="bg-white dark:bg-[#161b26] rounded-xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6">
           <div className="flex items-center justify-between mb-3">
             <div className="w-12 h-12 bg-gradient-to-br from-[#f44336] to-[#e57373] rounded-lg flex items-center justify-center">
               <Clock className="text-white" size={24} />
             </div>
           </div>
-          <h3 className="text-[#1e1e1e] mb-1">Pending Review</h3>
-          <p className="text-[#666]">5 items</p>
+          <h3 className="text-[#1e1e1e] dark:text-white mb-1">Pending Review</h3>
+          <p className="text-[#666] dark:text-[#a0a8b8]">5 items</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-6">
-        <h2 className="text-[#2c3968] mb-4">Recent Scraping Jobs</h2>
+      <div className="bg-white dark:bg-[#161b26] rounded-xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6">
+        <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">Recent Scraping Jobs</h2>
         <div className="space-y-3">
           {scrapingJobs.slice(0, 5).map((job) => (
             <div
               key={job.id}
-              className="flex items-center justify-between p-4 bg-[#f7f7f7] rounded-lg"
+              className="flex items-center justify-between p-4 bg-[#f7f7f7] dark:bg-[#1a1f2e] rounded-lg"
             >
               <div className="flex items-center gap-4">
                 <div
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center ${job.status === "completed"
-                      ? "bg-green-100"
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    job.status === "completed"
+                      ? "bg-green-100 dark:bg-green-900/30"
                       : job.status === "running"
-                        ? "bg-blue-100"
-                        : "bg-red-100"
-                    }`}
+                        ? "bg-blue-100 dark:bg-blue-900/30"
+                        : "bg-red-100 dark:bg-red-900/30"
+                  }`}
                 >
                   {job.status === "completed" ? (
-                    <CheckCircle className="text-green-600" size={20} />
+                    <CheckCircle className="text-green-600 dark:text-green-400" size={20} />
                   ) : job.status === "running" ? (
-                    <Clock className="text-blue-600" size={20} />
+                    <Clock className="text-blue-600 dark:text-blue-400" size={20} />
                   ) : (
-                    <XCircle className="text-red-600" size={20} />
+                    <XCircle className="text-red-600 dark:text-red-400" size={20} />
                   )}
                 </div>
                 <div>
-                  <p className="text-[#1e1e1e]">
+                  <p className="text-[#1e1e1e] dark:text-white">
                     {job.source}
                     {job.brand ? ` • ${job.brand}` : ""}
                   </p>
-                  <p className="text-[#999]">{job.timestamp}</p>
+                  <p className="text-[#999] dark:text-[#6b7280]">{job.timestamp}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-[#1e1e1e]">{job.phonesFound} phones</p>
-                <p className="text-[#999]">{job.duration}</p>
+                <p className="text-[#1e1e1e] dark:text-white">{job.phonesFound} phones</p>
+                <p className="text-[#999] dark:text-[#6b7280]">{job.duration}</p>
               </div>
             </div>
           ))}
-          {scrapingJobs.length === 0 && (
-            <p className="text-[#999]">No scraping jobs yet.</p>
-          )}
+          {scrapingJobs.length === 0 && <p className="text-[#999] dark:text-[#6b7280]">No scraping jobs yet.</p>}
         </div>
       </div>
     </div>
@@ -428,279 +429,279 @@ export default function AdminDashboardPage() {
   const renderManualSpecs = () => (
     <div>
       <div className="mb-8">
-        <h1 className="text-[#2c3968] mb-2">Manual Specification Entry</h1>
-        <p className="text-[#666]">Add or edit phone specifications manually</p>
+        <h1 className="text-[#2c3968] dark:text-[#4a7cf6] mb-2">Manual Specification Entry</h1>
+        <p className="text-[#666] dark:text-[#a0a8b8]">Add or edit phone specifications manually</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-8">
+      <div className="bg-white dark:bg-[#161b26] rounded-xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-8">
         <div className="space-y-6">
           <div>
-            <h3 className="text-[#2c3968] mb-4">Basic Information</h3>
+            <h3 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Phone Name *</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Phone Name *</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
                   placeholder="e.g., Galaxy S24 Ultra"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Brand *</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Brand *</label>
                 <input
                   type="text"
                   value={formData.brand}
                   onChange={(e) => handleInputChange("brand", e.target.value)}
                   placeholder="e.g., Samsung"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Release Date</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Release Date</label>
                 <input
                   type="text"
                   value={formData.releaseDate}
                   onChange={(e) => handleInputChange("releaseDate", e.target.value)}
                   placeholder="e.g., January 2024"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Price</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Price</label>
                 <input
                   type="text"
                   value={formData.price}
                   onChange={(e) => handleInputChange("price", e.target.value)}
                   placeholder="e.g., $1,199"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block mb-2 text-[#1e1e1e]">Image URL</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Image URL</label>
                 <input
                   type="text"
                   value={formData.image}
                   onChange={(e) => handleInputChange("image", e.target.value)}
                   placeholder="https://..."
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <h3 className="text-[#2c3968] mb-4">Display</h3>
+            <h3 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">Display</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Screen Size</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Screen Size</label>
                 <input
                   type="text"
                   value={formData.screenSize}
                   onChange={(e) => handleInputChange("screenSize", e.target.value)}
                   placeholder="e.g., 6.8 inches"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Resolution</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Resolution</label>
                 <input
                   type="text"
                   value={formData.resolution}
                   onChange={(e) => handleInputChange("resolution", e.target.value)}
                   placeholder="e.g., 1440 x 3120"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Refresh Rate</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Refresh Rate</label>
                 <input
                   type="text"
                   value={formData.refreshRate}
                   onChange={(e) => handleInputChange("refreshRate", e.target.value)}
                   placeholder="e.g., 120Hz"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Display Type</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Display Type</label>
                 <input
                   type="text"
                   value={formData.displayType}
                   onChange={(e) => handleInputChange("displayType", e.target.value)}
                   placeholder="e.g., AMOLED"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <h3 className="text-[#2c3968] mb-4">Performance</h3>
+            <h3 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">Performance</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Processor</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Processor</label>
                 <input
                   type="text"
                   value={formData.processor}
                   onChange={(e) => handleInputChange("processor", e.target.value)}
                   placeholder="e.g., Snapdragon 8 Gen 3"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">RAM</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">RAM</label>
                 <input
                   type="text"
                   value={formData.ram}
                   onChange={(e) => handleInputChange("ram", e.target.value)}
                   placeholder="e.g., 12GB"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Storage</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Storage</label>
                 <input
                   type="text"
                   value={formData.storage}
                   onChange={(e) => handleInputChange("storage", e.target.value)}
                   placeholder="e.g., 256GB / 512GB / 1TB"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <h3 className="text-[#2c3968] mb-4">Camera</h3>
+            <h3 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">Camera</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Main Camera</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Main Camera</label>
                 <input
                   type="text"
                   value={formData.mainCamera}
                   onChange={(e) => handleInputChange("mainCamera", e.target.value)}
                   placeholder="e.g., 200MP + 50MP + 12MP + 10MP"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Front Camera</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Front Camera</label>
                 <input
                   type="text"
                   value={formData.frontCamera}
                   onChange={(e) => handleInputChange("frontCamera", e.target.value)}
                   placeholder="e.g., 12MP"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Video Recording</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Video Recording</label>
                 <input
                   type="text"
                   value={formData.videoRecording}
                   onChange={(e) => handleInputChange("videoRecording", e.target.value)}
                   placeholder="e.g., 8K@30fps, 4K@120fps"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <h3 className="text-[#2c3968] mb-4">Battery</h3>
+            <h3 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">Battery</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Battery Capacity</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Battery Capacity</label>
                 <input
                   type="text"
                   value={formData.batteryCapacity}
                   onChange={(e) => handleInputChange("batteryCapacity", e.target.value)}
                   placeholder="e.g., 5000mAh"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Charging Speed</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Charging Speed</label>
                 <input
                   type="text"
                   value={formData.chargingSpeed}
                   onChange={(e) => handleInputChange("chargingSpeed", e.target.value)}
                   placeholder="e.g., 45W"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Wireless Charging</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Wireless Charging</label>
                 <input
                   type="text"
                   value={formData.wirelessCharging}
                   onChange={(e) => handleInputChange("wirelessCharging", e.target.value)}
                   placeholder="e.g., 15W"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <h3 className="text-[#2c3968] mb-4">Design & Build</h3>
+            <h3 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">Design & Build</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Dimensions</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Dimensions</label>
                 <input
                   type="text"
                   value={formData.dimensions}
                   onChange={(e) => handleInputChange("dimensions", e.target.value)}
                   placeholder="e.g., 162.3 x 79.0 x 8.6 mm"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Weight</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Weight</label>
                 <input
                   type="text"
                   value={formData.weight}
                   onChange={(e) => handleInputChange("weight", e.target.value)}
                   placeholder="e.g., 233g"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Available Colors</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Available Colors</label>
                 <input
                   type="text"
                   value={formData.colors}
                   onChange={(e) => handleInputChange("colors", e.target.value)}
                   placeholder="e.g., Titanium Black, Titanium Gray"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-[#1e1e1e]">Materials</label>
+                <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Materials</label>
                 <input
                   type="text"
                   value={formData.materials}
                   onChange={(e) => handleInputChange("materials", e.target.value)}
                   placeholder="e.g., Titanium frame, Gorilla Glass Victus 2"
-                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex gap-4 pt-4 border-t border-[#e5e5e5]">
+          <div className="flex gap-4 pt-4 border-t border-[#e5e5e5] dark:border-[#2d3548]">
             <button
               onClick={handleSaveSpecs}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-lg hover:shadow-lg transition-all"
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all cursor-pointer"
             >
               <Save size={20} />
               Save Specifications
             </button>
             <button
               onClick={() => setFormData(emptyForm)}
-              className="flex items-center gap-2 px-6 py-3 border border-[#d9d9d9] text-[#666] rounded-lg hover:bg-[#f7f7f7] transition-all"
+              className="flex items-center gap-2 px-6 py-3 border border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] rounded-lg hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] transition-all cursor-pointer"
             >
               <Trash2 size={20} />
               Clear Form
@@ -714,40 +715,40 @@ export default function AdminDashboardPage() {
   const renderWebScraping = () => (
     <div>
       <div className="mb-8">
-        <h1 className="text-[#2c3968] mb-2">Web Scraping</h1>
-        <p className="text-[#666]">
+        <h1 className="text-[#2c3968] dark:text-[#4a7cf6] mb-2">Web Scraping</h1>
+        <p className="text-[#666] dark:text-[#a0a8b8]">
           Run the GSMArena scraper to update the staging collection with newer phones
         </p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-6 mb-6">
-        <h3 className="text-[#2c3968] mb-4">Start New Scraping Job</h3>
+      <div className="bg-white dark:bg-[#161b26] rounded-xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6 mb-6">
+        <h3 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">Start New Scraping Job</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div>
-            <label className="block mb-2 text-[#1e1e1e]">Source Website</label>
+            <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Source Website</label>
             <input
               type="text"
               value={selectedSource}
               disabled
-              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] bg-[#f7f7f7] text-[#666]"
+              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-[#f7f7f7] dark:bg-[#0f1419] text-[#666] dark:text-[#6b7280]"
             />
           </div>
 
           <div>
-            <label className="block mb-2 text-[#1e1e1e]">Brand</label>
+            <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Brand</label>
             <input
               type="text"
               value={scrapeBrand}
               onChange={(e) => setScrapeBrand(e.target.value)}
               placeholder="e.g., apple"
               disabled={isScrapingRunning}
-              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
             />
           </div>
 
           <div>
-            <label className="block mb-2 text-[#1e1e1e]">Limit</label>
+            <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Limit</label>
             <input
               type="number"
               min={1}
@@ -755,7 +756,7 @@ export default function AdminDashboardPage() {
               value={scrapeLimit}
               onChange={(e) => setScrapeLimit(Number(e.target.value))}
               disabled={isScrapingRunning}
-              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
             />
           </div>
         </div>
@@ -764,32 +765,32 @@ export default function AdminDashboardPage() {
           <button
             onClick={handleStartScraping}
             disabled={isScrapingRunning}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Play size={20} />
             {isScrapingRunning ? "Running..." : "Start Scraping"}
           </button>
         </div>
 
-        <div className="mt-6 p-4 bg-[#f7f7f7] rounded-lg">
-          <p className="text-[#666] mb-2">
-            <strong className="text-[#1e1e1e]">Note:</strong> This runs your backend GSMArena scraper and upserts results into MongoDB staging.
+        <div className="mt-6 p-4 bg-[#f7f7f7] dark:bg-[#1a1f2e] rounded-lg">
+          <p className="text-[#666] dark:text-[#a0a8b8] mb-2">
+            <strong className="text-[#1e1e1e] dark:text-white">Note:</strong> This runs your backend GSMArena scraper
+            and upserts results into MongoDB staging.
           </p>
-          <p className="text-[#999]">
+          <p className="text-[#999] dark:text-[#6b7280]">
             • Current destination: <code>test.scrape_output</code>
             <br />
             • Recommended use: scrape newest phones by brand
-            <br />
-            • Current parameters sent: brand, limit, maxPages=3, poolMult=5
+            <br />• Current parameters sent: brand, limit, maxPages=3, poolMult=5
           </p>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-6">
-        <h3 className="text-[#2c3968] mb-4">Recent Scraping Jobs</h3>
+      <div className="bg-white dark:bg-[#161b26] rounded-xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6">
+        <h3 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">Recent Scraping Jobs</h3>
 
         {scrapingJobs.length === 0 ? (
-          <div className="text-center py-12 text-[#999]">
+          <div className="text-center py-12 text-[#999] dark:text-[#6b7280]">
             <Globe size={48} className="mx-auto mb-4 opacity-30" />
             <p>No scraping jobs yet. Start your first job above!</p>
           </div>
@@ -798,33 +799,34 @@ export default function AdminDashboardPage() {
             {scrapingJobs.map((job) => (
               <div
                 key={job.id}
-                className="p-4 border border-[#e5e5e5] rounded-lg hover:bg-[#f7f7f7] transition-all"
+                className="p-4 border border-[#e5e5e5] dark:border-[#2d3548] rounded-lg hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] transition-all"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div
-                      className={`w-12 h-12 rounded-lg flex items-center justify-center ${job.status === "completed"
-                          ? "bg-green-100"
+                      className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                        job.status === "completed"
+                          ? "bg-green-100 dark:bg-green-900/30"
                           : job.status === "running"
-                            ? "bg-blue-100"
-                            : "bg-red-100"
-                        }`}
+                            ? "bg-blue-100 dark:bg-blue-900/30"
+                            : "bg-red-100 dark:bg-red-900/30"
+                      }`}
                     >
                       {job.status === "completed" ? (
-                        <CheckCircle className="text-green-600" size={24} />
+                        <CheckCircle className="text-green-600 dark:text-green-400" size={24} />
                       ) : job.status === "running" ? (
-                        <Clock className="text-blue-600 animate-spin" size={24} />
+                        <Clock className="text-blue-600 dark:text-blue-400 animate-spin" size={24} />
                       ) : (
-                        <XCircle className="text-red-600" size={24} />
+                        <XCircle className="text-red-600 dark:text-red-400" size={24} />
                       )}
                     </div>
 
                     <div>
-                      <p className="text-[#1e1e1e] mb-1">
+                      <p className="text-[#1e1e1e] dark:text-white mb-1">
                         {job.source}
                         {job.brand ? ` • ${job.brand}` : ""}
                       </p>
-                      <div className="flex items-center gap-4 text-[#999] flex-wrap">
+                      <div className="flex items-center gap-4 text-[#999] dark:text-[#6b7280] flex-wrap">
                         <span className="flex items-center gap-1">
                           <Clock size={14} />
                           {job.timestamp}
@@ -836,33 +838,30 @@ export default function AdminDashboardPage() {
 
                   <div className="text-right">
                     <p
-                      className={`mb-1 ${job.status === "completed"
-                          ? "text-green-600"
+                      className={`mb-1 ${
+                        job.status === "completed"
+                          ? "text-green-600 dark:text-green-400"
                           : job.status === "running"
-                            ? "text-blue-600"
-                            : "text-red-600"
-                        }`}
+                            ? "text-blue-600 dark:text-blue-400"
+                            : "text-red-600 dark:text-red-400"
+                      }`}
                     >
-                      {job.status === "completed"
-                        ? "✓ Completed"
-                        : job.status === "running"
-                          ? "⟳ Running"
-                          : "✗ Failed"}
+                      {job.status === "completed" ? "✓ Completed" : job.status === "running" ? "⟳ Running" : "✗ Failed"}
                     </p>
-                    <p className="text-[#1e1e1e]">
+                    <p className="text-[#1e1e1e] dark:text-white">
                       {job.phonesFound} {job.phonesFound === 1 ? "phone" : "phones"} found
                     </p>
                   </div>
                 </div>
 
                 {job.output && (
-                  <pre className="mt-4 p-3 bg-[#f7f7f7] rounded-lg text-xs text-[#444] whitespace-pre-wrap overflow-x-auto">
+                  <pre className="mt-4 p-3 bg-[#f7f7f7] dark:bg-[#1a1f2e] rounded-lg text-xs text-[#444] dark:text-[#a0a8b8] whitespace-pre-wrap overflow-x-auto">
                     {job.output}
                   </pre>
                 )}
 
                 {job.error && (
-                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                  <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-400">
                     {job.error}
                   </div>
                 )}
@@ -877,30 +876,30 @@ export default function AdminDashboardPage() {
   const renderPriceTracking = () => (
     <div>
       <div className="mb-8">
-        <h1 className="text-[#2c3968] mb-2">Price Tracking</h1>
-        <p className="text-[#666]">
+        <h1 className="text-[#2c3968] dark:text-[#4a7cf6] mb-2">Price Tracking</h1>
+        <p className="text-[#666] dark:text-[#a0a8b8]">
           Manually insert a new price snapshot for a phone to test tracking and alerts
         </p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-[#e5e5e5] p-6">
-        <h3 className="text-[#2c3968] mb-4">Insert Price Snapshot</h3>
+      <div className="bg-white dark:bg-[#161b26] rounded-xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6">
+        <h3 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">Insert Price Snapshot</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block mb-2 text-[#1e1e1e]">Phone ID</label>
+            <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Phone ID</label>
             <input
               type="text"
               value={pricePhoneId}
               onChange={(e) => setPricePhoneId(e.target.value)}
               placeholder="e.g., samsung-x1-pro"
               disabled={isSubmittingPrice}
-              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
             />
           </div>
 
           <div>
-            <label className="block mb-2 text-[#1e1e1e]">Price</label>
+            <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Price</label>
             <input
               type="number"
               min={1}
@@ -909,19 +908,19 @@ export default function AdminDashboardPage() {
               onChange={(e) => setPriceAmount(e.target.value)}
               placeholder="e.g., 749"
               disabled={isSubmittingPrice}
-              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
             />
           </div>
 
           <div>
-            <label className="block mb-2 text-[#1e1e1e]">Currency</label>
+            <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Currency</label>
             <input
               type="text"
               value={priceCurrency}
               onChange={(e) => setPriceCurrency(e.target.value.toUpperCase())}
               placeholder="USD"
               disabled={isSubmittingPrice}
-              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all"
+              className="w-full px-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder:text-[#6b7280] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
             />
           </div>
         </div>
@@ -930,24 +929,22 @@ export default function AdminDashboardPage() {
           <button
             onClick={handleInsertPriceHistory}
             disabled={isSubmittingPrice}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <DollarSign size={20} />
             {isSubmittingPrice ? "Inserting..." : "Insert Price Snapshot"}
           </button>
         </div>
 
-        <div className="mt-6 p-4 bg-[#f7f7f7] rounded-lg">
-          <p className="text-[#666] mb-2">
-            <strong className="text-[#1e1e1e]">Use case:</strong> Insert a new manual price point to
+        <div className="mt-6 p-4 bg-[#f7f7f7] dark:bg-[#1a1f2e] rounded-lg">
+          <p className="text-[#666] dark:text-[#a0a8b8] mb-2">
+            <strong className="text-[#1e1e1e] dark:text-white">Use case:</strong> Insert a new manual price point to
             test the phone detail chart, summary cards, and future alert behavior.
           </p>
-          <p className="text-[#999]">
+          <p className="text-[#999] dark:text-[#6b7280]">
             • Endpoint used: <code>POST /api/phones/:id/price-history</code>
-            <br />
-            • Source recorded: <code>admin-manual</code>
-            <br />
-            • Best for simulating price drops without rerunning the scraper
+            <br />• Source recorded: <code>admin-manual</code>
+            <br />• Best for simulating price drops without rerunning the scraper
           </p>
         </div>
       </div>
@@ -955,7 +952,7 @@ export default function AdminDashboardPage() {
   );
 
   return (
-    <div className="flex min-h-[calc(100vh-140px)] bg-[#f7f7f7]">
+    <div className="flex min-h-[calc(100vh-140px)] bg-[#f7f7f7] dark:bg-[#0f1419]">
       {renderSidebar()}
 
       <div className="flex-1 p-8">

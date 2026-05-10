@@ -47,7 +47,6 @@ const PHONE_CARD_PROJECTION = {
  *  - ram: a list of ram size options to filter by
  *  - storage: a list of storage options to filter by
  *  - sortBy: string indicating how to sort phone listing
- *  -
  * @returns An object containing the list of phone JSON objects and the total
  * number of phones in the database.
  */
@@ -110,6 +109,8 @@ export const findPhonePage = async (
     name_asc: { name: 1 },
     name_desc: { name: -1 },
     newest: { releaseDate: -1 },
+    oldest: { releaseDate: 1 },
+    rating_desc: { averageRating: -1 },
   };
 
   // Gets sort strategy from argument if it exist otherwise sort by newest if garbage input
@@ -207,10 +208,7 @@ export interface ICreatePriceHistoryInput {
   recordedAt?: Date;
 }
 
-export const createPhonePriceHistoryEntry = async (
-  id: string,
-  input: ICreatePriceHistoryInput,
-) => {
+export const createPhonePriceHistoryEntry = async (id: string, input: ICreatePriceHistoryInput) => {
   const entry = new PriceHistory({
     phoneId: id,
     amount: input.amount,
@@ -306,7 +304,7 @@ export const createNewPhone = async (phoneData: Partial<IPhone>): Promise<IPhone
  * @returns The updated phone document
  */
 export const updatePhoneById = async (id: string, updateData: Partial<IPhone>): Promise<IPhone | null> => {
-  return await Phone.findOneAndUpdate({ id: id }, updateData, { new: true, runValidators: true });
+  return await Phone.findOneAndUpdate({ id: id }, updateData, { returnDocument: "after", runValidators: true });
 };
 
 /**
@@ -318,5 +316,3 @@ export const deletePhoneById = async (id: string): Promise<boolean> => {
   const result = await Phone.findOneAndDelete({ id: id });
   return !!result; // Returns true if document was found and deleted
 };
-
-

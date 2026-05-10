@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Shield } from "lucide-react";
 
@@ -20,6 +20,9 @@ export default function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { currentUser, loading } = useAuth();
 
+  // ------------------------------------------------------------
+  // | RENDER GUARDS
+  // ------------------------------------------------------------
   // CASE: Firebase Auth still loading
   if (loading) {
     return (

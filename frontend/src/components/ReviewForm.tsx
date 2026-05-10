@@ -8,11 +8,7 @@ import { MultiRatingInput, CategoryRatings } from "./MultiRatingInput";
 import { useDarkMode } from "./DarkModeContext";
 
 interface ReviewFormProps {
-  onSubmit: (data: {
-    title: string;
-    review: string;
-    categoryRatings: CategoryRatings;
-  }) => Promise<void>;
+  onSubmit: (data: { title: string; review: string; categoryRatings: CategoryRatings }) => Promise<void>;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
@@ -88,41 +84,25 @@ export function ReviewForm({ onSubmit, onCancel, isSubmitting = false }: ReviewF
         isDarkMode ? "bg-[#161b22] border-[#2d3748]" : "bg-[#f8f9fa] border-gray-200"
       }`}
     >
-      <h3
-        className={`text-lg font-semibold mb-4 ${
-          isDarkMode ? "text-[#e0e4eb]" : "text-[#2c3968]"
-        }`}
-      >
+      <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? "text-[#e0e4eb]" : "text-[#2c3968]"}`}>
         Write Your Review
       </h3>
 
       <div className="space-y-5">
         {/* Category Ratings */}
         <div>
-          <Label
-            className={`text-sm font-medium mb-3 block ${
-              isDarkMode ? "text-[#e0e4eb]" : "text-[#2c3968]"
-            }`}
-          >
+          <Label className={`text-sm font-medium mb-3 block ${isDarkMode ? "text-[#e0e4eb]" : "text-[#2c3968]"}`}>
             Rate Your Experience
           </Label>
-          <MultiRatingInput
-            value={categoryRatings}
-            onChange={setCategoryRatings}
-            showAverage={true}
-          />
-          {errors.ratings && (
-            <p className="text-red-500 text-sm mt-2">{errors.ratings}</p>
-          )}
+          <MultiRatingInput value={categoryRatings} onChange={setCategoryRatings} showAverage={true} />
+          {errors.ratings && <p className="text-red-500 text-sm mt-2">{errors.ratings}</p>}
         </div>
 
         {/* Title Input */}
         <div>
           <Label
             htmlFor="review-title"
-            className={`text-sm font-medium mb-2 block ${
-              isDarkMode ? "text-[#e0e4eb]" : "text-[#2c3968]"
-            }`}
+            className={`text-sm font-medium mb-2 block ${isDarkMode ? "text-[#e0e4eb]" : "text-[#2c3968]"}`}
           >
             Review Title
           </Label>
@@ -140,13 +120,7 @@ export function ReviewForm({ onSubmit, onCancel, isSubmitting = false }: ReviewF
           />
           <div className="flex justify-between mt-1">
             {errors.title && <p className="text-red-500 text-xs">{errors.title}</p>}
-            <p
-              className={`text-xs ml-auto ${
-                isDarkMode ? "text-[#6b7280]" : "text-gray-500"
-              }`}
-            >
-              {title.length}/100
-            </p>
+            <p className={`text-xs ml-auto ${isDarkMode ? "text-[#6b7280]" : "text-gray-500"}`}>{title.length}/100</p>
           </div>
         </div>
 
@@ -154,9 +128,7 @@ export function ReviewForm({ onSubmit, onCancel, isSubmitting = false }: ReviewF
         <div>
           <Label
             htmlFor="review-text"
-            className={`text-sm font-medium mb-2 block ${
-              isDarkMode ? "text-[#e0e4eb]" : "text-[#2c3968]"
-            }`}
+            className={`text-sm font-medium mb-2 block ${isDarkMode ? "text-[#e0e4eb]" : "text-[#2c3968]"}`}
           >
             Your Review
           </Label>
@@ -175,13 +147,7 @@ export function ReviewForm({ onSubmit, onCancel, isSubmitting = false }: ReviewF
           />
           <div className="flex justify-between mt-1">
             {errors.review && <p className="text-red-500 text-xs">{errors.review}</p>}
-            <p
-              className={`text-xs ml-auto ${
-                isDarkMode ? "text-[#6b7280]" : "text-gray-500"
-              }`}
-            >
-              {review.length}/2000
-            </p>
+            <p className={`text-xs ml-auto ${isDarkMode ? "text-[#6b7280]" : "text-gray-500"}`}>{review.length}/2000</p>
           </div>
         </div>
 
@@ -190,10 +156,8 @@ export function ReviewForm({ onSubmit, onCancel, isSubmitting = false }: ReviewF
           <Button
             onClick={handleSubmit}
             disabled={!isFormValid || isSubmitting}
-            className={`flex-1 ${
-              isDarkMode
-                ? "bg-[#4a7cf6] hover:bg-[#3b6ce6] text-white"
-                : "bg-[#2c3968] hover:bg-[#1e2a4a] text-white"
+            className={`flex-1 cursor-pointer ${
+              isDarkMode ? "bg-[#4a7cf6] hover:bg-[#3b6ce6] text-white" : "bg-[#2c3968] hover:bg-[#1e2a4a] text-white"
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {isSubmitting ? (
@@ -209,7 +173,7 @@ export function ReviewForm({ onSubmit, onCancel, isSubmitting = false }: ReviewF
             onClick={handleCancel}
             variant="outline"
             disabled={isSubmitting}
-            className={`${
+            className={`cursor-pointer ${
               isDarkMode
                 ? "border-[#2d3748] text-[#e0e4eb] hover:bg-[#2d3748]"
                 : "border-gray-300 text-[#2c3968] hover:bg-gray-100"

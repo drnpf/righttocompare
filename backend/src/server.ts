@@ -1,8 +1,14 @@
 import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import hpp from "hpp";
+import { noSqlSanitizer } from "./middleware/security";
 
-// Importing routes
+// Configurations and Routes
+import { connectDB } from "./config/db";
+import "./config/firebase";
 import userRoutes from "./routes/userRoutes";
 import phoneRoutes from "./routes/phoneRoutes";
 import reviewRoutes from "./routes/reviewRoutes";
@@ -10,26 +16,25 @@ import discussionRoutes from "./routes/discussionRoutes";
 import scraperRoutes from "./routes/scraperRoutes";
 import chatbotRoutes from "./routes/chatbotRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
+import trendsRoutes from "./routes/trendsRoutes";
 
-// Loading environment variables
-dotenv.config(); // THIS IS FOR DEVELOPMENT maybe we can use system environment variables on production
+dotenv.config();
 
-// Configuration imports
-import { connectDB } from "./config/db";
-import "./config/firebase";
-
-// Initializing Express App (BACKEND SERVER)
 const app: Application = express();
 const PORT = process.env.PORT || 5001;
 
-// App settings
-app.set("trust proxy", true); // Gets client's real IP from x-forwarded-for header rather than IP of load balancer/server
+// ------------------------------------------------------------
+// | NETWORK AND PROXY SETTINGS
+// -----------------------------------------------------------
+app.set("trust proxy", 1); // Gets client's real IP from x-forwarded-for header rather than IP of load balancer/server
 
-/**
- * Middleware Configurations (Express)
- * CORS: Allows requests to come in from Frontend (or different servers)
- * JSON: Allows Express to read JSON from HTTP requests
- */
+// ------------------------------------------------------------
+// | TRANSPORT AND HEADER SECURITY
+// -----------------------------------------------------------
+// HTML header information minimization
+app.use(helmet());
+
+// CORS setup
 app.use(
   cors({
     // Allows request from the following server URLs
@@ -39,16 +44,35 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
-app.use(express.json());
 
-/**
- * Database Connection (MongoDB)
- */
+// ------------------------------------------------------------
+// | TRAFFIC AND DOS PROTECTION
+// -----------------------------------------------------------
+// Rate limiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests. Please try again later.",
+  standardHeaders: true,
+  legacyHeaders: true,
+});
+app.use("/api", limiter);
+
+// ------------------------------------------------------------
+// | DATA PARSING AND SANITIZATION
+// -----------------------------------------------------------
+// JSON parser
+app.use(express.json({ limit: "10kb" })); // Guard against large payload DoS
+
+// Data sanitization
+app.use(noSqlSanitizer); // NoSQL query sanitization against injection attacks
+app.use(hpp()); // HTTP sanitization against input manipulation attacks
+
+// ------------------------------------------------------------
+// | DATABASE AND API ROUTES
+// -----------------------------------------------------------
 connectDB();
 
-/**
- * API Routes
- */
 app.use("/api/users", userRoutes);
 app.use("/api/phones", phoneRoutes);
 app.use("/api/phones", reviewRoutes); // Review routes nested under phones
@@ -56,8 +80,11 @@ app.use("/api/discussions", discussionRoutes); // Discussion thread routes
 app.use("/api/scraper", scraperRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/trends", trendsRoutes);
 
-// Health Check Route
+// ------------------------------------------------------------
+// | HEALTH CHECK AND ERROR HANDLING
+// -----------------------------------------------------------
 app.get("/", (req: Request, res: Response) => {
   res.send("API is running.");
 });

@@ -1,20 +1,30 @@
 import { useState, useEffect } from "react";
-import { Lock, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { toast } from "sonner@2.0.3";
 import { useAuth } from "../context/AuthContext";
+import { Lock, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 interface PasswordResetPageProps {
   onNavigateToSignIn: () => void;
 }
 
+// --- CONFIGURATIONS ---
+const SUCCESSFUL_PASSWORD_RESET_REDIRECT_MS = 3000;
+const PASSWORD_MIN = 8;
+const PASSWORD_MAX = 128;
+
 export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetPageProps) {
   // Functions from AuthContext
   const { confirmThePassword, verifyTheResetCode } = useAuth();
+  const [searchParams] = useSearchParams();
+
   const [oobCode, setOobCode] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -23,8 +33,7 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
 
   // Extract oobCode from URL on component mount
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get("oobCode");
+    const code = searchParams.get("oobCode");
 
     if (!code) {
       setError("Invalid or missing reset code. Please request a new password reset link.");
@@ -34,7 +43,7 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
 
     setOobCode(code);
     verifyResetCode(code);
-  }, []);
+  }, [searchParams]);
 
   const verifyResetCode = async (code: string) => {
     try {
@@ -58,22 +67,15 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
     }
   };
 
-  // COME BACK - need to add more robust password policy
-  const validatePassword = (password: string) => {
-    if (password.length < 6) {
-      return "Password must be at least 6 characters long";
-    }
-    return "";
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    // Validate password
-    const passwordError = validatePassword(newPassword);
-    if (passwordError) {
-      setError(passwordError);
+    // Password policy regex (at least 1 lowercase, 1 uppercase, 1 special char, 8<=password_length<=128 characters long maintains NIST password security standards)
+    const passwordPattern = `^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?& ]{${PASSWORD_MIN},${PASSWORD_MAX}}$`;
+    const passwordRegex = new RegExp(passwordPattern);
+    if (!passwordRegex.test(newPassword)) {
+      toast.error("Invalid email or password.");
       return;
     }
 
@@ -93,7 +95,7 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
       // Redirect to sign in after 3 seconds
       setTimeout(() => {
         onNavigateToSignIn();
-      }, 3000);
+      }, SUCCESSFUL_PASSWORD_RESET_REDIRECT_MS);
     } catch (err: any) {
       console.error("Error resetting password:", err);
       if (err.code === "auth/weak-password") {
@@ -130,7 +132,10 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
             Your password has been successfully reset. You can now sign in with your new password.
           </p>
           <p className="text-[#999] dark:text-[#707070] text-sm">Redirecting to sign in page in 3 seconds...</p>
-          <button onClick={onNavigateToSignIn} className="mt-4 text-[#2c3968] dark:text-[#4a7cf6] hover:underline">
+          <button
+            onClick={onNavigateToSignIn}
+            className="mt-4 text-[#2c3968] dark:text-[#4a7cf6] hover:underline cursor-pointer"
+          >
             Go to Sign In now
           </button>
         </div>
@@ -149,7 +154,7 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
           <p className="text-[#666] dark:text-[#a0a8b8] mb-6">{error}</p>
           <button
             onClick={onNavigateToSignIn}
-            className="w-full py-3 px-6 bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all duration-200"
+            className="w-full py-3 px-6 bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all duration-200 cursor-pointer"
           >
             Back to Sign In
           </button>
@@ -180,8 +185,11 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
               <label className="block text-[#1e1e1e] dark:text-white mb-2">New Password</label>
               <div className="relative">
                 <input
+                  id="new-password"
                   type={showPassword ? "text" : "password"}
                   value={newPassword}
+                  autoComplete="new-password"
+                  maxLength={PASSWORD_MAX}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter new password"
                   className="w-full px-4 py-3 pr-12 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
@@ -191,7 +199,7 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-colors cursor-pointer"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -204,8 +212,11 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
               <label className="block text-[#1e1e1e] dark:text-white mb-2">Confirm New Password</label>
               <div className="relative">
                 <input
+                  id="confirm-password"
                   type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
+                  autoComplete="new-password"
+                  maxLength={PASSWORD_MAX}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm new password"
                   className="w-full px-4 py-3 pr-12 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
@@ -215,7 +226,7 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-colors cursor-pointer"
                 >
                   {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -234,7 +245,7 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3 px-6 bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100 hover:scale-[1.02]"
+              className="w-full py-3 px-6 bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100 hover:scale-[1.02] cursor-pointer"
             >
               {submitting ? (
                 <span className="flex items-center justify-center gap-2">
@@ -253,7 +264,7 @@ export default function PasswordResetPage({ onNavigateToSignIn }: PasswordResetP
               Remember your password?{" "}
               <button
                 onClick={onNavigateToSignIn}
-                className="text-[#2c3968] dark:text-[#4a7cf6] hover:underline font-medium"
+                className="text-[#2c3968] dark:text-[#4a7cf6] hover:underline font-medium cursor-pointer"
               >
                 Sign In
               </button>
