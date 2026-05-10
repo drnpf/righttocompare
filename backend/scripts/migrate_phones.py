@@ -44,7 +44,6 @@ def transform_to_prod(doc):
     prices = doc.get("prices", [])
     price_val = prices[0].get("amount", 0) if prices else 0
 
-    # --- 2. Dynamic Camera Logic ---
     cam_section = raw.get("Main Camera", {})
     main_cam_str = next((v for k, v in cam_section.items() if k in ['Single', 'Dual', 'Triple', 'Quad', 'Five']), "")
     main_mp = parse_numeric(main_cam_str.split("MP")[0]) if "MP" in main_cam_str else 0
@@ -52,7 +51,6 @@ def transform_to_prod(doc):
     selfie_section = raw.get("Selfie camera", {})
     selfie_str = next((v for k, v in selfie_section.items() if k in ['Single', 'Dual']), "")
 
-    # --- 3. Sensor & Battery Logic ---
     feat_raw = raw.get("Features", {})
     sensors_str = feat_raw.get("Sensors", "").lower()
     charge_str = raw.get("Battery", {}).get("Charging", "").lower()
@@ -61,7 +59,6 @@ def transform_to_prod(doc):
         "id": doc.get("sourceId", "unknown"),
         "name": ext.get("modelName"),
         "manufacturer": ext.get("brand"),
-        # Standardize date format for Mongoose
         "releaseDate": datetime.fromisoformat(ext.get("announcedParsed").replace('Z', '')),
         "price": price_val,
         "images": { 
