@@ -171,26 +171,23 @@ export default function AdminDashboardPage() {
       const seconds = totalSeconds % 60;
       const duration = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 
-      const phonesFound =
-        typeof data.totalInserted === "number" ? data.totalInserted : 0;
+      const phonesFound = typeof data.totalInserted === "number" ? data.totalInserted : 0;
 
       setScrapingJobs((prev) =>
         prev.map((job) =>
           job.id === newJob.id
             ? {
-              ...job,
-              status: "completed",
-              phonesFound,
-              duration,
-              output: data.output || "",
-            }
+                ...job,
+                status: "completed",
+                phonesFound,
+                duration,
+                output: data.output || "",
+              }
             : job,
         ),
       );
 
-      toast.success(
-        `Scraping completed! Inserted ${phonesFound} phone${phonesFound === 1 ? "" : "s"}.`,
-      );
+      toast.success(`Scraping completed! Inserted ${phonesFound} phone${phonesFound === 1 ? "" : "s"}.`);
     } catch (error: any) {
       const elapsedMs = Date.now() - startedAt;
       const totalSeconds = Math.max(1, Math.round(elapsedMs / 1000));
@@ -202,11 +199,11 @@ export default function AdminDashboardPage() {
         prev.map((job) =>
           job.id === newJob.id
             ? {
-              ...job,
-              status: "failed",
-              duration,
-              error: error.message || "Scraper failed",
-            }
+                ...job,
+                status: "failed",
+                duration,
+                error: error.message || "Scraper failed",
+              }
             : job,
         ),
       );
@@ -273,10 +270,11 @@ export default function AdminDashboardPage() {
       <nav className="p-4">
         <button
           onClick={() => setCurrentView("dashboard")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${currentView === "dashboard"
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 cursor-pointer ${
+            currentView === "dashboard"
               ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white shadow-md"
               : "text-[#666] dark:text-[#a0a8b8] hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
-            }`}
+          }`}
         >
           <LayoutDashboard size={20} />
           <span>Dashboard</span>
@@ -284,10 +282,11 @@ export default function AdminDashboardPage() {
 
         <button
           onClick={() => setCurrentView("manual")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${currentView === "manual"
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 cursor-pointer ${
+            currentView === "manual"
               ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white shadow-md"
               : "text-[#666] dark:text-[#a0a8b8] hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
-            }`}
+          }`}
         >
           <FileEdit size={20} />
           <span>Manual Specs</span>
@@ -295,10 +294,11 @@ export default function AdminDashboardPage() {
 
         <button
           onClick={() => setCurrentView("scraping")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${currentView === "scraping"
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 cursor-pointer ${
+            currentView === "scraping"
               ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white shadow-md"
               : "text-[#666] dark:text-[#a0a8b8] hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
-            }`}
+          }`}
         >
           <Globe size={20} />
           <span>Web Scraping</span>
@@ -306,10 +306,11 @@ export default function AdminDashboardPage() {
 
         <button
           onClick={() => setCurrentView("priceTracking")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${currentView === "priceTracking"
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2  cursor-pointer ${
+            currentView === "priceTracking"
               ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white shadow-md"
               : "text-[#666] dark:text-[#a0a8b8] hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
-            }`}
+          }`}
         >
           <DollarSign size={20} />
           <span>Price Tracking</span>
@@ -317,10 +318,11 @@ export default function AdminDashboardPage() {
 
         <button
           onClick={() => setCurrentView("chatbot")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${currentView === "chatbot"
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all cursor-pointer ${
+            currentView === "chatbot"
               ? "bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white shadow-md"
               : "text-[#666] dark:text-[#a0a8b8] hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
-            }`}
+          }`}
         >
           <MessageSquare size={20} />
           <span>Chatbot Logs</span>
@@ -388,12 +390,13 @@ export default function AdminDashboardPage() {
             >
               <div className="flex items-center gap-4">
                 <div
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center ${job.status === "completed"
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    job.status === "completed"
                       ? "bg-green-100 dark:bg-green-900/30"
                       : job.status === "running"
                         ? "bg-blue-100 dark:bg-blue-900/30"
                         : "bg-red-100 dark:bg-red-900/30"
-                    }`}
+                  }`}
                 >
                   {job.status === "completed" ? (
                     <CheckCircle className="text-green-600 dark:text-green-400" size={20} />
@@ -417,9 +420,7 @@ export default function AdminDashboardPage() {
               </div>
             </div>
           ))}
-          {scrapingJobs.length === 0 && (
-            <p className="text-[#999] dark:text-[#6b7280]">No scraping jobs yet.</p>
-          )}
+          {scrapingJobs.length === 0 && <p className="text-[#999] dark:text-[#6b7280]">No scraping jobs yet.</p>}
         </div>
       </div>
     </div>
@@ -693,14 +694,14 @@ export default function AdminDashboardPage() {
           <div className="flex gap-4 pt-4 border-t border-[#e5e5e5] dark:border-[#2d3548]">
             <button
               onClick={handleSaveSpecs}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all"
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all cursor-pointer"
             >
               <Save size={20} />
               Save Specifications
             </button>
             <button
               onClick={() => setFormData(emptyForm)}
-              className="flex items-center gap-2 px-6 py-3 border border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] rounded-lg hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] transition-all"
+              className="flex items-center gap-2 px-6 py-3 border border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] rounded-lg hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] transition-all cursor-pointer"
             >
               <Trash2 size={20} />
               Clear Form
@@ -773,14 +774,14 @@ export default function AdminDashboardPage() {
 
         <div className="mt-6 p-4 bg-[#f7f7f7] dark:bg-[#1a1f2e] rounded-lg">
           <p className="text-[#666] dark:text-[#a0a8b8] mb-2">
-            <strong className="text-[#1e1e1e] dark:text-white">Note:</strong> This runs your backend GSMArena scraper and upserts results into MongoDB staging.
+            <strong className="text-[#1e1e1e] dark:text-white">Note:</strong> This runs your backend GSMArena scraper
+            and upserts results into MongoDB staging.
           </p>
           <p className="text-[#999] dark:text-[#6b7280]">
             • Current destination: <code>test.scrape_output</code>
             <br />
             • Recommended use: scrape newest phones by brand
-            <br />
-            • Current parameters sent: brand, limit, maxPages=3, poolMult=5
+            <br />• Current parameters sent: brand, limit, maxPages=3, poolMult=5
           </p>
         </div>
       </div>
@@ -803,12 +804,13 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div
-                      className={`w-12 h-12 rounded-lg flex items-center justify-center ${job.status === "completed"
+                      className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                        job.status === "completed"
                           ? "bg-green-100 dark:bg-green-900/30"
                           : job.status === "running"
                             ? "bg-blue-100 dark:bg-blue-900/30"
                             : "bg-red-100 dark:bg-red-900/30"
-                        }`}
+                      }`}
                     >
                       {job.status === "completed" ? (
                         <CheckCircle className="text-green-600 dark:text-green-400" size={24} />
@@ -836,18 +838,15 @@ export default function AdminDashboardPage() {
 
                   <div className="text-right">
                     <p
-                      className={`mb-1 ${job.status === "completed"
+                      className={`mb-1 ${
+                        job.status === "completed"
                           ? "text-green-600 dark:text-green-400"
                           : job.status === "running"
                             ? "text-blue-600 dark:text-blue-400"
                             : "text-red-600 dark:text-red-400"
-                        }`}
+                      }`}
                     >
-                      {job.status === "completed"
-                        ? "✓ Completed"
-                        : job.status === "running"
-                          ? "⟳ Running"
-                          : "✗ Failed"}
+                      {job.status === "completed" ? "✓ Completed" : job.status === "running" ? "⟳ Running" : "✗ Failed"}
                     </p>
                     <p className="text-[#1e1e1e] dark:text-white">
                       {job.phonesFound} {job.phonesFound === 1 ? "phone" : "phones"} found
@@ -944,10 +943,8 @@ export default function AdminDashboardPage() {
           </p>
           <p className="text-[#999] dark:text-[#6b7280]">
             • Endpoint used: <code>POST /api/phones/:id/price-history</code>
-            <br />
-            • Source recorded: <code>admin-manual</code>
-            <br />
-            • Best for simulating price drops without rerunning the scraper
+            <br />• Source recorded: <code>admin-manual</code>
+            <br />• Best for simulating price drops without rerunning the scraper
           </p>
         </div>
       </div>
