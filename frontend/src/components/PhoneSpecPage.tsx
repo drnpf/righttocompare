@@ -1600,7 +1600,26 @@ export default function PhoneSpecPage({
           </div>
         </Collapsible>
 
-        {/* 6. Reviews Section */}
+        {/* 6. Performance Benchmarks */}
+        <Collapsible open={true}>
+          <div id="benchmarks" className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-8 mb-8 mt-8">
+            <div className="mb-6">
+              <div className="flex items-center gap-3">
+                <div>
+                  <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-2">Performance Benchmarks</h2>
+                  <div className="h-1 w-20 bg-[#2c3968] dark:bg-[#4a7cf6] rounded-full"></div>
+                </div>
+              </div>
+            </div>
+            <BenchmarkDisplay
+              benchmarks={phoneData.categories?.benchmarks || {}}
+              phoneName={phoneData.name}
+            />
+          </div>
+        </Collapsible>
+
+
+        {/* 7. Reviews Section */}
         <Collapsible open={isReviewsOpen} onOpenChange={setIsReviewsOpen}>
           <div id="reviews" ref={reviewsSectionRef} className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-8 mb-8 mt-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">

@@ -196,7 +196,7 @@ const [isSaving, setIsSaving] = useState(false);
       fetchPhones();
     }
   }, [currentView]);
-  
+
   const handleInputChange = (field: keyof PhoneSpecForm, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -208,8 +208,7 @@ const [isSaving, setIsSaving] = useState(false);
       return;
     }
 
-<<<<<<< HEAD
-    if (!currentUser?.firebaseUser) {
+if (!currentUser?.firebaseUser) {
       toast.error("You must be signed in to save specifications");
       return;
     }
@@ -218,7 +217,6 @@ const [isSaving, setIsSaving] = useState(false);
       setIsSaving(true);
       const token = await currentUser.firebaseUser.getIdToken();
 
-      // Slug ID from brand + name
       const slug = `${formData.brand}-${formData.name}`
         .trim().toLowerCase()
         .replace(/['"]/g, "")
@@ -226,7 +224,6 @@ const [isSaving, setIsSaving] = useState(false);
         .replace(/^-+|-+$/g, "")
         .slice(0, 64);
 
-      // Convert the form's string values into the Phone schema format
       const phoneData = {
         id: editingPhoneId || slug,
         name: formData.name,
@@ -300,14 +297,12 @@ const [isSaving, setIsSaving] = useState(false);
 
       let res;
       if (editingPhoneId) {
-        // UPDATE existing phone
         res = await fetch(`${API_BASE}/api/phones/${editingPhoneId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify(phoneData),
         });
       } else {
-        // CREATE new phone
         res = await fetch(`${API_BASE}/api/phones`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -326,16 +321,15 @@ const [isSaving, setIsSaving] = useState(false);
       );
       setFormData(emptyForm);
       setEditingPhoneId(null);
-      await fetchPhones(); // Refresh the list
+      await fetchPhones();
     } catch (error: any) {
       toast.error(error.message || "Failed to save specifications");
     } finally {
       setIsSaving(false);
     }
   };
-  
- // Edit phone 
- const handleEditPhone = (phone: any) => {
+
+  const handleEditPhone = (phone: any) => {
     setEditingPhoneId(phone.id);
     setFormData({
       name: phone.name || "", brand: phone.brand || "", image: phone.images?.main || "", releaseDate: phone.releaseDate || "",
@@ -385,31 +379,24 @@ const [isSaving, setIsSaving] = useState(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Delete a phone 
   const handleDeletePhone = async (phoneId: string, phoneName: string) => {
     if (!confirm(`Are you sure you want to delete "${phoneName}"?`)) return;
-
     if (!currentUser?.firebaseUser) {
       toast.error("You must be signed in to delete specifications");
       return;
     }
-
     try {
       const token = await currentUser.firebaseUser.getIdToken();
       const res = await fetch(`${API_BASE}/api/phones/${phoneId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || "Failed to delete phone");
       }
-
       toast.success(`${phoneName} deleted`);
-      await fetchPhones(); // Refresh the list
-
-      // Clear form if we were editing the deleted phone
+      await fetchPhones();
       if (editingPhoneId === phoneId) {
         setFormData(emptyForm);
         setEditingPhoneId(null);
@@ -418,27 +405,31 @@ const [isSaving, setIsSaving] = useState(false);
       toast.error(error.message || "Failed to delete phone");
     }
   };
-  
-  const handleStartScraping = () => {
-=======
-    toast.success(`Specifications for ${formData.name} saved successfully!`);
-    setFormData(emptyForm);
-  };
+
+  // Filter phones by search query
+  const filteredPhones = phones.filter((p) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return [p.id, p.name, p.brand].some((v: string) => (v || "").toLowerCase().includes(q));
+  });
+
+  // Pagination
+  const totalAdminPages = Math.ceil(filteredPhones.length / phonesPerPage);
+  const paginatedPhones = filteredPhones.slice(
+    (adminPage - 1) * phonesPerPage,
+    adminPage * phonesPerPage
+  );
 
   const handleStartScraping = async () => {
     const cleanedBrand = scrapeBrand.trim().toLowerCase();
-
     if (!cleanedBrand) {
       toast.error("Please enter a brand to scrape");
       return;
     }
-
     if (!Number.isFinite(scrapeLimit) || scrapeLimit < 1) {
       toast.error("Please enter a valid limit");
       return;
     }
-
->>>>>>> ebc15a83260471fdf2574ad785c26f5d027c83a9
     setIsScrapingRunning(true);
     toast.info(`Starting GSMArena scrape for ${cleanedBrand}...`);
 
@@ -579,13 +570,6 @@ const [isSaving, setIsSaving] = useState(false);
       setIsSubmittingPrice(false);
     }
   };
-
-  // Filter phones by search query 
-  const filteredPhones = phones.filter((p) => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return true;
-    return [p.id, p.name, p.brand].some((v: string) => (v || "").toLowerCase().includes(q));
-  });
 
   const renderSidebar = () => (
     <div className="w-64 bg-white dark:bg-[#161b26] border-r border-[#e5e5e5] dark:border-[#2d3548] min-h-screen">
@@ -834,6 +818,27 @@ const [isSaving, setIsSaving] = useState(false);
         <p className="text-[#999] text-sm mt-3">
           Showing {paginatedPhones.length} of {filteredPhones.length} phone{filteredPhones.length !== 1 ? "s" : ""}
         </p>
+         {totalAdminPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <button
+              onClick={() => setAdminPage((p) => Math.max(1, p - 1))}
+              disabled={adminPage === 1}
+              className="px-3 py-1.5 rounded-lg border border-[#d9d9d9] text-[#666] hover:bg-[#f7f7f7] transition-all disabled:opacity-30 text-sm"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-[#666]">
+              Page {adminPage} of {totalAdminPages}
+            </span>
+            <button
+              onClick={() => setAdminPage((p) => Math.min(totalAdminPages, p + 1))}
+              disabled={adminPage === totalAdminPages}
+              className="px-3 py-1.5 rounded-lg border border-[#d9d9d9] text-[#666] hover:bg-[#f7f7f7] transition-all disabled:opacity-30 text-sm"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
   
       {editingPhoneId && (
@@ -984,7 +989,6 @@ const [isSaving, setIsSaving] = useState(false);
                 />
               </div>
               <div>
-<<<<<<< HEAD
                 <label className="block mb-2 text-[#1e1e1e]">CPU</label>
                 <input 
                 type="text" 
@@ -1013,10 +1017,7 @@ const [isSaving, setIsSaving] = useState(false);
                     />
                     </div>
                     <div>
-                <label className="block mb-2 text-[#1e1e1e]">RAM</label>
-=======
                 <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">RAM</label>
->>>>>>> ebc15a83260471fdf2574ad785c26f5d027c83a9
                 <input
                   type="text"
                   value={formData.ram}
@@ -1098,7 +1099,6 @@ const [isSaving, setIsSaving] = useState(false);
                 />
               </div>
               <div>
-<<<<<<< HEAD
                 <label className="block mb-2 text-[#1e1e1e]">Ultrawide Camera (MP)</label>
                 <input 
                 type="text" 
@@ -1117,10 +1117,7 @@ const [isSaving, setIsSaving] = useState(false);
                   />
                   </div>
                   <div>
-                <label className="block mb-2 text-[#1e1e1e]">Video Recording</label>
-=======
                 <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Video Recording</label>
->>>>>>> ebc15a83260471fdf2574ad785c26f5d027c83a9
                 <input
                   type="text"
                   value={formData.videoRecording}
@@ -1156,7 +1153,6 @@ const [isSaving, setIsSaving] = useState(false);
                 />
               </div>
               <div>
-<<<<<<< HEAD
                 <label className="block mb-2 text-[#1e1e1e]">Battery Type</label>
                 <input type="text" 
                 value={formData.batteryType} 
@@ -1166,10 +1162,7 @@ const [isSaving, setIsSaving] = useState(false);
                 />
                 </div>
                 <div>
-                <label className="block mb-2 text-[#1e1e1e]">Wireless Charging</label>
-=======
                 <label className="block mb-2 text-[#1e1e1e] dark:text-[#d1d5db]">Wireless Charging</label>
->>>>>>> ebc15a83260471fdf2574ad785c26f5d027c83a9
                 <input
                   type="text"
                   value={formData.wirelessCharging}
@@ -1227,73 +1220,50 @@ const [isSaving, setIsSaving] = useState(false);
             </div>
           </div>
 
-<<<<<<< HEAD
-          {/* Connectivity */}
+{/* Connectivity */}
           <div>
             <h3 className="text-[#2c3968] mb-4">Connectivity</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block mb-2 text-[#1e1e1e]">5G Support</label>
-                <select 
-                value={formData.has5G} 
-                onChange={(e) => handleInputChange("has5G", e.target.value)} 
-                className={inputClass}>
+                <select value={formData.has5G} onChange={(e) => handleInputChange("has5G", e.target.value)} className={inputClass}>
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
-                  </select>
-                  </div>
+                </select>
+              </div>
               <div>
                 <label className="block mb-2 text-[#1e1e1e]">Bluetooth Version</label>
-                <input 
-                type="text" 
-                value={formData.bluetoothVersion} 
-                onChange={(e) => handleInputChange("bluetoothVersion", e.target.value)} 
-                placeholder="e.g., 5.3" 
-                className={inputClass} /></div>
+                <input type="text" value={formData.bluetoothVersion} onChange={(e) => handleInputChange("bluetoothVersion", e.target.value)} placeholder="e.g., 5.3" className={inputClass} />
+              </div>
               <div>
                 <label className="block mb-2 text-[#1e1e1e]">NFC</label>
-                <select 
-                value={formData.hasNfc} 
-                onChange={(e) => handleInputChange("hasNfc", e.target.value)} 
-                className={inputClass}>
+                <select value={formData.hasNfc} onChange={(e) => handleInputChange("hasNfc", e.target.value)} className={inputClass}>
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
-                  </select>
-                  </div>
+                </select>
+              </div>
               <div>
                 <label className="block mb-2 text-[#1e1e1e]">Headphone Jack</label>
-                <select value={formData.headphoneJack} 
-                onChange={(e) => handleInputChange("headphoneJack", e.target.value)} 
-                className={inputClass}>
+                <select value={formData.headphoneJack} onChange={(e) => handleInputChange("headphoneJack", e.target.value)} className={inputClass}>
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
-                  </select>
-                  </div>
+                </select>
+              </div>
             </div>
           </div>
 
-           {/* Audio */}
+          {/* Audio */}
           <div>
             <h3 className="text-[#2c3968] mb-4">Audio</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block mb-2 text-[#1e1e1e]">Speakers</label>
-                <input 
-                type="text" 
-                value={formData.speakers} 
-                onChange={(e) => handleInputChange("speakers", e.target.value)} 
-                placeholder="e.g., Stereo speakers tuned by AKG" 
-                className={inputClass} 
-                />
-                </div>
+                <input type="text" value={formData.speakers} onChange={(e) => handleInputChange("speakers", e.target.value)} placeholder="e.g., Stereo speakers tuned by AKG" className={inputClass} />
+              </div>
               <div>
                 <label className="block mb-2 text-[#1e1e1e]">Audio Features</label>
-                <input type="text" value={formData.audioFeatures} 
-                onChange={(e) => handleInputChange("audioFeatures", e.target.value)} 
-                placeholder="e.g., Dolby Atmos, 32-bit/384kHz" 
-                className={inputClass} 
-                />
-                </div>
+                <input type="text" value={formData.audioFeatures} onChange={(e) => handleInputChange("audioFeatures", e.target.value)} placeholder="e.g., Dolby Atmos, 32-bit/384kHz" className={inputClass} />
+              </div>
             </div>
           </div>
 
@@ -1303,96 +1273,66 @@ const [isSaving, setIsSaving] = useState(false);
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block mb-2 text-[#1e1e1e]">Fingerprint</label>
-                <input 
-                type="text" 
-                value={formData.fingerprint} 
-                onChange={(e) => handleInputChange("fingerprint", e.target.value)} 
-                placeholder="e.g., Ultrasonic under-display" 
-                className={inputClass} 
-                />
-                </div>
+                <input type="text" value={formData.fingerprint} onChange={(e) => handleInputChange("fingerprint", e.target.value)} placeholder="e.g., Ultrasonic under-display" className={inputClass} />
+              </div>
               <div>
                 <label className="block mb-2 text-[#1e1e1e]">Face Recognition</label>
-                <select value={formData.faceRecognition} 
-                onChange={(e) => handleInputChange("faceRecognition", e.target.value)} 
-                className={inputClass}>
+                <select value={formData.faceRecognition} onChange={(e) => handleInputChange("faceRecognition", e.target.value)} className={inputClass}>
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
-                  </select>
-                  </div>
+                </select>
+              </div>
               <div>
                 <label className="block mb-2 text-[#1e1e1e]">Accelerometer</label>
-                <select value={formData.accelerometer} 
-                onChange={(e) => handleInputChange("accelerometer", e.target.value)} 
-                className={inputClass}>
+                <select value={formData.accelerometer} onChange={(e) => handleInputChange("accelerometer", e.target.value)} className={inputClass}>
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
-                  </select>
-                  </div>
+                </select>
+              </div>
               <div>
                 <label className="block mb-2 text-[#1e1e1e]">Gyroscope</label>
-                <select value={formData.gyroscope} 
-                onChange={(e) => handleInputChange("gyroscope", e.target.value)} 
-                className={inputClass}>
+                <select value={formData.gyroscope} onChange={(e) => handleInputChange("gyroscope", e.target.value)} className={inputClass}>
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
-                  </select>
-                  </div>
+                </select>
+              </div>
               <div>
                 <label className="block mb-2 text-[#1e1e1e]">Proximity</label>
-                <select value={formData.proximity} onChange={(e) => handleInputChange("proximity", e.target.value)} 
-                className={inputClass}>
+                <select value={formData.proximity} onChange={(e) => handleInputChange("proximity", e.target.value)} className={inputClass}>
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
-                  </select>
-                  </div>
+                </select>
+              </div>
               <div>
                 <label className="block mb-2 text-[#1e1e1e]">Compass</label>
-                <select
-                 value={formData.compass} 
-                 onChange={(e) => handleInputChange("compass", e.target.value)} 
-                 className={inputClass}>
+                <select value={formData.compass} onChange={(e) => handleInputChange("compass", e.target.value)} className={inputClass}>
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
-                  </select>
-                  </div>
+                </select>
+              </div>
               <div>
                 <label className="block mb-2 text-[#1e1e1e]">Barometer</label>
-                <select 
-                value={formData.barometer} 
-                onChange={(e) => handleInputChange("barometer", e.target.value)} 
-                className={inputClass}>
+                <select value={formData.barometer} onChange={(e) => handleInputChange("barometer", e.target.value)} className={inputClass}>
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
-                  </select>
-                  </div>
+                </select>
+              </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-4 pt-4 border-t border-[#e5e5e5]">
-            <button
-              onClick={handleSaveSpecs}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50"
-=======
           <div className="flex gap-4 pt-4 border-t border-[#e5e5e5] dark:border-[#2d3548]">
             <button
               onClick={handleSaveSpecs}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all"
->>>>>>> ebc15a83260471fdf2574ad785c26f5d027c83a9
+              disabled={isSaving}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50"
             >
               <Save size={20} />
               {isSaving ? "Saving..." : editingPhoneId ? "Update Specifications" : "Save Specifications"}
             </button>
             <button
-<<<<<<< HEAD
-              onClick={() => { setFormData(emptyForm); setEditingPhoneId(null); }}
-              className="flex items-center gap-2 px-6 py-3 border border-[#d9d9d9] text-[#666] rounded-lg hover:bg-[#f7f7f7] transition-all"
-=======
-              onClick={() => setFormData(emptyForm)}
-              className="flex items-center gap-2 px-6 py-3 border border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] rounded-lg hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] transition-all"
->>>>>>> ebc15a83260471fdf2574ad785c26f5d027c83a9
+            onClick={() => { setFormData(emptyForm); setEditingPhoneId(null); }}
+            className="flex items-center gap-2 px-6 py-3 border border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] rounded-lg hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] transition-all"
             >
               <Trash2 size={20} />
               Clear Form
