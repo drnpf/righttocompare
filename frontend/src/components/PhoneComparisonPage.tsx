@@ -210,6 +210,7 @@ export default function PhoneComparisonPage({
       try {
         const data = await getPhonePage(1, SEARCH_RESULT_LIMIT, { search: searchQuery });
         setSearchList(data.phones);
+        window.scrollTo(0, 0);
       } catch (error) {
         console.log("Search fetch failed", error);
       } finally {
@@ -279,14 +280,21 @@ export default function PhoneComparisonPage({
     return Array.from(categoriesSet);
   }, [phones]);
 
-  // Handle scroll for sticky header
   useEffect(() => {
     const handleScroll = () => {
-      setStickyHeader(window.scrollY > 300);
+      // 1. Only run logic if loading is done
+      if (isLoading) return;
+
+      const shouldSticky = window.scrollY > 300;
+
+      // 2. Only update state if it's actually changing (prevents unnecessary re-renders)
+      setStickyHeader((prev) => (prev !== shouldSticky ? shouldSticky : prev));
     };
-    window.addEventListener("scroll", handleScroll);
+
+    // 3. Add passive: true for better scroll performance
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [isLoading]); // Add isLoading to dependencies
 
   // Calculate the minimum number of slots to show
   const minSlots = 3;
@@ -461,9 +469,10 @@ export default function PhoneComparisonPage({
     <div className="max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-3 sm:px-6 py-4 sm:py-8">
       {/* Sticky Header */}
       <div
-        className={`fixed top-[80px] left-0 right-0 bg-white/95 dark:bg-[#161b26]/95 backdrop-blur-md border-b border-border shadow-lg z-50 transition-all duration-300 ${
-          stickyHeader ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
-        }`}
+        className={`fixed top-[80px] left-0 right-0 bg-white/95 dark:bg-[#161b26]/95 backdrop-blur-md border-b border-border shadow-lg z-50
+          ${isLoading ? "" : "transition-all duration-300"} 
+          ${stickyHeader ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0 pointer-events-none"}
+          `}
       >
         <div className="max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-6">
           <div className="flex items-center gap-4 py-4">
