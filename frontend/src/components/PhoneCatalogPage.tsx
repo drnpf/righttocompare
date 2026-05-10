@@ -57,7 +57,9 @@ export default function PhoneCatalogPage({
 
   // --- Filter States ---
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"name" | "price" | "release">("name");
+  const [sortBy, setSortBy] = useState<"name" | "name_desc" | "price" | "price_asc" | "release" | "oldest" | "rating">(
+    "name",
+  );
   const [availableManufacturers, setAvailableManufacturers] = useState<string[]>([]);
   const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>([]);
   const [minPrice, setMinPrice] = useState<number>(0);
@@ -131,7 +133,20 @@ export default function PhoneCatalogPage({
         const options = {
           search: searchQuery,
           manufacturer: selectedManufacturers,
-          sortBy: sortBy === "release" ? "newest" : sortBy === "price" ? "price_desc" : "name_asc",
+          sortBy:
+            sortBy === "release"
+              ? "newest"
+              : sortBy === "oldest"
+                ? "oldest"
+                : sortBy === "price"
+                  ? "price_desc"
+                  : sortBy === "price_asc"
+                    ? "price_asc"
+                    : sortBy === "name_desc"
+                      ? "name_desc"
+                      : sortBy === "rating"
+                        ? "rating_desc"
+                        : "name_asc",
           minPrice: minPrice,
           maxPrice: maxPrice,
           ram: selectedRAM,
@@ -408,12 +423,16 @@ export default function PhoneCatalogPage({
               <div className="relative">
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as "name" | "price" | "release")}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                   className="appearance-none pl-4 pr-10 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all cursor-pointer"
                 >
-                  <option value="name">Sort: Name</option>
-                  <option value="price">Sort: Price</option>
-                  <option value="release">Sort: Newest</option>
+                  <option value="name">Name: A → Z</option>
+                  <option value="name_desc">Name: Z → A</option>
+                  <option value="price_asc">Price: Low → High</option>
+                  <option value="price">Price: High → Low</option>
+                  <option value="release">Release: Newest</option>
+                  <option value="oldest">Release: Oldest</option>
+                  <option value="rating">Top Rated</option>
                 </select>
                 <ChevronDown
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] pointer-events-none"
@@ -506,7 +525,7 @@ export default function PhoneCatalogPage({
           )}
         </div>
 
-        {/* 3. YOUR ADVANCED FILTER DRAWER */}
+        {/* ADVANCED FILTER DRAWER */}
         {showFilters && (
           <CatalogFilters
             availableManufacturers={availableManufacturers}
@@ -537,18 +556,18 @@ export default function PhoneCatalogPage({
             // GRID VIEW
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {allPhones.map((phone, index) => (
-                <button
+                <div
                   key={phone.id}
                   onClick={() => onNavigate(phone.id)}
-                  className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-200 text-left group"
+                  className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-200 text-left group cursor-pointer"
                 >
                   {/* Phone Image */}
                   <div className="aspect-square bg-gradient-to-br from-[#f7f7f7] to-[#e5e5e5] dark:from-[#1a1f2e] dark:to-[#252b3d] flex items-center justify-center p-8">
                     <img
                       src={phone.images.main}
                       alt={phone.name}
-                      loading={index < 4 ? "eager" : "lazy"} // Lazy loads the images for phones after first row, or not in view
-                      fetchpriority={index < 4 ? "high" : "low"} // Images on first row have high priority to be downloaded first
+                      loading={index < 4 ? "eager" : "lazy"}
+                      fetchpriority={index < 4 ? "high" : "low"}
                       className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
                     />
                   </div>
@@ -577,7 +596,6 @@ export default function PhoneCatalogPage({
                         </div>
                       ))}
                     </div>
-
                     <div className="mt-4 pt-4 border-t border-[#e5e5e5] dark:border-[#2d3548]">
                       {isPhoneInComparison(phone.id) ? (
                         <div className="flex items-center justify-center gap-2 text-[#10b981] dark:text-[#34d399]">
@@ -587,7 +605,7 @@ export default function PhoneCatalogPage({
                       ) : (
                         <button
                           onClick={(e) => handleAddToComparison(phone.id, e)}
-                          className="w-full py-2 px-3 bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 group/btn hover:scale-105"
+                          className="w-full py-2 px-3 bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 group/btn hover:scale-105 cursor-pointer"
                         >
                           <Plus size={16} className="transition-transform group-hover/btn:rotate-90" />
                           <span className="text-[14px]">Add to Compare</span>
@@ -595,17 +613,17 @@ export default function PhoneCatalogPage({
                       )}
                     </div>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           ) : (
             // LIST VIEW
             <div className="space-y-4">
               {allPhones.map((phone, index) => (
-                <button
+                <div
                   key={phone.id}
                   onClick={() => onNavigate(phone.id)}
-                  className="w-full bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6 hover:shadow-lg hover:scale-[1.01] transition-all duration-200 text-left group"
+                  className="w-full bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6 hover:shadow-lg hover:scale-[1.01] transition-all duration-200 text-left group cursor-pointer"
                 >
                   <div className="flex gap-6 items-center">
                     {/* Phone Image */}
@@ -613,8 +631,6 @@ export default function PhoneCatalogPage({
                       <img
                         src={phone.images.main}
                         alt={phone.name}
-                        loading={index < 4 ? "eager" : "lazy"} // Lazy loads the images for phones after first row, or not in view
-                        fetchpriority={index < 4 ? "high" : "low"} // Images on first row have high priority to be downloaded first
                         className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
                       />
                     </div>
@@ -658,7 +674,7 @@ export default function PhoneCatalogPage({
                       ) : (
                         <button
                           onClick={(e) => handleAddToComparison(phone.id, e)}
-                          className="px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all duration-200 flex items-center gap-2 group/btn hover:scale-105"
+                          className="px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all duration-200 flex items-center gap-2 group/btn hover:scale-105 cursor-pointer"
                         >
                           <Plus size={18} className="transition-transform group-hover/btn:rotate-90" />
                           <span className="whitespace-nowrap">Add to Compare</span>
@@ -666,7 +682,7 @@ export default function PhoneCatalogPage({
                       )}
                     </div>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           )

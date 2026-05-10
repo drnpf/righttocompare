@@ -10,8 +10,8 @@ import { SentimentPill } from "./SentimentPill";
 interface ReviewCardProps {
   review: ReviewData;
   currentUserId?: string;
-  onVote: (reviewId: number, voteType: "helpful" | "notHelpful") => void;
-  onDelete?: (reviewId: number) => void;
+  onVote: (reviewId: string, voteType: "helpful" | "notHelpful") => void;
+  onDelete?: (reviewId: string) => void;
   isVoting?: boolean;
 }
 
@@ -41,7 +41,7 @@ export function ReviewCard({ review, currentUserId, onVote, onDelete, isVoting =
 
   const handleDelete = () => {
     if (window.confirm("Are you sure you want to delete this review?")) {
-      onDelete?.(review.id);
+      onDelete?.(review._id);
     }
   };
 
@@ -100,7 +100,7 @@ export function ReviewCard({ review, currentUserId, onVote, onDelete, isVoting =
       {sortedTags && sortedTags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3 pointer-events-none select-none opacity-90">
           {sortedTags.map((tag, idx) => (
-            <SentimentPill key={`${review.id}-${tag}-${idx}`} tag={tag as any} readOnly={true} />
+            <SentimentPill key={`${review._id}-${tag}-${idx}`} tag={tag as any} readOnly={true} />
           ))}
         </div>
       )}
@@ -142,7 +142,7 @@ export function ReviewCard({ review, currentUserId, onVote, onDelete, isVoting =
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onVote(review.id, "helpful")}
+            onClick={() => onVote(review._id, "helpful")}
             disabled={isVoting || isOwnReview}
             className={`flex items-center gap-1 px-2 py-1 ${
               hasVotedHelpful
@@ -160,7 +160,7 @@ export function ReviewCard({ review, currentUserId, onVote, onDelete, isVoting =
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onVote(review.id, "notHelpful")}
+            onClick={() => onVote(review._id, "notHelpful")}
             disabled={isVoting || isOwnReview}
             className={`flex items-center gap-1 px-2 py-1 ${
               hasVotedNotHelpful

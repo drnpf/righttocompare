@@ -1,11 +1,14 @@
 import mongoose, { Schema, Document } from "mongoose";
-import { ICategoryRatings, IReview } from "./Review";
+import { ICategoryRatings } from "./Review";
 import { ISentimentSummary } from "./Sentiment";
 
-export interface IPhoneSummary {
+export interface IPhoneReference {
   id: string;
   name: string;
   manufacturer: string;
+}
+
+export interface IPhoneSummary extends IPhoneReference {
   price: number;
   images: {
     main: string;
@@ -107,7 +110,6 @@ export interface IPhone extends IPhoneCard, Document {
     compatible: boolean;
     notes?: string;
   }[];
-  reviews: IReview[];
 
   // Review metadata
   totalReviews: number;
@@ -236,29 +238,6 @@ const PhoneSchema: Schema = new Schema<IPhone>(
         name: { type: String, required: true },
         compatible: { type: Boolean, required: true },
         notes: { type: String },
-      },
-    ],
-    reviews: [
-      {
-        id: { type: Number, required: true },
-        userId: { type: String, required: true },
-        userName: { type: String, required: true },
-        rating: { type: Number, required: true, min: 1, max: 5 },
-        categoryRatings: {
-          camera: { type: Number, required: true, min: 1, max: 5 },
-          battery: { type: Number, required: true, min: 1, max: 5 },
-          design: { type: Number, required: true, min: 1, max: 5 },
-          performance: { type: Number, required: true, min: 1, max: 5 },
-          value: { type: Number, required: true, min: 1, max: 5 },
-        },
-        date: { type: Date, required: true },
-        title: { type: String, required: true },
-        review: { type: String, required: true },
-        sentimentTags: { type: [String], default: [] },
-        helpful: { type: Number, default: 0 },
-        notHelpful: { type: Number, default: 0 },
-        helpfulVoters: { type: [String], default: [] },
-        notHelpfulVoters: { type: [String], default: [] },
       },
     ],
   },

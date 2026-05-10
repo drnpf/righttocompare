@@ -78,3 +78,6 @@ Thumbs.db
 # --- BACKEND IGNORES ---
 # Ignores keys
 backend/src/config/keys/*
+__pycache__/
+*.pyc
+backend/phone_recs_bot/.venv/
