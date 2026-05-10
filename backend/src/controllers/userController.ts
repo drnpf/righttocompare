@@ -3,6 +3,14 @@ import { AuthRequest } from "../middleware/authentication";
 import * as UserService from "../services/userService";
 import { sendUserNotificationDigest } from "../services/notificationService";
 
+const getSingleRouteParam = (param: string | string[] | undefined): string | undefined => {
+  if (Array.isArray(param)) {
+    return param[0];
+  }
+
+  return param;
+};
+
 /**
  * Sync Firebase User to MongoDB (for Retrieval or Creation).
  * Checks if user exists in MongoDB based on Firebase UID from token.
@@ -71,7 +79,12 @@ export const syncUser = async (req: AuthRequest, res: Response): Promise<void> =
 export const getUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const tokenUid = req.user?.uid; // Who is logged in (from Token)
-    const uid = req.params.uid; // Who the edit is attempted on (from URL)
+    const uid = getSingleRouteParam(req.params.uid); // Who the edit is attempted on (from URL)
+
+    if (!uid) {
+      res.status(400).json({ message: "Missing user ID" });
+      return;
+    }
 
     // Authorization check of URL uid from request against the token uid
     if (tokenUid !== uid) {
@@ -102,7 +115,12 @@ export const getUser = async (req: AuthRequest, res: Response): Promise<void> =>
 export const updateUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const tokenUid = req.user?.uid; // Who is logged in (from Token)
-    const paramUid = req.params.uid; // Who the edit is attempted on (from URL)
+    const paramUid = getSingleRouteParam(req.params.uid); // Who the edit is attempted on (from URL)
+
+    if (!paramUid) {
+      res.status(400).json({ message: "Missing user ID" });
+      return;
+    }
 
     // Authorization check of URL uid from request against the token uid
     if (tokenUid !== paramUid) {
@@ -132,7 +150,12 @@ export const updateUser = async (req: AuthRequest, res: Response): Promise<void>
 
 export const sendTestNotificationEmail = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const paramUid = req.params.uid;
+    const paramUid = getSingleRouteParam(req.params.uid);
+
+    if (!paramUid) {
+      res.status(400).json({ message: "Missing user ID" });
+      return;
+    }
 
     const user = await UserService.findUserByUid(paramUid);
     if (!user) {
