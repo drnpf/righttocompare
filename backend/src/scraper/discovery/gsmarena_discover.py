@@ -9,6 +9,16 @@ from ..utils.slug import normalize_brand
 GSMARENA_BASE = "https://www.gsmarena.com/"
 MAKERS_URL = urljoin(GSMARENA_BASE, "makers.php3")
 
+COMMON_BRANDS = {
+    "samsung": "https://www.gsmarena.com/samsung-phones-9.php",
+    "apple": "https://www.gsmarena.com/apple-phones-48.php",
+    "google": "https://www.gsmarena.com/google-phones-107.php",
+    "nothing": "https://www.gsmarena.com/nothing-phones-128.php",
+    "oneplus": "https://www.gsmarena.com/oneplus-phones-95.php",
+    "sony": "https://www.gsmarena.com/sony-phones-7.php",
+    "huawei": "https://www.gsmarena.com/huawei-phones-58.php",
+    "xiaomi": "https://www.gsmarena.com/xiaomi-phones-80.php",
+}
 
 def fetch_brand_directory(http: HttpClient) -> Dict[str, str]:
     """
@@ -65,6 +75,9 @@ def discover_phone_urls_for_brand(http: HttpClient, brand_url: str, max_pages: i
     next_url: Optional[str] = brand_url
     pages = 0
 
+    # These keywords indicate the link is NOT a phone
+    DENY_KEYWORDS = ["watch", "tablet", "pad", "tab", "laptop", "macbook"]    
+
     while next_url and pages < max_pages:
         html = http.get_text(next_url)
         soup = BeautifulSoup(html, "lxml")
@@ -75,6 +88,11 @@ def discover_phone_urls_for_brand(http: HttpClient, brand_url: str, max_pages: i
             href = a.get("href", "")
             if not href:
                 continue
+            
+            # Skips if not a phone (saves a request for getting actual page)
+            if any(k in href.lower() for k in DENY_KEYWORDS):
+                continue
+
             if href.endswith(".php") and "-" in href and "phones" not in href and "makers" not in href:
                 abs_url = urljoin(GSMARENA_BASE, href)
                 if abs_url.startswith(GSMARENA_BASE) and abs_url not in urls:
@@ -102,6 +120,13 @@ def discover_candidate_urls(
     Else, scrape all brands (slow).
     """
     directory = fetch_brand_directory(http)
+
+    # Goes directly to brand page using directory to save a request
+    if brand:
+        b_norm = normalize_brand(brand)
+        if b_norm in COMMON_BRANDS:
+            print(f"   [discovery] Using static route for {brand}...")
+            return discover_phone_urls_for_brand(http, COMMON_BRANDS[b_norm], max_pages=max_pages)
 
     if brand:
         b = normalize_brand(brand)

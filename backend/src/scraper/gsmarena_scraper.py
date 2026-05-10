@@ -12,6 +12,7 @@ from .parsers.gsmarena_phone_parser import (
     is_phone_only_device as gsm_is_phone_only,
 )
 from .utils.dates import parse_gsmarena_announced
+from .utils.slug import gsmarena_source_id_from_url
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -64,11 +65,17 @@ def newest_sort_urls(
     scored: List[Tuple[Optional[int], str]] = []
 
     for u in urls:
+        # Checking if URL contains deny keywords before requesting from GSM
+        source_id = gsmarena_source_id_from_url(u)
+        deny_keywords = ["watch", "tablet", "tab", "pad", "ipad", "macbook"]
+        if any(d in source_id.lower() for d in deny_keywords):
+            print(f"   [sorting] Pre-filtered (No Request): {source_id}", flush=True)
+            continue
+
         try:
-            print(f"   [sorting] Checking date for: {u.split('/')[-1]}", flush=True) # DEBUG
             tables = gsm_quick_tables(http, u)
 
-            if not gsm_is_phone_only(tables):
+            if not gsm_is_phone_only(tables, model_name=source_id):
                 continue
 
             launch = tables.get("Launch", {}) or {}
@@ -77,6 +84,7 @@ def newest_sort_urls(
             key = dt.year * 10000 + dt.month * 100 + dt.day if dt else None
 
             scored.append((key, u))
+            print(f"   [sorting] Confirmed phone {len(scored)}/{target_candidates}: {source_id}", flush=True)
 
             if len(scored) >= target_candidates:
                 break
@@ -159,7 +167,7 @@ def main() -> int:
 
     # 2) Sort newest-first from a phone-only pool
     top = newest_sort_urls(http, urls, limit=args.limit, pool_mult=args.pool_mult)
-    print(f"[gsmarena] Discovered {len(urls)} URLs. Candidate top={len(top)}.")
+    print(f"[gsmarena] Discovered {len(urls)} URLs. Candidate top={len(top)}.", flush=True)
 
     # 3) Scrape + insert (phones-only), up to args.limit
     inserted = scrape_and_insert(http, col, top, hard_limit=args.limit)
