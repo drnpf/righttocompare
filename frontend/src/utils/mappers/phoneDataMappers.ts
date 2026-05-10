@@ -48,6 +48,7 @@ export const mapJsonToPhoneCard = (dbPhone: any): PhoneCard => {
       { icon: Camera, label: "Main Cam", value: `${specs.camera.mainMegapixels}MP` },
       { icon: Battery, label: "Battery", value: `${specs.battery.capacitymAh} mAh` },
     ],
+    hotSignals: dbPhone.hotSignals,
   };
 };
 

@@ -1,6 +1,9 @@
 import Phone, { IPhone, IPhoneSummary, IPhoneCard } from "../models/Phone";
 import PriceHistory from "../models/PriceHistory";
 
+const HOT_PRICE_DROP_THRESHOLD_PERCENT = 20;
+const HOT_LOOKBACK_DAYS = 365;
+
 /**
  * Projection for the PhoneSummary view. Only has essential fields for catalog grid and comparison cart
  */
@@ -122,6 +125,147 @@ export const findPhonePage = async (
     Phone.countDocuments(query),
   ]);
   return { phones, total };
+};
+
+export interface IHotPhoneCard extends IPhoneCard {
+  hotSignals: {
+    isNewRelease: boolean;
+    hasPriceDrop: boolean;
+    originalPrice: number | null;
+    latestPrice: number | null;
+    percentDrop: number | null;
+  };
+}
+
+const buildPhoneQuery = (options: {
+  search?: string;
+  manufacturer?: string[];
+  minPrice?: number;
+  maxPrice?: number;
+  ram?: number[];
+  storage?: number[];
+}) => {
+  const query: any = {};
+
+  if (options.search) {
+    query.$or = [
+      { name: { $regex: options.search, $options: "i" } },
+      { manufacturer: { $regex: options.search, $options: "i" } },
+    ];
+  }
+
+  if (options.manufacturer && options.manufacturer.length > 0) {
+    query.manufacturer = { $in: options.manufacturer };
+  }
+
+  if (options.minPrice !== undefined || options.maxPrice !== undefined) {
+    query.price = {};
+    if (options.minPrice !== undefined) query.price.$gte = options.minPrice;
+    if (options.maxPrice !== undefined) query.price.$lte = options.maxPrice;
+  }
+
+  if (options.ram && options.ram.length > 0) {
+    query["specs.performance.ram.options"] = { $in: options.ram };
+  }
+
+  if (options.storage && options.storage.length > 0) {
+    query["specs.performance.storageOptions"] = { $in: options.storage };
+  }
+
+  return query;
+};
+
+export const findHotPhonePage = async (
+  page: number,
+  limit: number,
+  options: {
+    search?: string;
+    manufacturer?: string[];
+    minPrice?: number;
+    maxPrice?: number;
+    ram?: number[];
+    storage?: number[];
+  },
+): Promise<{ phones: IHotPhoneCard[]; total: number }> => {
+  const safePage = Math.max(1, page);
+  const safeLimit = Math.max(1, limit);
+  const skip = (safePage - 1) * safeLimit;
+
+  const query = buildPhoneQuery(options);
+  const phones = (await Phone.find(query).select(PHONE_CARD_PROJECTION).lean()) as IPhoneCard[];
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - HOT_LOOKBACK_DAYS);
+
+  const phoneIds = phones.map((phone) => phone.id);
+  const priceHistoryRows = await PriceHistory.find({ phoneId: { $in: phoneIds } })
+    .sort({ phoneId: 1, recordedAt: 1 })
+    .lean();
+
+  const historyByPhoneId = new Map<string, typeof priceHistoryRows>();
+  for (const row of priceHistoryRows) {
+    const currentRows = historyByPhoneId.get(row.phoneId) || [];
+    currentRows.push(row);
+    historyByPhoneId.set(row.phoneId, currentRows);
+  }
+
+  const hotPhones = phones
+    .map((phone) => {
+      const releaseDate = new Date(phone.releaseDate);
+      const isNewRelease = releaseDate >= cutoff;
+
+      const history = historyByPhoneId.get(phone.id) || [];
+      const oldest = history[0];
+      const latest = history[history.length - 1];
+
+      let originalPrice: number | null = null;
+      let latestPrice: number | null = null;
+      let percentDrop: number | null = null;
+      let hasPriceDrop = false;
+
+      if (
+        oldest &&
+        latest &&
+        Number.isFinite(oldest.amount) &&
+        Number.isFinite(latest.amount) &&
+        oldest.amount > 0
+      ) {
+        originalPrice = oldest.amount;
+        latestPrice = latest.amount;
+        percentDrop = ((oldest.amount - latest.amount) / oldest.amount) * 100;
+        hasPriceDrop = percentDrop >= HOT_PRICE_DROP_THRESHOLD_PERCENT;
+      }
+
+      return {
+        ...phone,
+        hotSignals: {
+          isNewRelease,
+          hasPriceDrop,
+          originalPrice,
+          latestPrice,
+          percentDrop,
+        },
+      };
+    })
+    .filter((phone) => phone.hotSignals.isNewRelease || phone.hotSignals.hasPriceDrop)
+    .sort((a, b) => {
+      if (a.hotSignals.hasPriceDrop !== b.hotSignals.hasPriceDrop) {
+        return a.hotSignals.hasPriceDrop ? -1 : 1;
+      }
+
+      const percentA = a.hotSignals.percentDrop ?? -1;
+      const percentB = b.hotSignals.percentDrop ?? -1;
+      if (percentA !== percentB) {
+        return percentB - percentA;
+      }
+
+      return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
+    });
+
+  return {
+    phones: hotPhones.slice(skip, skip + safeLimit),
+    total: hotPhones.length,
+  };
 };
 
 export interface IPriceHistoryPoint {

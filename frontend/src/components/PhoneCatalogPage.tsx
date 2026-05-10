@@ -9,7 +9,7 @@ import { Search, Grid3x3, List, ChevronDown, Plus, Check, Loader2, ChevronLeft, 
 
 // Custom Components & APIs
 import { PhoneCard, PhoneSummary } from "../types/phoneTypes";
-import { getPhonePage, getManufacturers, getPhoneSummaries } from "../api/phoneApi";
+import { getPhonePage, getHotPhonePage, getManufacturers, getPhoneSummaries } from "../api/phoneApi";
 import ComparisonCart from "./ComparisonCart";
 import RecentlyViewedPhones from "./RecentlyViewedPhones";
 import { CatalogFilters } from "./CatalogFilters";
@@ -117,14 +117,6 @@ export default function PhoneCatalogPage({
 
     const fetchPhones = async () => {
       // --- HOT PAGE AND POPULAR PAGE SHORT CIRCUIT ---
-      if (activeTab !== "catalog") {
-        // Showing no phones on those pages for now until we figure out how we display things there
-        setAllPhones([]);
-        setTotalItems(0);
-        setLoading(false);
-        return;
-      }
-
       try {
         // Setting loading state only after certain duration has passed on backend fetching
         loadingTimer = setTimeout(() => setLoading(true), SEARCH_DELAY_LOADING_MS); // reduces UI flicker
@@ -152,7 +144,22 @@ export default function PhoneCatalogPage({
           ram: selectedRAM,
           storage: selectedStorage,
         };
-        const { phones, pagination } = await getPhonePage(currentPage, itemsPerPage, options);
+        const { phones, pagination } =
+          activeTab === "hot"
+            ? await getHotPhonePage(currentPage, itemsPerPage, options)
+            : activeTab === "catalog"
+              ? await getPhonePage(currentPage, itemsPerPage, options)
+              : {
+                  phones: [],
+                  pagination: {
+                    totalItems: 0,
+                    totalPages: 0,
+                    currentPage: 1,
+                    itemsPerPage,
+                    hasNextPage: false,
+                    hasPrevPage: false,
+                  },
+                };
 
         // Mounting phone card catalog page for use
         setAllPhones(phones);
@@ -240,38 +247,6 @@ export default function PhoneCatalogPage({
     setSortBy("name");
   };
 
-  // Helper function to check if a phone was released within the past year
-  const parsePhoneDate = (dateStr: string) => new Date(dateStr);
-  const isWithinPastYear = (releaseDate: string) => {
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-    return parsePhoneDate(releaseDate) >= oneYearAgo;
-  };
-
-  // Get phones based on active tab
-  const getPhonesForTab = () => {
-    switch (activeTab) {
-      case "hot":
-        // Filter phones released within past year, sorted by release date
-        return allPhones
-          .filter((phone) => isWithinPastYear(phone.releaseDate))
-          .sort((a, b) => {
-            // // Sort by release date (newest first)
-            // Better long-term solution would be to store dates in ISO format in database
-            const dateA = new Date(a.releaseDate).getTime();
-            const dateB = new Date(b.releaseDate).getTime();
-
-            return dateB - dateA;
-          });
-      case "popular":
-        // Empty for now
-        return [];
-      default:
-        // Catalog - all phones
-        return allPhones;
-    }
-  };
-
   const handleAddToComparison = (phoneId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const phone = allPhones.find((p) => p.id === phoneId);
@@ -302,6 +277,38 @@ export default function PhoneCatalogPage({
 
   const isPhoneInComparison = (phoneId: string) => {
     return comparisonPhoneIds.includes(phoneId);
+  };
+
+  const getHotSignalBadges = (phone: PhoneCard) => {
+    if (activeTab !== "hot" || !phone.hotSignals) return null;
+
+    const badges: React.ReactNode[] = [];
+
+    if (phone.hotSignals.isNewRelease) {
+      badges.push(
+        <Badge
+          key="new"
+          variant="secondary"
+          className="bg-[#ef4444] text-white hover:bg-[#ef4444]/90"
+        >
+          New This Year
+        </Badge>,
+      );
+    }
+
+    if (phone.hotSignals.hasPriceDrop && phone.hotSignals.percentDrop != null) {
+      badges.push(
+        <Badge
+          key="drop"
+          variant="secondary"
+          className="bg-[#10b981] text-white hover:bg-[#10b981]/90"
+        >
+          {Math.round(phone.hotSignals.percentDrop)}% Off Launch
+        </Badge>,
+      );
+    }
+
+    return badges;
   };
 
   /**
@@ -586,8 +593,15 @@ export default function PhoneCatalogPage({
                         >
                           {phone.releaseDate}
                         </Badge>
+                        {getHotSignalBadges(phone)}
                       </div>
                       <p className="text-[#2c3968] dark:text-[#4a7cf6]">{phone.price}</p>
+                      {activeTab === "hot" && phone.hotSignals?.hasPriceDrop && (
+                        <p className="text-[13px] text-[#10b981] dark:text-[#34d399]">
+                          Launch price ${phone.hotSignals.originalPrice?.toLocaleString()} to current $
+                          {phone.hotSignals.latestPrice?.toLocaleString()}
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-1.5">
@@ -649,8 +663,15 @@ export default function PhoneCatalogPage({
                           >
                             {phone.releaseDate}
                           </Badge>
+                          {getHotSignalBadges(phone)}
                         </div>
                         <p className="text-[#2c3968] dark:text-[#4a7cf6]">{phone.price}</p>
+                        {activeTab === "hot" && phone.hotSignals?.hasPriceDrop && (
+                          <p className="text-[13px] text-[#10b981] dark:text-[#34d399]">
+                            Launch price ${phone.hotSignals.originalPrice?.toLocaleString()} to current $
+                            {phone.hotSignals.latestPrice?.toLocaleString()}
+                          </p>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">

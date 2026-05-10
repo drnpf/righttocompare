@@ -85,6 +85,52 @@ export const getPhonePage = async (
   }
 };
 
+export const getHotPhonePage = async (
+  page: number = 1,
+  limit: number = DEFAULT_PHONE_LIMIT,
+  options: {
+    search?: string;
+    manufacturer?: string[];
+    minPrice?: number;
+    maxPrice?: number;
+    ram?: number[];
+    storage?: number[];
+  },
+): Promise<PaginatedPhoneResponse> => {
+  try {
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("limit", limit.toString());
+
+    if (options.search) params.append("search", options.search);
+    options.manufacturer?.forEach((m) => params.append("manufacturer", m));
+    if (options.minPrice != null) params.append("minPrice", options.minPrice.toString());
+    if (options.maxPrice != null) params.append("maxPrice", options.maxPrice.toString());
+    options.ram?.forEach((r) => params.append("ram", r.toString()));
+    options.storage?.forEach((s) => params.append("storage", s.toString()));
+
+    const response = await fetch(`${API_URL}/hot?${params.toString()}`);
+    if (!response.ok) throw new Error(`Failed to fetch hot phone page: ${response.statusText}`);
+
+    const rawJson = await response.json();
+    const mappedPhones = rawJson.data.map((dbPhone: any) => mapJsonToPhoneCard(dbPhone));
+    return { phones: mappedPhones, pagination: rawJson.pagination };
+  } catch (error) {
+    console.error("Error fetching hot phones from backend:", error);
+    return {
+      phones: [],
+      pagination: {
+        totalItems: 0,
+        totalPages: 0,
+        currentPage: 1,
+        itemsPerPage: DEFAULT_PHONE_LIMIT,
+        hasNextPage: false,
+        hasPrevPage: false,
+      },
+    };
+  }
+};
+
 /**
  * Fetches the details of a single phone by its ID from the backend.
  * @param id The ID of the phone to fetch
