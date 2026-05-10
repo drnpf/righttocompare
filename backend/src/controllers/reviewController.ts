@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { AuthRequest } from "../middleware/authMiddleware";
+import { AuthRequest } from "../middleware/authentication";
 import * as reviewService from "../services/reviewService";
 import Phone from "../models/Phone";
 
@@ -11,7 +11,7 @@ import Phone from "../models/Phone";
  */
 export const createReview = async (req: AuthRequest, res: Response) => {
   try {
-    const { phoneId } = req.params;
+    const phoneId = String(req.params.phoneId);
     const { title, review, categoryRatings } = req.body;
 
     // Validate required fields
@@ -94,7 +94,7 @@ export const createReview = async (req: AuthRequest, res: Response) => {
  */
 export const getReviews = async (req: AuthRequest, res: Response) => {
   try {
-    const { phoneId } = req.params;
+    const phoneId = String(req.params.phoneId);
     const page = parseInt(req.query.page as string) || 1;
     const rawLimit = parseInt(req.query.limit as string) || 10;
     const limit = Math.min(rawLimit, 25); // Hard cap of 25 reviews per page
@@ -129,7 +129,7 @@ export const getReviews = async (req: AuthRequest, res: Response) => {
  */
 export const voteOnReview = async (req: AuthRequest, res: Response) => {
   try {
-    const { reviewId } = req.params;
+    const reviewId = String(req.params.reviewId);
 
     const { voteType } = req.body;
     if (!voteType || !["helpful", "notHelpful"].includes(voteType)) {
@@ -158,7 +158,7 @@ export const voteOnReview = async (req: AuthRequest, res: Response) => {
  */
 export const getReviewSentiment = async (req: AuthRequest, res: Response) => {
   try {
-    const { phoneId } = req.params;
+    const phoneId = String(req.params.phoneId);
 
     // Getting sentiment
     const result = await reviewService.getSentimentSummary(phoneId);
@@ -178,7 +178,8 @@ export const getReviewSentiment = async (req: AuthRequest, res: Response) => {
  */
 export const deleteReview = async (req: AuthRequest, res: Response) => {
   try {
-    const { phoneId, reviewId } = req.params;
+    const phoneId = String(req.params.phoneId);
+    const reviewId = String(req.params.reviewId);
 
     const userId = req.user?.uid;
     if (!userId) return res.status(401).json({ message: "User not authenticated" });

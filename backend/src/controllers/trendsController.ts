@@ -53,7 +53,7 @@ export const getTickerData = async (req: Request, res: Response) => {
  * @returns
  */
 export const getPhoneVibeShift = async (req: Request, res: Response) => {
-  const { phoneId } = req.params;
+  const phoneId = String(req.params.phoneId);
   try {
     // Getting days from query parameters
     const recentDays = parseInt(req.query.recentDays as string) || 30; // Default is 30 days
