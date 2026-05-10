@@ -34,7 +34,7 @@ export default function ComparisonCart({
       <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50">
         <button
           onClick={() => onMinimizedChange(false)}
-          className="bg-white dark:bg-[#161b26] text-[#2c3968] dark:text-[#4a7cf6] rounded-full px-4 py-2.5 md:px-5 md:py-3 shadow-lg hover:shadow-xl border border-[#e0e0e0] dark:border-[#2d3548] hover:border-[#2c3968]/30 dark:hover:border-[#4a7cf6]/30 transition-all duration-300 hover:scale-[1.02] relative group"
+          className="bg-white dark:bg-[#161b26] text-[#2c3968] dark:text-[#4a7cf6] rounded-full px-4 py-2.5 md:px-5 md:py-3 shadow-lg hover:shadow-xl border border-[#e0e0e0] dark:border-[#2d3548] hover:border-[#2c3968]/30 dark:hover:border-[#4a7cf6]/30 transition-all duration-300 hover:scale-[1.02] relative group cursor-pointer"
         >
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -68,7 +68,7 @@ export default function ComparisonCart({
           <div className="flex gap-2">
             <button
               onClick={() => onMinimizedChange(true)}
-              className="text-[#999] dark:text-[#707070] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-colors"
+              className="text-[#999] dark:text-[#707070] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-colors cursor-pointer"
               title="Minimize"
             >
               <ChevronDown className="w-5 h-5" />
@@ -89,7 +89,7 @@ export default function ComparisonCart({
               </div>
               <button
                 onClick={() => onRemovePhone(phone.id)}
-                className="text-[#999] dark:text-[#707070] hover:text-red-500 dark:hover:text-red-400 transition-colors shrink-0"
+                className="text-[#999] dark:text-[#707070] hover:text-red-500 dark:hover:text-red-400 transition-colors shrink-0 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -116,7 +116,7 @@ export default function ComparisonCart({
 
         <Button
           onClick={onCompare}
-          className="w-full bg-[#2c3968] dark:bg-[#4a7cf6] hover:bg-[#2c3968]/90 dark:hover:bg-[#4a7cf6]/90"
+          className="w-full bg-[#2c3968] dark:bg-[#4a7cf6] hover:bg-[#2c3968]/90 dark:hover:bg-[#4a7cf6]/90 cursor-pointer"
         >
           Compare Now
           <ArrowRight className="w-4 h-4 ml-2" />

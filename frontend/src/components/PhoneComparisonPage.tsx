@@ -523,7 +523,7 @@ export default function PhoneComparisonPage({
                   </h2>
                   <button
                     onClick={() => setFilterVisible(false)}
-                    className="text-[#2c3968] dark:text-[#4a7cf6] hover:bg-[#2c3968]/10 dark:hover:bg-[#4a7cf6]/10 rounded-lg p-2 transition-colors"
+                    className="text-[#2c3968] dark:text-[#4a7cf6] hover:bg-[#2c3968]/10 dark:hover:bg-[#4a7cf6]/10 rounded-lg p-2 transition-colors cursor-pointer"
                     title="Hide filter"
                   >
                     <ChevronLeft className="w-5 h-5" />
@@ -531,11 +531,17 @@ export default function PhoneComparisonPage({
                 </div>
                 <div className="h-1 w-20 bg-[#2c3968] dark:bg-[#4a7cf6] rounded-full mb-4"></div>
                 <div className="flex gap-2 text-sm">
-                  <button onClick={selectAllSpecs} className="text-[#2c3968] dark:text-[#4a7cf6] hover:underline">
+                  <button
+                    onClick={selectAllSpecs}
+                    className="text-[#2c3968] dark:text-[#4a7cf6] hover:underline cursor-pointer"
+                  >
                     Select All
                   </button>
                   <span className="text-[#666] dark:text-[#a0a8b8]">|</span>
-                  <button onClick={clearAllSpecs} className="text-[#2c3968] dark:text-[#4a7cf6] hover:underline">
+                  <button
+                    onClick={clearAllSpecs}
+                    className="text-[#2c3968] dark:text-[#4a7cf6] hover:underline cursor-pointer"
+                  >
                     Clear All
                   </button>
                 </div>
@@ -604,7 +610,7 @@ export default function PhoneComparisonPage({
                             >
                               <Checkbox
                                 checked={isFullySelected}
-                                className={`border-[#2c3968] dark:border-[#4a7cf6] data-[state=checked]:bg-[#2c3968] dark:data-[state=checked]:bg-[#4a7cf6] data-[state=checked]:text-white transition-colors ${
+                                className={`border-[#2c3968] dark:border-[#4a7cf6] data-[state=checked]:bg-[#2c3968] dark:data-[state=checked]:bg-[#4a7cf6] data-[state=checked]:text-white transition-colors cursor-pointer ${
                                   isPartiallySelected ? "opacity-50" : ""
                                 }`}
                               />
@@ -633,7 +639,7 @@ export default function PhoneComparisonPage({
                                   checked={categorySelectedSpecs.includes(specName)}
                                   onCheckedChange={() => toggleSpec(category, specName)}
                                   id={`${category}-${specName}`}
-                                  className="border-[#2c3968] dark:border-[#4a7cf6] data-[state=checked]:bg-[#2c3968] dark:data-[state=checked]:bg-[#4a7cf6] data-[state=checked]:text-white transition-colors"
+                                  className="border-[#2c3968] dark:border-[#4a7cf6] data-[state=checked]:bg-[#2c3968] dark:data-[state=checked]:bg-[#4a7cf6] data-[state=checked]:text-white transition-colors cursor-pointer"
                                 />
                                 <label
                                   htmlFor={`${category}-${specName}`}
@@ -682,7 +688,7 @@ export default function PhoneComparisonPage({
                 {phones.length > 0 && (
                   <Button
                     onClick={handleShareComparison}
-                    className="bg-[#2c3968] hover:bg-[#1f2747] text-white px-6 py-2 rounded-lg transition-colors duration-200 inline-flex items-center gap-2"
+                    className="bg-[#2c3968] hover:bg-[#1f2747] text-white px-6 py-2 rounded-lg transition-colors duration-200 inline-flex items-center gap-2 cursor-pointer"
                   >
                     <Share2 className="w-4 h-4" />
                     Share Comparison
@@ -697,7 +703,7 @@ export default function PhoneComparisonPage({
             <div className="fixed left-0 top-1/2 -translate-y-1/2 z-50">
               <button
                 onClick={() => setFilterVisible(true)}
-                className="bg-[#2c3968] dark:bg-[#4a7cf6] hover:bg-[#1f2747] dark:hover:bg-[#5b8df7] text-white rounded-r-lg p-3 shadow-lg transition-all duration-200 flex items-center gap-2"
+                className="bg-[#2c3968] dark:bg-[#4a7cf6] hover:bg-[#1f2747] dark:hover:bg-[#5b8df7] text-white rounded-r-lg p-3 shadow-lg transition-all duration-200 flex items-center gap-2 cursor-pointer"
                 title="Show filter"
               >
                 <ChevronRight className="w-5 h-5" />
@@ -721,7 +727,7 @@ export default function PhoneComparisonPage({
                         <div className="p-6 relative">
                           <button
                             onClick={() => onRemovePhone(phone.id)}
-                            className="absolute top-4 right-4 text-[#999] dark:text-[#6b7280] hover:text-red-500 dark:hover:text-red-400 transition-colors z-10"
+                            className="absolute top-4 right-4 text-[#999] dark:text-[#6b7280] hover:text-red-500 dark:hover:text-red-400 transition-colors z-10 cursor-pointer"
                             title="Remove from comparison"
                           >
                             <X className="w-5 h-5" />
@@ -790,7 +796,7 @@ export default function PhoneComparisonPage({
                                   onOpenChange={(open) => setSearchOpenIndex(open ? idx : null)}
                                 >
                                   <PopoverTrigger asChild>
-                                    <button className="w-full flex flex-col items-center justify-center gap-4 p-6 border-2 border-dashed border-[#e0e0e0] dark:border-[#2d3548] rounded-lg hover:border-[#2c3968] dark:hover:border-[#4a7cf6] hover:bg-[#f7f9fc] dark:hover:bg-[#1a1f2e] transition-all group bg-white dark:bg-[#161b26]">
+                                    <button className="w-full flex flex-col items-center justify-center gap-4 p-6 border-2 border-dashed border-[#e0e0e0] dark:border-[#2d3548] rounded-lg hover:border-[#2c3968] dark:hover:border-[#4a7cf6] hover:bg-[#f7f9fc] dark:hover:bg-[#1a1f2e] transition-all group bg-white dark:bg-[#161b26] cursor-pointer">
                                       <div className="w-20 h-20 rounded-full bg-[#f0f0f0] dark:bg-[#1a1f2e] flex items-center justify-center group-hover:bg-[#2c3968] dark:group-hover:bg-[#4a7cf6] transition-colors">
                                         <Plus className="w-10 h-10 text-[#ccc] dark:text-[#6b7280] group-hover:text-white transition-colors" />
                                       </div>

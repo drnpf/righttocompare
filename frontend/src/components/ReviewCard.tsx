@@ -79,7 +79,7 @@ export function ReviewCard({ review, currentUserId, onVote, onDelete, isVoting =
               variant="ghost"
               size="sm"
               onClick={handleDelete}
-              className={`p-2 ${
+              className={`p-2 ccursor-pointer ursor-pointer ${
                 isDarkMode
                   ? "text-red-400 hover:text-red-300 hover:bg-red-900/20"
                   : "text-red-500 hover:text-red-600 hover:bg-red-50"
@@ -113,7 +113,7 @@ export function ReviewCard({ review, currentUserId, onVote, onDelete, isVoting =
         <div className="mb-4">
           <button
             onClick={() => setShowCategoryRatings(!showCategoryRatings)}
-            className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1 text-sm font-medium transition-colors cursor-pointer ${
               isDarkMode ? "text-[#4a7cf6] hover:text-[#6b93f7]" : "text-[#2c3968] hover:text-[#4a5a8a]"
             }`}
           >
@@ -144,7 +144,7 @@ export function ReviewCard({ review, currentUserId, onVote, onDelete, isVoting =
             size="sm"
             onClick={() => onVote(review._id, "helpful")}
             disabled={isVoting || isOwnReview}
-            className={`flex items-center gap-1 px-2 py-1 ${
+            className={`flex items-center gap-1 px-2 py-1 cursor-pointer ${
               hasVotedHelpful
                 ? isDarkMode
                   ? "bg-green-900/30 text-green-400"
@@ -162,7 +162,7 @@ export function ReviewCard({ review, currentUserId, onVote, onDelete, isVoting =
             size="sm"
             onClick={() => onVote(review._id, "notHelpful")}
             disabled={isVoting || isOwnReview}
-            className={`flex items-center gap-1 px-2 py-1 ${
+            className={`flex items-center gap-1 px-2 py-1 cursor-pointer ${
               hasVotedNotHelpful
                 ? isDarkMode
                   ? "bg-red-900/30 text-red-400"
