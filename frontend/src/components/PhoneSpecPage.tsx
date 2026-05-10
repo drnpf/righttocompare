@@ -1238,7 +1238,7 @@ export default function PhoneSpecPage({
                                 {(isFullySelected || isPartiallySelected) && (
                                   <Badge
                                     variant="secondary"
-                                    className="text-xs px-2 py-0.5 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] border border-[#2c3968]/20 dark:border-[#4a7cf6]/20"
+                                    className="text-xs px-2 py-0.5 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/20 text-[#2c3968] dark:text-[#4a7cf6] border border-[#2c3968]/20 dark:border-[#4a7cf6]/30 shadow-none"
                                   >
                                     {categorySelectedSpecs.length}/{specs.length}
                                   </Badge>
@@ -1258,7 +1258,7 @@ export default function PhoneSpecPage({
                             >
                               <Checkbox
                                 checked={isFullySelected}
-                                className={isPartiallySelected ? "data-[state=checked]:bg-[#2c3968]/50" : ""}
+                                className={`h-5 w-5 rounded-md border-2 transition-all border-[#2c3968] data-[state=checked]:bg-[#2c3968] data-[state=checked]:text-white dark:border-[#4a7cf6] dark:bg-[#1a1f2e] dark:data-[state=checked]:bg-[#4a7cf6] ${isPartiallySelected ? "opacity-50" : ""}`}
                               />
                             </div>
 
@@ -1286,6 +1286,7 @@ export default function PhoneSpecPage({
                                     checked={categorySelectedSpecs.includes(specName)}
                                     onCheckedChange={() => toggleSpec(category, specName)}
                                     id={`${category}-${specName}`}
+                                    className="h-4 w-4 rounded border-2 border-[#2c3968] data-[state=checked]:bg-[#2c3968] data-[state=checked]:text-white dark:border-[#4a7cf6] dark:bg-[#0d1117] dark:data-[state=checked]:bg-[#4a7cf6]"
                                   />
                                   <label
                                     htmlFor={`${category}-${specName}`}
@@ -1699,7 +1700,7 @@ export default function PhoneSpecPage({
 
                 {!showReviewForm && (
                   <Button
-                    className="bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] dark:from-[#4a7cf6] dark:to-[#5b8df7] hover:from-[#2c3968]/90 hover:to-[#3d4b7f]/90 dark:hover:from-[#3d6be5] dark:hover:to-[#4a7cf6] shadow-md hover:shadow-lg transition-all cursor-pointer"
+                    className="bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] text-white dark:from-[#4a7cf6] dark:to-[#5b8df7] dark:text-white hover:from-[#243059] hover:to-[#354368] dark:hover:from-[#3d6be5] dark:hover:to-[#4a7cf6] shadow-md hover:shadow-lg transition-all cursor-pointer"
                     onClick={() => setShowReviewForm(true)}
                   >
                     <PenSquare className="w-4 h-4 mr-2" />
@@ -1801,7 +1802,12 @@ export default function PhoneSpecPage({
                   {!currentUser ? (
                     <div className="bg-[#f7f7f7] dark:bg-[#1a1f2e] border-2 border-[#2c3968] dark:border-[#4a7cf6] rounded-lg p-6 text-center">
                       <p className="text-[#666] dark:text-[#a0a8b8] mb-4">Please sign in to write a review</p>
-                      <Button className="bg-[#2c3968] hover:bg-[#2c3968]/90 cursor-pointer">Sign In</Button>
+                      <Button
+                        className="bg-[#2c3968] text-white hover:bg-[#1e2547] dark:bg-[#4a7cf6] dark:text-white dark:hover:bg-[#5b8df7] shadow-md transition-all cursor-pointer"
+                        onClick={() => navigate("/sign-in")}
+                      >
+                        Sign In
+                      </Button>
                     </div>
                   ) : (
                     <ReviewForm

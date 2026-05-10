@@ -116,10 +116,10 @@ export default function ComparisonCart({
 
         <Button
           onClick={onCompare}
-          className="w-full bg-[#2c3968] dark:bg-[#4a7cf6] hover:bg-[#2c3968]/90 dark:hover:bg-[#4a7cf6]/90 cursor-pointer"
+          className="w-full bg-[#2c3968] text-white hover:bg-[#1f2747] dark:bg-[#4a7cf6] dark:text-white dark:hover:bg-[#5b8df7] shadow-lg transition-all duration-200 cursor-pointer"
         >
           Compare Now
-          <ArrowRight className="w-4 h-4 ml-2" />
+          <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
         </Button>
 
         {phones.length < maxPhones && (
