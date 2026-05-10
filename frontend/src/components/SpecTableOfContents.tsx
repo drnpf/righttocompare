@@ -229,7 +229,7 @@ export default function SpecTableOfContents({
                   {/* Toggle Button */}
                   <button
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className="w-8 h-8 bg-[#2c3968] dark:bg-[#4a7cf6] text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 flex items-center justify-center hover:bg-[#3d4b7f] dark:hover:bg-[#5b8df7]"
+                    className="w-8 h-8 bg-[#2c3968] dark:bg-[#4a7cf6] text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 flex items-center justify-center hover:bg-[#3d4b7f] dark:hover:bg-[#5b8df7] cursor-pointer"
                     title="Collapse"
                   >
                     <ChevronRight className="w-7 h-7 stroke-[4]" />
@@ -254,11 +254,13 @@ export default function SpecTableOfContents({
                             >
                               <button
                                 onClick={() => scrollToSection(section.id)}
-                                className="flex items-center gap-3 flex-1"
+                                className="flex items-center gap-3 flex-1 cursor-pointer"
                               >
                                 <div
                                   className={`p-1.5 rounded-lg transition-all duration-300 ${
-                                    isActive ? "bg-white/20" : "bg-[#2c3968]/5 dark:bg-[#4a7cf6]/10 group-hover:bg-[#2c3968]/10 dark:group-hover:bg-[#4a7cf6]/15"
+                                    isActive
+                                      ? "bg-white/20"
+                                      : "bg-[#2c3968]/5 dark:bg-[#4a7cf6]/10 group-hover:bg-[#2c3968]/10 dark:group-hover:bg-[#4a7cf6]/15"
                                   }`}
                                 >
                                   <Icon
@@ -269,7 +271,7 @@ export default function SpecTableOfContents({
                               </button>
                               <PopoverTrigger asChild>
                                 <button
-                                  className={`p-1 hover:bg-white/10 rounded transition-colors ${isActive ? "text-white" : "text-[#2c3968]/60 dark:text-[#4a7cf6]/60"}`}
+                                  className={`p-1 hover:bg-white/10 rounded transition-colors cursor-pointer ${isActive ? "text-white" : "text-[#2c3968]/60 dark:text-[#4a7cf6]/60"}`}
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <ChevronDown className="w-3 h-3" />
@@ -289,7 +291,7 @@ export default function SpecTableOfContents({
                                     scrollToSection(section.id);
                                     setIsFullSpecsPopoverOpen(false);
                                   }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all duration-200 hover:bg-[#f5f7fa] dark:hover:bg-[#1a1f2e] text-[#2c3968] dark:text-[#4a7cf6]"
+                                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all duration-200 hover:bg-[#f5f7fa] dark:hover:bg-[#1a1f2e] text-[#2c3968] dark:text-[#4a7cf6] cursor-pointer"
                                 >
                                   <List className="w-3.5 h-3.5" />
                                   <span className="text-sm">All Specifications</span>
@@ -307,7 +309,7 @@ export default function SpecTableOfContents({
                                         scrollToSection(subSection.id);
                                         setIsFullSpecsPopoverOpen(false);
                                       }}
-                                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all duration-200 ${
+                                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all duration-200 cursor-pointer${
                                         isSubActive
                                           ? "bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6]"
                                           : "text-[#666] dark:text-[#a0a8b8] hover:bg-[#f5f7fa] dark:hover:bg-[#1a1f2e] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
@@ -315,7 +317,9 @@ export default function SpecTableOfContents({
                                     >
                                       <div
                                         className={`w-1.5 h-1.5 rounded-full ${
-                                          isSubActive ? "bg-[#2c3968] dark:bg-[#4a7cf6]" : "bg-[#999]/40 dark:bg-[#6b7280]/40"
+                                          isSubActive
+                                            ? "bg-[#2c3968] dark:bg-[#4a7cf6]"
+                                            : "bg-[#999]/40 dark:bg-[#6b7280]/40"
                                         }`}
                                       />
                                       <span className="text-xs capitalize">{subSection.label}</span>
@@ -328,7 +332,7 @@ export default function SpecTableOfContents({
                         ) : (
                           <button
                             onClick={() => scrollToSection(section.id)}
-                            className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-300 ${
+                            className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-300 cursor-pointer ${
                               isActive
                                 ? "bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white shadow-md scale-[1.02]"
                                 : "text-[#666] dark:text-[#a0a8b8] hover:bg-gradient-to-r hover:from-[#f5f7fa] hover:to-white dark:hover:from-[#1a1f2e] dark:hover:to-[#161b26] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] hover:shadow-sm hover:scale-[1.01]"
@@ -336,7 +340,9 @@ export default function SpecTableOfContents({
                           >
                             <div
                               className={`p-1.5 rounded-lg transition-all duration-300 ${
-                                isActive ? "bg-white/20" : "bg-[#2c3968]/5 dark:bg-[#4a7cf6]/10 group-hover:bg-[#2c3968]/10 dark:group-hover:bg-[#4a7cf6]/15"
+                                isActive
+                                  ? "bg-white/20"
+                                  : "bg-[#2c3968]/5 dark:bg-[#4a7cf6]/10 group-hover:bg-[#2c3968]/10 dark:group-hover:bg-[#4a7cf6]/15"
                               }`}
                             >
                               <Icon
@@ -377,7 +383,7 @@ export default function SpecTableOfContents({
                 <div className="px-5 pb-5">
                   <button
                     onClick={scrollToTop}
-                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm text-[#2c3968] dark:text-[#4a7cf6] bg-[#2c3968]/5 dark:bg-[#4a7cf6]/10 hover:bg-[#2c3968]/10 dark:hover:bg-[#4a7cf6]/15 transition-colors duration-200 border border-[#2c3968]/10 dark:border-[#4a7cf6]/10"
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm text-[#2c3968] dark:text-[#4a7cf6] bg-[#2c3968]/5 dark:bg-[#4a7cf6]/10 hover:bg-[#2c3968]/10 dark:hover:bg-[#4a7cf6]/15 transition-colors duration-200 border border-[#2c3968]/10 dark:border-[#4a7cf6]/10 cursor-pointer"
                   >
                     <ArrowUp className="w-3.5 h-3.5" />
                     Back to Top
@@ -391,7 +397,7 @@ export default function SpecTableOfContents({
               {/* Toggle Button - Collapsed State */}
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full h-10 bg-[#2c3968] dark:bg-[#4a7cf6] text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center hover:bg-[#3d4b7f] dark:hover:bg-[#5b8df7] mb-4"
+                className="w-full h-10 bg-[#2c3968] dark:bg-[#4a7cf6] text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center hover:bg-[#3d4b7f] dark:hover:bg-[#5b8df7] mb-4 cursor-pointer"
                 title="Expand"
               >
                 <ChevronLeft className="w-7 h-7 stroke-[4]" />
@@ -413,7 +419,7 @@ export default function SpecTableOfContents({
                           <div className="relative">
                             <button
                               onClick={() => scrollToSection(section.id)}
-                              className={`group w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300 ${
+                              className={`group w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300 cursor-pointer ${
                                 isActive
                                   ? "bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white shadow-md scale-110"
                                   : "text-[#2c3968]/60 dark:text-[#4a7cf6]/60 hover:bg-gradient-to-r hover:from-[#f5f7fa] hover:to-white dark:hover:from-[#1a1f2e] dark:hover:to-[#161b26] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] hover:shadow-sm hover:scale-105"
@@ -424,8 +430,10 @@ export default function SpecTableOfContents({
                             </button>
                             <PopoverTrigger asChild>
                               <button
-                                className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center transition-all duration-300 ${
-                                  isActive ? "bg-white text-[#2c3968] dark:bg-[#161b26] dark:text-[#4a7cf6]" : "bg-[#2c3968] dark:bg-[#4a7cf6] text-white hover:bg-[#3d4b7f] dark:hover:bg-[#5b8df7]"
+                                className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer ${
+                                  isActive
+                                    ? "bg-white text-[#2c3968] dark:bg-[#161b26] dark:text-[#4a7cf6]"
+                                    : "bg-[#2c3968] dark:bg-[#4a7cf6] text-white hover:bg-[#3d4b7f] dark:hover:bg-[#5b8df7]"
                                 }`}
                                 title="Show subsections"
                                 onClick={(e) => e.stopPropagation()}
@@ -447,7 +455,7 @@ export default function SpecTableOfContents({
                                   scrollToSection(section.id);
                                   setIsFullSpecsPopoverOpenCollapsed(false);
                                 }}
-                                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all duration-200 hover:bg-[#f5f7fa] dark:hover:bg-[#1a1f2e] text-[#2c3968] dark:text-[#4a7cf6]"
+                                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all duration-200 hover:bg-[#f5f7fa] dark:hover:bg-[#1a1f2e] text-[#2c3968] dark:text-[#4a7cf6] cursor-pointer"
                               >
                                 <List className="w-3.5 h-3.5" />
                                 <span className="text-sm">All Specifications</span>
@@ -465,7 +473,7 @@ export default function SpecTableOfContents({
                                       scrollToSection(subSection.id);
                                       setIsFullSpecsPopoverOpenCollapsed(false);
                                     }}
-                                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all duration-200 ${
+                                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all duration-200 cursor-pointer ${
                                       isSubActive
                                         ? "bg-[#2c3968]/10 text-[#2c3968]"
                                         : "text-[#666] hover:bg-[#f5f7fa] hover:text-[#2c3968]"
@@ -473,7 +481,9 @@ export default function SpecTableOfContents({
                                   >
                                     <div
                                       className={`w-1.5 h-1.5 rounded-full ${
-                                        isSubActive ? "bg-[#2c3968] dark:bg-[#4a7cf6]" : "bg-[#999]/40 dark:bg-[#6b7280]/40"
+                                        isSubActive
+                                          ? "bg-[#2c3968] dark:bg-[#4a7cf6]"
+                                          : "bg-[#999]/40 dark:bg-[#6b7280]/40"
                                       }`}
                                     />
                                     <span className="text-xs capitalize">{subSection.label}</span>
@@ -486,7 +496,7 @@ export default function SpecTableOfContents({
                       ) : (
                         <button
                           onClick={() => scrollToSection(section.id)}
-                          className={`group w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300 ${
+                          className={`group w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300 cursor-pointer ${
                             isActive
                               ? "bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] text-white shadow-md scale-110"
                               : "text-[#2c3968]/60 hover:bg-gradient-to-r hover:from-[#f5f7fa] hover:to-white hover:text-[#2c3968] hover:shadow-sm hover:scale-105"
@@ -506,7 +516,7 @@ export default function SpecTableOfContents({
                 <div className="mt-2">
                   <button
                     onClick={scrollToTop}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl text-[#2c3968]/60 dark:text-[#4a7cf6]/60 hover:bg-[#f5f7fa] dark:hover:bg-[#1a1f2e] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-all duration-300 hover:scale-105"
+                    className="w-10 h-10 flex items-center justify-center rounded-xl text-[#2c3968]/60 dark:text-[#4a7cf6]/60 hover:bg-[#f5f7fa] dark:hover:bg-[#1a1f2e] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-all duration-300 hover:scale-105 cursor-pointer"
                     title="Back to Top"
                   >
                     <ArrowUp className="w-4 h-4" />
@@ -523,7 +533,7 @@ export default function SpecTableOfContents({
         <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
           <SheetTrigger asChild>
             <button
-              className="w-12 h-12 bg-[#2c3968] dark:bg-[#4a7cf6] text-white rounded-full shadow-xl hover:shadow-2xl hover:bg-[#3d4b7f] dark:hover:bg-[#5b8df7] transition-all duration-300 hover:scale-110 flex items-center justify-center"
+              className="w-12 h-12 bg-[#2c3968] dark:bg-[#4a7cf6] text-white rounded-full shadow-xl hover:shadow-2xl hover:bg-[#3d4b7f] dark:hover:bg-[#5b8df7] transition-all duration-300 hover:scale-110 flex items-center justify-center cursor-pointer"
               title="Table of Contents"
             >
               <TableOfContents className="w-5 h-5" />
@@ -570,7 +580,7 @@ export default function SpecTableOfContents({
                         scrollToSection(section.id);
                         setIsMobileSheetOpen(false);
                       }}
-                      className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 ${
+                      className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 cursor-pointer ${
                         isActive
                           ? "bg-gradient-to-r from-[#2c3968] to-[#3d4b7f] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white shadow-md"
                           : "text-[#666] dark:text-[#a0a8b8] hover:bg-[#f5f7fa] dark:hover:bg-[#1a1f2e] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
@@ -594,7 +604,7 @@ export default function SpecTableOfContents({
                               scrollToSection(sub.id);
                               setIsMobileSheetOpen(false);
                             }}
-                            className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-left text-xs transition-colors ${
+                            className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-left text-xs transition-colors cursor-pointer ${
                               activeSection === sub.id
                                 ? "text-[#2c3968] dark:text-[#4a7cf6] bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10"
                                 : "text-[#999] dark:text-[#6b7280] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] hover:bg-[#f5f7fa] dark:hover:bg-[#1a1f2e]"
@@ -621,7 +631,7 @@ export default function SpecTableOfContents({
                     scrollToTop();
                     setIsMobileSheetOpen(false);
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm text-[#2c3968] dark:text-[#4a7cf6] bg-[#2c3968]/5 dark:bg-[#4a7cf6]/10 hover:bg-[#2c3968]/10 dark:hover:bg-[#4a7cf6]/15 transition-colors border border-[#2c3968]/10 dark:border-[#4a7cf6]/10"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm text-[#2c3968] dark:text-[#4a7cf6] bg-[#2c3968]/5 dark:bg-[#4a7cf6]/10 hover:bg-[#2c3968]/10 dark:hover:bg-[#4a7cf6]/15 transition-colors border border-[#2c3968]/10 dark:border-[#4a7cf6]/10 cursor-pointer"
                 >
                   <ArrowUp className="w-3.5 h-3.5" />
                   Back to Top

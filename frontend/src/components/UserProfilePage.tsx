@@ -229,7 +229,7 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
               <button
                 onClick={handleSaveProfile}
                 disabled={isSaving}
-                className="px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#4a5a9e] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all duration-300 flex items-center gap-2 disabled:opacity-50"
+                className="px-6 py-3 bg-gradient-to-r from-[#2c3968] to-[#4a5a9e] dark:from-[#4a7cf6] dark:to-[#5b8df7] text-white rounded-lg hover:shadow-lg transition-all duration-300 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 <Save size={18} />
                 {isSaving ? "Saving..." : "Save Changes"}
@@ -256,7 +256,7 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
         <div className="mb-6">
           <button
             onClick={() => toggleSection("personal")}
-            className="w-full bg-white dark:bg-[#161b26] rounded-xl p-6 border border-gray-200 dark:border-[#2d3548] shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between group"
+            className="w-full bg-white dark:bg-[#161b26] rounded-xl p-6 border border-gray-200 dark:border-[#2d3548] shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between group cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#2c3968] to-[#4a5a9e] dark:from-[#4a7cf6] dark:to-[#5b8df7] flex items-center justify-center text-white">
@@ -270,7 +270,10 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
             {activeSection === "personal" ? (
               <ChevronUp className="text-[#2c3968] dark:text-[#4a7cf6]" size={24} />
             ) : (
-              <ChevronDown className="text-gray-400 dark:text-[#6b7280] group-hover:text-[#2c3968] dark:group-hover:text-[#4a7cf6] transition-colors" size={24} />
+              <ChevronDown
+                className="text-gray-400 dark:text-[#6b7280] group-hover:text-[#2c3968] dark:group-hover:text-[#4a7cf6] transition-colors"
+                size={24}
+              />
             )}
           </button>
 
@@ -284,7 +287,7 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
                     <button
                       key={brand}
                       onClick={() => handleBrandToggle(brand)}
-                      className={`px-4 py-2 rounded-lg border-2 transition-all duration-300 ${
+                      className={`px-4 py-2 rounded-lg border-2 transition-all duration-300 cursor-pointer ${
                         profile.preferences.preferredBrands.includes(brand)
                           ? "border-[#2c3968] bg-[#2c3968] text-white shadow-md dark:border-[#4a7cf6] dark:bg-[#4a7cf6]"
                           : "border-gray-300 bg-white text-gray-700 hover:border-[#2c3968] hover:bg-gray-50 dark:border-[#2d3548] dark:bg-[#1a1f2e] dark:text-[#a0a8b8] dark:hover:border-[#4a7cf6] dark:hover:bg-[#252b3d]"
@@ -304,7 +307,7 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
                     <button
                       key={range.label}
                       onClick={() => handleBudgetChange(range.min, range.max)}
-                      className={`px-4 py-3 rounded-lg border-2 transition-all duration-300 ${
+                      className={`px-4 py-3 rounded-lg border-2 transition-all duration-300 cursor-pointer ${
                         profile.preferences.budget.min === range.min && profile.preferences.budget.max === range.max
                           ? "border-[#2c3968] bg-[#2c3968] text-white shadow-md dark:border-[#4a7cf6] dark:bg-[#4a7cf6]"
                           : "border-gray-300 bg-white text-gray-700 hover:border-[#2c3968] hover:bg-gray-50 dark:border-[#2d3548] dark:bg-[#1a1f2e] dark:text-[#a0a8b8] dark:hover:border-[#4a7cf6] dark:hover:bg-[#252b3d]"
@@ -319,7 +322,9 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
               {/* Priority Features */}
               <div>
                 <h3 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">Priority Features</h3>
-                <p className="text-gray-600 dark:text-[#a0a8b8] text-sm mb-6">Rate the importance of each feature (1-5)</p>
+                <p className="text-gray-600 dark:text-[#a0a8b8] text-sm mb-6">
+                  Rate the importance of each feature (1-5)
+                </p>
                 {Object.entries(featureLabels).map(([key, label]) => (
                   <div key={key} className="mb-6">
                     <div className="flex items-center justify-between mb-3">
@@ -338,7 +343,7 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
                               value,
                             )
                           }
-                          className={`flex-1 py-2 rounded-lg border-2 transition-all duration-300 ${
+                          className={`flex-1 py-2 rounded-lg border-2 transition-all duration-300 cursor-pointer ${
                             profile.preferences.priorityFeatures[
                               key as keyof typeof profile.preferences.priorityFeatures
                             ] >= value
@@ -361,7 +366,7 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
         <div className="mb-6">
           <button
             onClick={() => toggleSection("notifications")}
-            className="w-full bg-white dark:bg-[#161b26] rounded-xl p-6 border border-gray-200 dark:border-[#2d3548] shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between group"
+            className="w-full bg-white dark:bg-[#161b26] rounded-xl p-6 border border-gray-200 dark:border-[#2d3548] shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between group cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#2c3968] to-[#4a5a9e] dark:from-[#4a7cf6] dark:to-[#5b8df7] flex items-center justify-center text-white">
@@ -375,7 +380,10 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
             {activeSection === "notifications" ? (
               <ChevronUp className="text-[#2c3968] dark:text-[#4a7cf6]" size={24} />
             ) : (
-              <ChevronDown className="text-gray-400 dark:text-[#6b7280] group-hover:text-[#2c3968] dark:group-hover:text-[#4a7cf6] transition-colors" size={24} />
+              <ChevronDown
+                className="text-gray-400 dark:text-[#6b7280] group-hover:text-[#2c3968] dark:group-hover:text-[#4a7cf6] transition-colors"
+                size={24}
+              />
             )}
           </button>
 
@@ -408,8 +416,10 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
                       </div>
                       <button
                         onClick={() => handleNotificationToggle(notifKey)}
-                        className={`relative w-14 h-8 rounded-full transition-all duration-300 ${
-                          profile.preferences.notifications[notifKey] ? "bg-[#2c3968] dark:bg-[#4a7cf6]" : "bg-gray-300 dark:bg-[#2d3548]"
+                        className={`relative w-14 h-8 rounded-full transition-all duration-300 cursor-pointer ${
+                          profile.preferences.notifications[notifKey]
+                            ? "bg-[#2c3968] dark:bg-[#4a7cf6]"
+                            : "bg-gray-300 dark:bg-[#2d3548]"
                         }`}
                       >
                         <div
@@ -430,7 +440,7 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
         <div className="mb-6">
           <button
             onClick={() => toggleSection("discussions")}
-            className="w-full bg-white dark:bg-[#161b26] rounded-xl p-6 border border-gray-200 dark:border-[#2d3548] shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between group"
+            className="w-full bg-white dark:bg-[#161b26] rounded-xl p-6 border border-gray-200 dark:border-[#2d3548] shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between group cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#2c3968] to-[#4a5a9e] dark:from-[#4a7cf6] dark:to-[#5b8df7] flex items-center justify-center text-white">
@@ -448,7 +458,10 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
             {activeSection === "discussions" ? (
               <ChevronUp className="text-[#2c3968] dark:text-[#4a7cf6]" size={24} />
             ) : (
-              <ChevronDown className="text-gray-400 dark:text-[#6b7280] group-hover:text-[#2c3968] dark:group-hover:text-[#4a7cf6] transition-colors" size={24} />
+              <ChevronDown
+                className="text-gray-400 dark:text-[#6b7280] group-hover:text-[#2c3968] dark:group-hover:text-[#4a7cf6] transition-colors"
+                size={24}
+              />
             )}
           </button>
 
@@ -460,7 +473,9 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
                 <div className="text-center py-12">
                   <MessageCircle className="mx-auto text-gray-300 dark:text-[#2d3548] mb-4" size={48} />
                   <p className="text-gray-500 dark:text-[#a0a8b8]">You haven't posted any discussions yet</p>
-                  <p className="text-gray-400 dark:text-[#6b7280] text-sm mt-2">Head to the Community tab to start a conversation</p>
+                  <p className="text-gray-400 dark:text-[#6b7280] text-sm mt-2">
+                    Head to the Community tab to start a conversation
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -478,7 +493,9 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
                       </div>
                       <p className="text-gray-600 dark:text-[#a0a8b8] text-sm line-clamp-2 mb-3">{d.content}</p>
                       <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-[#6b7280]">
-                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-[#1a1f2e] rounded-full text-gray-600 dark:text-[#a0a8b8]">{d.category}</span>
+                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-[#1a1f2e] rounded-full text-gray-600 dark:text-[#a0a8b8]">
+                          {d.category}
+                        </span>
                         <span className="flex items-center gap-1">
                           <ThumbsUp size={12} />
                           {d.upvotes - d.downvotes > 0 ? "+" : ""}
@@ -505,7 +522,7 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
         <div className="mb-6">
           <button
             onClick={() => toggleSection("wishlist")}
-            className="w-full bg-white dark:bg-[#161b26] rounded-xl p-6 border border-gray-200 dark:border-[#2d3548] shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between group"
+            className="w-full bg-white dark:bg-[#161b26] rounded-xl p-6 border border-gray-200 dark:border-[#2d3548] shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between group cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#2c3968] to-[#4a5a9e] dark:from-[#4a7cf6] dark:to-[#5b8df7] flex items-center justify-center text-white">
@@ -521,7 +538,10 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
             {activeSection === "wishlist" ? (
               <ChevronUp className="text-[#2c3968] dark:text-[#4a7cf6]" size={24} />
             ) : (
-              <ChevronDown className="text-gray-400 dark:text-[#6b7280] group-hover:text-[#2c3968] dark:group-hover:text-[#4a7cf6] transition-colors" size={24} />
+              <ChevronDown
+                className="text-gray-400 dark:text-[#6b7280] group-hover:text-[#2c3968] dark:group-hover:text-[#4a7cf6] transition-colors"
+                size={24}
+              />
             )}
           </button>
 
@@ -531,7 +551,9 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
                 <div className="text-center py-12">
                   <Heart className="mx-auto text-gray-300 dark:text-[#2d3548] mb-4" size={48} />
                   <p className="text-gray-500 dark:text-[#a0a8b8]">Your wishlist is empty</p>
-                  <p className="text-gray-400 dark:text-[#6b7280] text-sm mt-2">Add phones to your wishlist from their spec pages</p>
+                  <p className="text-gray-400 dark:text-[#6b7280] text-sm mt-2">
+                    Add phones to your wishlist from their spec pages
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -546,7 +568,7 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
                       >
                         <button
                           onClick={() => handleRemoveFromWishlist(phoneId)}
-                          className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all duration-300 shadow-lg z-10"
+                          className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all duration-300 shadow-lg z-10 cursor-pointer"
                         >
                           <X size={16} />
                         </button>

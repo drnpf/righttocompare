@@ -1,6 +1,7 @@
-import svgPaths from "./svg-caqd896ugm";
-import { User, LogOut, UserCircle, Shield, Moon } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { User, LogOut, UserCircle, Shield, Moon } from "lucide-react";
+import svgPaths from "./svg-caqd896ugm";
 import { useDarkMode } from "../components/DarkModeContext";
 import { AppUser } from "../types/userTypes";
 
@@ -80,6 +81,21 @@ function NavigationBarLinks({
   };
   const displayName = getDisplayName();
 
+  /**
+   * Helper function to handle refresh if same page logic
+   * @param path Path to the page being navigated to
+   * @param originalCallback The original callback
+   */
+  const handleNavInteraction = (path: string, originalCallback?: () => void) => {
+    if (location.pathname === path) {
+      // Force hard refresh to clear all states/filters/scroll
+      window.location.href = path;
+    } else {
+      // Otherwise use the standard navigation provided by the parent
+      originalCallback?.();
+    }
+  };
+
   return (
     <div className="content-stretch flex gap-[20px] items-center relative shrink-0" data-name="Navigation Bar Links">
       <button
@@ -116,7 +132,7 @@ function NavigationBarLinks({
       >
         {/* Catalog Page */}
         <button
-          onClick={onCatalogClick}
+          onClick={() => handleNavInteraction("/", onCatalogClick)}
           className="box-border content-stretch flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
           data-name="Catalog"
         >
@@ -127,7 +143,7 @@ function NavigationBarLinks({
 
         {/* Trends Page */}
         <button
-          onClick={onTrendsClick}
+          onClick={() => handleNavInteraction("/trends", onTrendsClick)}
           className="box-border content-stretch flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
           data-name="Trends"
         >
@@ -138,7 +154,7 @@ function NavigationBarLinks({
 
         {/* Comparison Tool Page */}
         <button
-          onClick={onComparisonToolClick}
+          onClick={() => handleNavInteraction("/compare", onComparisonToolClick)}
           className="box-border content-stretch flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
           data-name="Comparison Tool"
         >
@@ -151,7 +167,7 @@ function NavigationBarLinks({
 
         {/* Discussion Page */}
         <button
-          onClick={onDiscussionsClick}
+          onClick={() => handleNavInteraction("/discussions", onDiscussionsClick)}
           className="box-border content-stretch hidden lg:flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
           data-name="Discussions"
         >
@@ -223,7 +239,7 @@ function NavigationBarLinks({
           </div>
         ) : (
           <button
-            onClick={onSignInClick}
+            onClick={() => handleNavInteraction("/sign-in", onSignInClick)}
             className="bg-[#2c3968] box-border flex items-center justify-center px-[16px] md:px-[24px] py-[12px] relative rounded-[100px] shrink-0 hover:bg-[#3d4a7a] transition-colors cursor-pointer"
             data-name="Navigation Pill"
           >
@@ -262,13 +278,22 @@ function NavigationBarLayout({
   onCatalogClick?: () => void;
   onLogoClick?: () => void;
 }) {
+  const navigate = useNavigate();
   return (
     <div
       className="absolute content-stretch flex h-[80px] items-center justify-between left-0 right-0 top-1/2 translate-y-[-50%] w-full max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 gap-2 md:gap-4"
       data-name="Navigation Bar Layout"
     >
-      <LogoButton className="h-[50px] md:h-[70px] relative shrink-0 w-[250px] md:w-[388px]" onClick={onLogoClick} />
-      {/* Spacer to maintain layout spacing where search bar was */}
+      <LogoButton
+        className="h-[50px] md:h-[70px] relative shrink-0 w-[250px] md:w-[388px]"
+        onClick={() => {
+          if (window.location.pathname === "/") {
+            window.location.href = "/";
+          } else {
+            navigate("/");
+          }
+        }}
+      />
       <div className="relative shrink-0 w-full max-w-[300px] md:max-w-[400px] hidden sm:block" />
       <NavigationBarLinks
         onComparisonToolClick={onComparisonToolClick}
