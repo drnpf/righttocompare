@@ -1,6 +1,6 @@
 import { Response, NextFunction } from "express";
 import User from "../models/User";
-import { AuthRequest } from "./authMiddleware";
+import { AuthRequest } from "./authentication";
 
 /**
  * Makes sure user is an admin.

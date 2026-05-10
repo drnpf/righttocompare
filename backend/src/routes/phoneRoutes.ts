@@ -1,6 +1,6 @@
 import { Router } from "express";
 import * as phoneController from "../controllers/phoneController";
-import { protect } from "../middleware/authMiddleware";
+import { protect } from "../middleware/authentication";
 import { requireAdmin } from "../middleware/adminMiddleware";
 
 const router = Router();
