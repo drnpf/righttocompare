@@ -412,8 +412,8 @@ export default function PhoneCatalogPage({
                 onClick={() => setShowFilters(!showFilters)}
                 className={`px-4 py-3 rounded-lg border text-sm font-bold transition-all ${
                   showFilters
-                    ? "bg-[#2c3968] text-white border-transparent"
-                    : "border-[#d9d9d9] dark:border-[#2d3548] text-[#2c3968] dark:text-[#4a7cf6] hover:bg-gray-50"
+                    ? "bg-[#2c3968] dark:bg-[#4a7cf6] text-white border-transparent shadow-md"
+                    : "border-[#d9d9d9] dark:border-[#2d3548] text-[#2c3968] dark:text-[#4a7cf6] hover:bg-gray-50 dark:hover:bg-[#252b3d]"
                 }`}
               >
                 {showFilters ? "Hide Filters" : "Filters"}

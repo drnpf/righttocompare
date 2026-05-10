@@ -462,13 +462,18 @@ export default function PhoneComparisonPage({
       <div className="flex gap-3 lg:gap-6 relative">
         {/* Left Sidebar - Filter */}
         <div
-          className={`shrink-0 transition-all duration-300 ease-in-out ${
+          className={`sticky transition-all duration-300 ${
             filterVisible ? "w-[280px] sm:w-[340px] opacity-100" : "w-0 opacity-0"
-          } ${filterVisible ? "fixed lg:relative top-0 left-0 h-full lg:h-auto z-[60] lg:z-auto" : ""}`}
+          } ${stickyHeader ? "top-[165px]" : "top-[0px]"} ${
+            filterVisible ? "fixed lg:relative left-0 h-full lg:h-auto z-[40]" : ""
+          }`}
         >
           {/* Mobile Overlay */}
           {filterVisible && (
-            <div className="fixed inset-0 bg-black/50 dark:bg-black/70 lg:hidden z-[59]" onClick={() => setFilterVisible(false)} />
+            <div
+              className="fixed inset-0 bg-black/50 dark:bg-black/70 lg:hidden z-[59]"
+              onClick={() => setFilterVisible(false)}
+            />
           )}
           <div
             className={`sticky top-24 ${filterVisible ? "" : "invisible"} ${filterVisible ? "z-[60] lg:z-auto" : ""}`}
@@ -476,7 +481,9 @@ export default function PhoneComparisonPage({
             <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-4 sm:p-6 h-screen lg:h-auto overflow-y-auto lg:overflow-visible">
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-[#2c3968] dark:text-[#4a7cf6] text-lg sm:text-xl font-semibold">Specification Filter</h2>
+                  <h2 className="text-[#2c3968] dark:text-[#4a7cf6] text-lg sm:text-xl font-semibold">
+                    Specification Filter
+                  </h2>
                   <button
                     onClick={() => setFilterVisible(false)}
                     className="text-[#2c3968] dark:text-[#4a7cf6] hover:bg-[#2c3968]/10 dark:hover:bg-[#4a7cf6]/10 rounded-lg p-2 transition-colors"
@@ -535,7 +542,9 @@ export default function PhoneComparisonPage({
 
                             <div className="flex-1 min-w-0">
                               <CollapsibleTrigger className="flex items-center gap-2 text-left w-full">
-                                <span className="capitalize text-[#2c3968] dark:text-[#4a7cf6] text-sm truncate">{category}</span>
+                                <span className="capitalize text-[#2c3968] dark:text-[#4a7cf6] text-sm truncate">
+                                  {category}
+                                </span>
                                 {(isFullySelected || isPartiallySelected) && (
                                   <Badge
                                     variant="secondary"
@@ -558,14 +567,18 @@ export default function PhoneComparisonPage({
                             >
                               <Checkbox
                                 checked={isFullySelected}
-                                className={isPartiallySelected ? "data-[state=checked]:bg-[#2c3968]/50" : ""}
+                                className={`border-[#2c3968] dark:border-[#4a7cf6] data-[state=checked]:bg-[#2c3968] dark:data-[state=checked]:bg-[#4a7cf6] transition-colors ${
+                                  isPartiallySelected ? "opacity-50" : ""
+                                }`}
                               />
                             </div>
 
                             <CollapsibleTrigger>
                               <ChevronDown
                                 className={`w-4 h-4 transition-all duration-200 ${
-                                  openCategories[category] ? "rotate-180 text-[#2c3968] dark:text-[#4a7cf6]" : "text-[#999] dark:text-[#6b7280]"
+                                  openCategories[category]
+                                    ? "rotate-180 text-[#2c3968] dark:text-[#4a7cf6]"
+                                    : "text-[#999] dark:text-[#6b7280]"
                                 }`}
                               />
                             </CollapsibleTrigger>
@@ -583,6 +596,7 @@ export default function PhoneComparisonPage({
                                   checked={categorySelectedSpecs.includes(specName)}
                                   onCheckedChange={() => toggleSpec(category, specName)}
                                   id={`${category}-${specName}`}
+                                  className="border-[#2c3968] dark:border-[#4a7cf6] data-[state=checked]:bg-[#2c3968] dark:data-[state=checked]:bg-[#4a7cf6] dark:data-[state=checked]:text-white"
                                 />
                                 <label
                                   htmlFor={`${category}-${specName}`}
@@ -607,7 +621,7 @@ export default function PhoneComparisonPage({
         <div className="flex-1 min-w-0">
           {/* Sticky Header */}
           <div
-            className={`fixed top-0 left-0 right-0 bg-gradient-to-r from-white via-[#f7f9fc] to-white dark:from-[#161b26] dark:via-[#1a1f2e] dark:to-[#161b26] backdrop-blur-xl border-b-2 border-[#2c3968]/20 dark:border-[#4a7cf6]/20 shadow-xl z-50 transition-all duration-300 ${
+            className={`fixed top-[80px] left-0 right-0 bg-white/90 dark:bg-background/90 backdrop-blur-xl border-b border-border shadow-xl z-40 transition-all duration-300 ${
               stickyHeader ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
             }`}
           >
@@ -654,7 +668,9 @@ export default function PhoneComparisonPage({
                   </span>
                   <div className="w-2 h-2 rounded-full bg-[#2c3968] dark:bg-[#4a7cf6] animate-pulse"></div>
                 </div>
-                <h1 className="text-5xl text-[#2c3968] dark:text-white mb-4 font-bold tracking-tight">Phone Comparison</h1>
+                <h1 className="text-5xl text-[#2c3968] dark:text-white mb-4 font-bold tracking-tight">
+                  Phone Comparison
+                </h1>
                 <div className="h-1.5 w-32 bg-gradient-to-r from-transparent via-[#2c3968] dark:via-[#4a7cf6] to-transparent rounded-full mx-auto mb-6"></div>
                 <p className="text-lg text-[#666] dark:text-[#a0a8b8] leading-relaxed mb-6">
                   {phones.length === 0
@@ -696,7 +712,10 @@ export default function PhoneComparisonPage({
                   <tr>
                     <th className="w-[180px] p-0 bg-white dark:bg-[#161b26] sticky left-0 z-10"></th>
                     {phones.map((phone, index) => (
-                      <th key={phone.id} className="w-[340px] p-0 bg-white dark:bg-[#161b26] border-l border-[#e0e0e0] dark:border-[#2d3548] align-top">
+                      <th
+                        key={phone.id}
+                        className="w-[340px] p-0 bg-white dark:bg-[#161b26] border-l border-[#e0e0e0] dark:border-[#2d3548] align-top"
+                      >
                         <div className="p-6 relative">
                           <button
                             onClick={() => onRemovePhone(phone.id)}
@@ -780,17 +799,12 @@ export default function PhoneComparisonPage({
                                     </button>
                                   </PopoverTrigger>
                                   <PopoverContent
-                                    className="w-[300px] p-0 dark:bg-[#161b26] dark:border-[#2d3548]"
+                                    className="w-[300px] p-0 bg-white dark:bg-background border-border shadow-2xl"
                                     align="center"
-                                    onOpenAutoFocus={(e) => e.preventDefault()}
                                   >
-                                    <Command shouldFilter={false}>
-                                      <CommandInput
-                                        placeholder="Search phones..."
-                                        value={searchQuery}
-                                        onValueChange={setSearchQuery}
-                                      />
-                                      <CommandList className="min-h-[300px] transition-opacity duration-200">
+                                    <Command className="dark:bg-background" shouldFilter={false}>
+                                      <CommandInput className="dark:text-white" placeholder="Search phones..." />
+                                      <CommandList className="dark:bg-background border-t border-border">
                                         {/* Search loading indicator */}
                                         {isSearching && (
                                           <div className="absolute top-0 left-0 right-0 h-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 overflow-hidden z-20">
@@ -825,7 +839,9 @@ export default function PhoneComparisonPage({
                                                     <p className="text-sm text-[#2c3968] dark:text-[#4a7cf6] truncate">
                                                       {phone.manufacturer} {phone.name}
                                                     </p>
-                                                    <p className="text-xs text-[#666] dark:text-[#a0a8b8]">{phone.price}</p>
+                                                    <p className="text-xs text-[#666] dark:text-[#a0a8b8]">
+                                                      {phone.price}
+                                                    </p>
                                                   </div>
                                                   <Plus className="w-4 h-4 text-[#2c3968] dark:text-[#4a7cf6] shrink-0" />
                                                 </div>
@@ -883,7 +899,9 @@ export default function PhoneComparisonPage({
                               key={phone.id}
                               className="px-6 py-3 bg-white dark:bg-[#161b26] border-t border-[#e0e0e0] dark:border-t-[#2d3548] border-l border-[#e0e0e0] dark:border-l-[#2d3548] group-hover:bg-[#fafbfc] dark:group-hover:bg-[#1a1f2e]"
                             >
-                              <span className="text-sm text-[#2c3968] dark:text-[#4a7cf6] break-words">{phoneSpec?.value || "N/A"}</span>
+                              <span className="text-sm text-[#2c3968] dark:text-[#4a7cf6] break-words">
+                                {phoneSpec?.value || "N/A"}
+                              </span>
                             </td>
                           );
                         })}
@@ -944,7 +962,10 @@ export default function PhoneComparisonPage({
 
                           {/* Category Specs */}
                           {filteredSpecKeys.map((specKey, specIdx) => (
-                            <tr key={`${category}-${specKey}`} className="group hover:bg-[#fafbfc] dark:hover:bg-[#1a1f2e] transition-colors">
+                            <tr
+                              key={`${category}-${specKey}`}
+                              className="group hover:bg-[#fafbfc] dark:hover:bg-[#1a1f2e] transition-colors"
+                            >
                               <td className="px-6 py-3 bg-white dark:bg-[#161b26] border-t border-[#e0e0e0] dark:border-[#2d3548] sticky left-0 z-10 group-hover:bg-[#fafbfc] dark:group-hover:bg-[#1a1f2e]">
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm text-[#666] dark:text-[#a0a8b8] break-words">{specKey}</span>
@@ -1075,9 +1096,14 @@ export default function PhoneComparisonPage({
 
                           {/* Carrier rows */}
                           {filteredCarriers.map((carrierName) => (
-                            <tr key={`carrier-${carrierName}`} className="group hover:bg-[#fafbfc] dark:hover:bg-[#1a1f2e] transition-colors">
+                            <tr
+                              key={`carrier-${carrierName}`}
+                              className="group hover:bg-[#fafbfc] dark:hover:bg-[#1a1f2e] transition-colors"
+                            >
                               <td className="px-6 py-3 bg-white dark:bg-[#161b26] border-t border-[#e0e0e0] dark:border-[#2d3548] sticky left-0 z-10 group-hover:bg-[#fafbfc] dark:group-hover:bg-[#1a1f2e]">
-                                <span className="text-sm text-[#666] dark:text-[#a0a8b8] break-words">{carrierName}</span>
+                                <span className="text-sm text-[#666] dark:text-[#a0a8b8] break-words">
+                                  {carrierName}
+                                </span>
                               </td>
                               {phones.map((phone) => {
                                 const carrierInfo = phone.carrierCompatibility?.find((c) => c.name === carrierName);
@@ -1094,7 +1120,9 @@ export default function PhoneComparisonPage({
                                           {carrierInfo.compatible ? "✓ Compatible" : "✗ Not Compatible"}
                                         </span>
                                         {carrierInfo.notes && (
-                                          <span className="text-xs text-[#999] dark:text-[#6b7280]">{carrierInfo.notes}</span>
+                                          <span className="text-xs text-[#999] dark:text-[#6b7280]">
+                                            {carrierInfo.notes}
+                                          </span>
                                         )}
                                       </div>
                                     ) : (
