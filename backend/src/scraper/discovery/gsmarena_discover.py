@@ -119,15 +119,15 @@ def discover_candidate_urls(
     If brand is provided, only scrape that brand.
     Else, scrape all brands (slow).
     """
-    directory = fetch_brand_directory(http)
-
-    # Goes directly to brand page using directory to save a request
+    # Goes directly to brand page using static dictionary to save a request
     if brand:
         b_norm = normalize_brand(brand)
         if b_norm in COMMON_BRANDS:
             print(f"   [discovery] Using static route for {brand}...")
             return discover_phone_urls_for_brand(http, COMMON_BRANDS[b_norm], max_pages=max_pages)
 
+    # Fetches brand page
+    directory = fetch_brand_directory(http)
     if brand:
         b = normalize_brand(brand)
         if b not in directory:

@@ -71,26 +71,30 @@ def newest_sort_urls(
         if any(d in source_id.lower() for d in deny_keywords):
             print(f"   [sorting] Pre-filtered (No Request): {source_id}", flush=True)
             continue
-
+        
         try:
             tables = gsm_quick_tables(http, u)
 
-            if not gsm_is_phone_only(tables, model_name=source_id):
-                continue
-
-            launch = tables.get("Launch", {}) or {}
-            announced_str = launch.get("Announced")
-            dt = parse_gsmarena_announced(announced_str)
-            key = dt.year * 10000 + dt.month * 100 + dt.day if dt else None
-
-            scored.append((key, u))
-            print(f"   [sorting] Confirmed phone {len(scored)}/{target_candidates}: {source_id}", flush=True)
-
-            if len(scored) >= target_candidates:
+        except Exception as e:
+            # Breaks loop and upserts scraped phones on block
+            if "429" in str(e):
+                print(f"   [429 Blocked] at {source_id}. Saving scraped phones.")
                 break
-
-        except Exception:
             continue
+
+        if not gsm_is_phone_only(tables, model_name=source_id):
+            continue
+
+        launch = tables.get("Launch", {}) or {}
+        announced_str = launch.get("Announced")
+        dt = parse_gsmarena_announced(announced_str)
+        key = dt.year * 10000 + dt.month * 100 + dt.day if dt else None
+
+        scored.append((key, u))
+        print(f"   [sorting] Confirmed phone {len(scored)}/{target_candidates}: {source_id}", flush=True)
+
+        if len(scored) >= target_candidates:
+            break
 
     # Sort newest first; unknown dates last
     scored.sort(key=lambda x: (x[0] is None, -(x[0] or 0)))
@@ -166,8 +170,14 @@ def main() -> int:
         return 0
 
     # 2) Sort newest-first from a phone-only pool
-    top = newest_sort_urls(http, urls, limit=args.limit, pool_mult=args.pool_mult)
+    if args.pool_mult > 1:
+        top = newest_sort_urls(http, urls, limit=args.limit, pool_mult=args.pool_mult)
+        print(f"[gsmarena] Using Deep Sort (Pool Multiplier: {args.pool_mult})...")
+    else: # Discovery already handles only adding phone URLs to urls list
+        top = urls[:args.limit + 5]
+        print(f"[gsmarena] Fast Path enabled. Trusting native sort...")
     print(f"[gsmarena] Discovered {len(urls)} URLs. Candidate top={len(top)}.", flush=True)
+
 
     # 3) Scrape + insert (phones-only), up to args.limit
     inserted = scrape_and_insert(http, col, top, hard_limit=args.limit)
