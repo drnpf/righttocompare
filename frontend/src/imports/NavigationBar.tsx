@@ -1,14 +1,9 @@
 import svgPaths from "./svg-caqd896ugm";
-import imgRightToCompareNameSlogan from "figma:asset/9f0492f671cd59d55bfede5826dae0ba5a04987c.png";
-import imgRightToCompareIcon from "figma:asset/18bcc14c7462237f04633edea2ae040313d21786.png";
 import { User, LogOut, UserCircle, Shield, Moon } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useDarkMode } from "../components/DarkModeContext";
 import { AppUser } from "../types/userTypes";
 
-/**
- * @figmaAssetKey 2f445a571b3309ebad6f453668e4e71c19f9efae
- */
 function LogoButton({ className, onClick }: { className?: string; onClick?: () => void }) {
   return (
     <button
@@ -18,16 +13,18 @@ function LogoButton({ className, onClick }: { className?: string; onClick?: () =
     >
       <div className="absolute aspect-[664/146] left-[18.04%] right-0 top-0" data-name="RightToCompare_name_slogan">
         <img
-          alt=""
+          alt="RightToCompare Name and Slogan"
+          src="/name_slogan.webp"
           className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full"
-          src={imgRightToCompareNameSlogan}
+          fetchpriority="high"
         />
       </div>
       <div className="absolute aspect-[70/70] left-0 right-[81.96%] top-0" data-name="RightToCompare_icon">
         <img
-          alt=""
+          alt="RightToCompare Icon"
+          src="/icon.webp"
           className="absolute inset-0 max-w-none object-50%-50% object-cover pointer-events-none size-full"
-          src={imgRightToCompareIcon}
+          fetchpriority="high"
         />
       </div>
     </button>

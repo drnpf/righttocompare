@@ -1,5 +1,9 @@
+# Shell scripts
+*.sh
+
 # Dependencies
-.venv
+.venv/
+venv/
 node_modules/
 /.pnp
 .pnp.js
@@ -8,9 +12,11 @@ node_modules/
 /coverage
 
 # Production builds
-/build
-/dist
-*.local
+build/
+dist/
+out/
+bin/
+obj/
 
 # Environment variables
 .env
@@ -72,3 +78,6 @@ Thumbs.db
 # --- BACKEND IGNORES ---
 # Ignores keys
 backend/src/config/keys/*
+__pycache__/
+*.pyc
+backend/phone_recs_bot/.venv/

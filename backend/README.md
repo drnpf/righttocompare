@@ -12,11 +12,12 @@
 
 ### 1. Installation
 
-Navigate to the backend directory and install dependencies:
+Navigate to the backend directory and install dependencies & chatbot:
 
 ```bash
 cd backend
 npm install
+npm run setup:chatbot
 ```
 
 ---

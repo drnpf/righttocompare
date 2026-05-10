@@ -1,10 +1,28 @@
 import { useState, useEffect } from "react";
-import { User, Bell, Heart, Settings, ChevronDown, ChevronUp, Save, X } from "lucide-react";
 import { toast } from "sonner@2.0.3";
+
+// Icons
+import {
+  User,
+  Bell,
+  Heart,
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  Save,
+  X,
+  MessageCircle,
+  ThumbsUp,
+  Eye,
+} from "lucide-react";
+
+// Custom Components & API
 import { phonesData } from "../data/phoneData";
 import { useAuth } from "../context/AuthContext";
 import { AppUser } from "../types/userTypes";
 import { updateUserProfile } from "../api/userApi";
+import { getDiscussionsByUser } from "../api/discussionApi";
+import { DiscussionResponse } from "../types/discussionTypes";
 
 interface UserProfile {
   name: string;
@@ -49,12 +67,18 @@ const featureLabels = {
   design: "Design & Build",
 };
 
-export default function UserProfilePage() {
-  const { currentUser, loading: authLoading, updateCurrentUser } = useAuth();
+interface UserProfilePageProps {
+  onViewDiscussion?: (discussionId: string) => void;
+}
+
+export default function UserProfilePage({ onViewDiscussion }: UserProfilePageProps) {
+  const { currentUser, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<AppUser | null>(null);
   const [activeSection, setActiveSection] = useState<string | null>("personal");
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [userDiscussions, setUserDiscussions] = useState<DiscussionResponse[]>([]);
+  const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(false);
 
   // Update profile when Firebase user changes
   useEffect(() => {
@@ -62,6 +86,25 @@ export default function UserProfilePage() {
       setProfile({ ...currentUser }); // Using shallow copy
     }
   }, [currentUser]);
+
+  // Fetch user's discussions when section opens
+  useEffect(() => {
+    if (activeSection === "discussions" && currentUser && userDiscussions.length === 0) {
+      setIsLoadingDiscussions(true);
+      getDiscussionsByUser(currentUser.uid)
+        .then(setUserDiscussions)
+        .finally(() => setIsLoadingDiscussions(false));
+    }
+  }, [activeSection, currentUser]);
+
+  const getTimeAgo = (dateStr: string) => {
+    const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (seconds < 60) return "just now";
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return `${Math.floor(seconds / 604800)}w ago`;
+  };
 
   const toggleSection = (section: string) => {
     setActiveSection(activeSection === section ? null : section);
@@ -154,9 +197,6 @@ export default function UserProfilePage() {
 
       // Updating the user profile
       const updateUser = await updateUserProfile(uid, token, profile);
-
-      // Update frontend immediately
-      updateCurrentUser({ wishlist: profile.wishlist });
 
       toast.success("Profile saved!");
       setHasChanges(false);
@@ -295,7 +335,7 @@ export default function UserProfilePage() {
                           onClick={() =>
                             handleFeaturePriorityChange(
                               key as keyof UserProfile["preferences"]["priorityFeatures"],
-                              value
+                              value,
                             )
                           }
                           className={`flex-1 py-2 rounded-lg border-2 transition-all duration-300 ${
@@ -382,6 +422,81 @@ export default function UserProfilePage() {
                   );
                 })}
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* My Discussions Section */}
+        <div className="mb-6">
+          <button
+            onClick={() => toggleSection("discussions")}
+            className="w-full bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#2c3968] to-[#4a5a9e] flex items-center justify-center text-white">
+                <MessageCircle size={24} />
+              </div>
+              <div className="text-left">
+                <h2 className="text-[#2c3968] mb-1">My Discussions</h2>
+                <p className="text-gray-600 text-sm">
+                  {userDiscussions.length > 0
+                    ? `${userDiscussions.length} ${userDiscussions.length === 1 ? "discussion" : "discussions"} posted`
+                    : "View your discussion history"}
+                </p>
+              </div>
+            </div>
+            {activeSection === "discussions" ? (
+              <ChevronUp className="text-[#2c3968]" size={24} />
+            ) : (
+              <ChevronDown className="text-gray-400 group-hover:text-[#2c3968] transition-colors" size={24} />
+            )}
+          </button>
+
+          {activeSection === "discussions" && (
+            <div className="mt-4 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+              {isLoadingDiscussions ? (
+                <div className="text-center py-10 text-gray-500">Loading discussions...</div>
+              ) : userDiscussions.length === 0 ? (
+                <div className="text-center py-12">
+                  <MessageCircle className="mx-auto text-gray-300 mb-4" size={48} />
+                  <p className="text-gray-500">You haven't posted any discussions yet</p>
+                  <p className="text-gray-400 text-sm mt-2">Head to the Community tab to start a conversation</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {userDiscussions.map((d) => (
+                    <div
+                      key={d._id}
+                      onClick={() => onViewDiscussion?.(d._id)}
+                      className={`p-4 border border-gray-200 rounded-lg transition-all duration-200 ${onViewDiscussion ? "cursor-pointer hover:border-[#2c3968] hover:shadow-md" : ""}`}
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <h4 className="text-[#2c3968] leading-snug line-clamp-1">{d.title}</h4>
+                        <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
+                          {getTimeAgo(d.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-gray-600 text-sm line-clamp-2 mb-3">{d.content}</p>
+                      <div className="flex items-center gap-4 text-xs text-gray-400">
+                        <span className="px-2 py-0.5 bg-gray-100 rounded-full text-gray-600">{d.category}</span>
+                        <span className="flex items-center gap-1">
+                          <ThumbsUp size={12} />
+                          {d.upvotes - d.downvotes > 0 ? "+" : ""}
+                          {d.upvotes - d.downvotes}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageCircle size={12} />
+                          {d.replyCount}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Eye size={12} />
+                          {d.views.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

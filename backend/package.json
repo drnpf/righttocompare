@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node dist/server.js",
     "build": "tsc",
-    "dev": "nodemon src/server.ts"
+    "backend": "nodemon src/server.ts",
+    "setup:chatbot": "cd phone_recs_bot && py -m venv .venv && .venv\\Scripts\\python.exe -m pip install -r requirements.txt",
+    "chatbot": "cd phone_recs_bot && .venv\\Scripts\\python.exe -m uvicorn app.main:app --reload",
+    "dev": "concurrently \"npm run backend\" \"npm run chatbot\""
   },
   "keywords": [],
   "author": "",
@@ -24,6 +27,7 @@
     "@types/express": "^5.0.6",
     "@types/mongoose": "^5.11.96",
     "@types/node": "^24.10.2",
+    "concurrently": "^9.2.1",
     "nodemon": "^3.1.11",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
