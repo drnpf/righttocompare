@@ -105,6 +105,54 @@ const categoryConfig: Record<string, { icon: any }> = {
 // ------------------------------------------------------------
 const REVIEW_FETCH_FILTER_DEBOUNCE_MS = 300;
 
+const retailerLogoData: Record<string, string> = {
+  Amazon:
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40">
+      <rect width="120" height="40" rx="10" fill="#111111"/>
+      <text x="18" y="21" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#ffffff">amazon</text>
+      <path d="M26 27c18 10 46 8 64-2" fill="none" stroke="#ff9900" stroke-width="3.2" stroke-linecap="round"/>
+      <path d="M87 22l5 4-6 1" fill="none" stroke="#ff9900" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `),
+  "Best Buy":
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40">
+      <rect width="120" height="40" rx="10" fill="#0046be"/>
+      <path d="M18 8h72l14 12-14 12H18z" fill="#ffde00"/>
+      <circle cx="87" cy="20" r="2.2" fill="#0046be"/>
+      <text x="30" y="18" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#111111">BEST</text>
+      <text x="30" y="29" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#111111">BUY</text>
+    </svg>
+  `),
+  Walmart:
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40">
+      <rect width="120" height="40" rx="10" fill="#0071ce"/>
+      <text x="14" y="24" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#ffffff">Walmart</text>
+      <g transform="translate(95 20)" stroke="#ffc220" stroke-width="3" stroke-linecap="round">
+        <path d="M0-8V-3"/><path d="M0 3V8"/><path d="M-8 0h5"/><path d="M3 0h5"/>
+        <path d="M-5.5-5.5l3.5 3.5"/><path d="M2 2l3.5 3.5"/><path d="M-5.5 5.5l3.5-3.5"/><path d="M2-2l3.5-3.5"/>
+      </g>
+    </svg>
+  `),
+  Target:
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40">
+      <rect width="120" height="40" rx="10" fill="#ffffff"/>
+      <circle cx="24" cy="20" r="11" fill="none" stroke="#cc0000" stroke-width="5"/>
+      <circle cx="24" cy="20" r="4.5" fill="#cc0000"/>
+      <text x="42" y="25" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" fill="#cc0000">Target</text>
+    </svg>
+  `),
+};
+
+const accessoryLabels = ["Case", "Screen Protector", "Charger", "Earbuds", "Power Bank"];
+
 // Phone Spec Page interface
 interface PhoneSpecPageProps {
   comparisonPhoneIds: string[];
@@ -166,6 +214,7 @@ export default function PhoneSpecPage({
   const [isPriceTrackingOpen, setIsPriceTrackingOpen] = useState(true);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isPriceAlertOpen, setIsPriceAlertOpen] = useState(false);
+  const [isShopDialogOpen, setIsShopDialogOpen] = useState(false);
   const [priceAlertEmail, setPriceAlertEmail] = useState("");
   const [targetPrice, setTargetPrice] = useState("");
 
@@ -527,6 +576,41 @@ export default function PhoneSpecPage({
     setTimeout(() => {
       reviewsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
+  };
+
+  const getRetailerUrl = (retailer: "Amazon" | "Best Buy" | "Walmart" | "Target") => {
+    const encodedPhoneName = encodeURIComponent(phoneData.name);
+
+    const retailerUrls = {
+      Amazon: `https://www.amazon.com/s?k=${encodedPhoneName}`,
+      "Best Buy": `https://www.bestbuy.com/site/searchpage.jsp?st=${encodedPhoneName}`,
+      Walmart: `https://www.walmart.com/search?q=${encodedPhoneName}`,
+      Target: `https://www.target.com/s?searchTerm=${encodedPhoneName}`,
+    };
+
+    return retailerUrls[retailer];
+  };
+
+  const openSearchWindow = (url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleBuyPhoneFromRetailer = (retailer: "Amazon" | "Best Buy" | "Walmart" | "Target") => {
+    openSearchWindow(getRetailerUrl(retailer));
+    toast.success(`Opening ${retailer}`, {
+      description: `Searching ${retailer} for ${phoneData.name}`,
+      duration: 3000,
+    });
+  };
+
+  const handleBuyAccessory = (accessory: string) => {
+    const accessoryUrl = `https://www.amazon.com/s?k=${encodeURIComponent(`${phoneData.name} ${accessory}`)}`;
+
+    openSearchWindow(accessoryUrl);
+    toast.success(`Opening ${accessory}`, {
+      description: `Searching Amazon for ${phoneData.name} ${accessory}`,
+      duration: 3000,
+    });
   };
 
   // Handle voting on reviews via API
@@ -974,8 +1058,8 @@ export default function PhoneSpecPage({
                 </Dialog>
               </div>
 
-              {/* Add to Compare Button - Second Row */}
-              <div className="flex justify-center mt-3 w-full px-4 sm:px-0">
+              {/* Add to Compare and Shop Actions */}
+              <div className="flex flex-col items-center gap-3 mt-3 w-full px-4 sm:px-0">
                 <Button
                   className={
                     comparisonPhones.some((phone) => phone.id === phoneData.id)
@@ -997,6 +1081,78 @@ export default function PhoneSpecPage({
                     </>
                   )}
                 </Button>
+
+                <Dialog open={isShopDialogOpen} onOpenChange={setIsShopDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      className="bg-white dark:bg-[#161b26] text-[#2c3968] dark:text-[#dbe7ff] border border-[#2c3968]/20 dark:border-[#4a7cf6]/30 hover:bg-[#f7f9fc] dark:hover:bg-[#1c2433] shadow-md w-full sm:w-auto"
+                      variant="outline"
+                    >
+                      <DollarSign className="w-4 h-4 mr-2" />
+                      Shop Now
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="w-full max-w-[min(92vw,48rem)] rounded-2xl border-[#2c3968]/15 p-5 sm:p-6">
+                    <DialogHeader>
+                      <DialogTitle className="text-[#2c3968]">Shop for {phoneData.name}</DialogTitle>
+                      <DialogDescription>
+                        Pick a retailer to shop for the phone, or jump straight to common accessories on Amazon.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <section className="rounded-2xl border border-[#2c3968]/10 bg-[#f7f9fc] p-4">
+                        <div className="mb-4">
+                          <h3 className="text-base font-semibold text-[#2c3968]">Buy the Phone</h3>
+                          <p className="text-sm text-[#666]">Search this model at major retailers.</p>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          {(["Amazon", "Best Buy", "Walmart", "Target"] as const).map((retailer) => (
+                            <div key={retailer} className="rounded-xl border border-[#2c3968]/10 bg-white p-4 shadow-sm">
+                              <div className="flex flex-col items-center gap-3">
+                                <div className="flex min-h-14 items-center justify-center rounded-lg border border-[#e6ebf5] bg-white px-3 py-2">
+                                  <img
+                                    src={retailerLogoData[retailer]}
+                                    alt={`${retailer} logo`}
+                                    className="h-10 w-auto object-contain"
+                                  />
+                                </div>
+                                <Button
+                                  className="min-w-[150px] bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] text-white hover:from-[#243059] hover:to-[#354368]"
+                                  onClick={() => handleBuyPhoneFromRetailer(retailer)}
+                                >
+                                  Shop Now
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+
+                      <section className="rounded-2xl border border-[#2c3968]/10 bg-white p-4">
+                        <div className="mb-4">
+                          <h3 className="text-base font-semibold text-[#2c3968]">Buy Accessories</h3>
+                          <p className="text-sm text-[#666]">
+                            Open Amazon searches for accessories that fit this phone.
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          {accessoryLabels.map((accessory) => (
+                            <Button
+                              key={accessory}
+                              className="w-[180px] justify-center self-start bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] text-white hover:from-[#243059] hover:to-[#354368]"
+                              onClick={() => handleBuyAccessory(accessory)}
+                            >
+                              {accessory}
+                            </Button>
+                          ))}
+                        </div>
+                      </section>
+                    </div>
+                    <DialogFooter className="mt-4 sm:justify-start">
+                      <p className="text-xs text-[#666]">Each button opens one search in a new tab.</p>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
 
               {/* Mobile Browse Phones Section - Shows below XL screens */}
