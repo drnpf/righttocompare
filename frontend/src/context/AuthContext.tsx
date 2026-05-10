@@ -29,6 +29,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   verifyTheResetCode: (oobCode: string) => Promise<void>;
   confirmThePassword: (oobCode: string, newPassword: string) => Promise<void>;
+  updateCurrentUser: (updates: Partial<AppUser>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -178,6 +179,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return confirmPasswordReset(auth, oobCode, newPassword);
   }, []);
 
+  const updateCurrentUser = useCallback((updates: Partial<AppUser>) => {
+    setCurrentUser((prev) => (prev ? { ...prev, ...updates } : prev));
+  }, []);
+
   // Public interface for functions (PUT NEW FUNCTIONS NAMES FOR AuthContext HERE)
   const value = useMemo(
     () => ({
@@ -190,6 +195,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       resetPassword,
       verifyTheResetCode,
       confirmThePassword,
+      updateCurrentUser,
     }),
     [
       currentUser,
@@ -201,6 +207,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       resetPassword,
       verifyTheResetCode,
       confirmThePassword,
+      updateCurrentUser,
     ],
   );
 

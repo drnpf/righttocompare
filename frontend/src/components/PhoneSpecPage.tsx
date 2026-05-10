@@ -86,6 +86,7 @@ import { PhoneSummary, PhoneData } from "../types/phoneTypes";
 import { getPhoneById, getPhoneSummaries } from "../api/phoneApi";
 import { SentimentSummary } from "../types/sentimentTypes";
 import { getPhoneReviewSentiment } from "../api/reviewApi";
+import { updateUserProfile } from "../api/userApi";
 
 // Category icons mapping - minimalistic uniform color scheme
 const categoryConfig: Record<string, { icon: any }> = {
@@ -195,7 +196,7 @@ export default function PhoneSpecPage({
   // Routing & User Authentication
   const { phoneId } = useParams<{ phoneId: string }>();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, updateCurrentUser } = useAuth();
   const reviewsSectionRef = useRef<HTMLDivElement>(null);
   const hasAddedToHistory = useRef<string | null>(null); // Tracking if a phone has already been added to recently viewed
 
@@ -473,6 +474,15 @@ export default function PhoneSpecPage({
 
     fetchPriceTrackingData();
   }, [phoneId]);
+
+  useEffect(() => {
+    if (!currentUser?.wishlist || !phoneData?.id) {
+      setIsWishlisted(false);
+      return;
+    }
+
+    setIsWishlisted(currentUser.wishlist.includes(phoneData.id));
+  }, [currentUser, phoneData?.id]);
 
   /**
    * SYNC: Comparison Cart Metadata Cache
@@ -773,12 +783,29 @@ export default function PhoneSpecPage({
   };
 
   // -- WISHLIST --
-  const handleWishlistToggle = () => {
-    setIsWishlisted(!isWishlisted);
-    if (!isWishlisted) {
-      toast.success(`${phoneData.name} added to wishlist!`);
-    } else {
-      toast.success(`${phoneData.name} removed from wishlist`);
+  const handleWishlistToggle = async () => {
+    if (!currentUser?.firebaseUser) {
+      toast.error("Please sign in to update your wishlist");
+      return;
+    }
+
+    const newWishlist = isWishlisted
+      ? currentUser.wishlist.filter((id) => id !== phoneData.id)
+      : [...currentUser.wishlist, phoneData.id];
+
+    try {
+      const token = await currentUser.firebaseUser.getIdToken();
+      const updatedUser = await updateUserProfile(currentUser.uid, token, { wishlist: newWishlist });
+
+      if (!updatedUser) {
+        throw new Error("Failed to update wishlist");
+      }
+
+      updateCurrentUser({ wishlist: updatedUser.wishlist ?? newWishlist });
+      setIsWishlisted(!isWishlisted);
+      toast.success(`${phoneData.name} ${isWishlisted ? "removed from" : "added to"} wishlist!`);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update wishlist");
     }
   };
 

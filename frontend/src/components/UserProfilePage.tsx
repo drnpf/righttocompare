@@ -72,7 +72,7 @@ interface UserProfilePageProps {
 }
 
 export default function UserProfilePage({ onViewDiscussion }: UserProfilePageProps) {
-  const { currentUser, loading: authLoading } = useAuth();
+  const { currentUser, loading: authLoading, updateCurrentUser } = useAuth();
   const [profile, setProfile] = useState<AppUser | null>(null);
   const [activeSection, setActiveSection] = useState<string | null>("personal");
   const [hasChanges, setHasChanges] = useState(false);
@@ -196,7 +196,16 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
       const uid = currentUser.uid;
 
       // Updating the user profile
-      const updateUser = await updateUserProfile(uid, token, profile);
+      const updatedUser = await updateUserProfile(uid, token, profile);
+      if (!updatedUser) {
+        throw new Error("Failed to update user profile");
+      }
+
+      updateCurrentUser({
+        displayName: updatedUser.displayName ?? profile.displayName,
+        preferences: updatedUser.preferences ?? profile.preferences,
+        wishlist: updatedUser.wishlist ?? profile.wishlist,
+      });
 
       toast.success("Profile saved!");
       setHasChanges(false);
