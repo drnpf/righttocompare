@@ -375,7 +375,15 @@ function AppContent() {
               {/* Admin */}
               <Route
                 path="/admin"
-                element={<AdminDashboardPage />}
+                element={
+                  <ProtectedRoute
+                    adminOnly
+                    onNavigateToCatalog={handleCatalogClick}
+                    onNavigateToSignIn={handleSignInClick}
+                  >
+                    <AdminDashboardPage />
+                  </ProtectedRoute>
+                }
               />
 
               {/* Password reset */}
