@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "sonner@2.0.3";
+import CarrierCompatibilityChecker from "./CarrierCompatibilityChecker";
 
 // UI Components
 import { Card, CardContent, CardHeader } from "./ui/card";
@@ -86,6 +87,7 @@ import { PhoneSummary, PhoneData } from "../types/phoneTypes";
 import { getPhoneById, getPhoneSummaries } from "../api/phoneApi";
 import { SentimentSummary } from "../types/sentimentTypes";
 import { getPhoneReviewSentiment } from "../api/reviewApi";
+import BenchmarkDisplay from "./BenchmarkDisplay";
 import { updateUserProfile } from "../api/userApi";
 
 // Category icons mapping - minimalistic uniform color scheme
@@ -847,6 +849,29 @@ export default function PhoneSpecPage({
     // The cart will automatically hide when there are no phones/closing minimizes the cart
     setShowComparisonCart(false);
   };
+
+  // Saves the user's carrier preference to their profile in the database
+  const handleCarrierChange = async (carrier: string) => {
+    // Save to localStorage so it works immediately
+    localStorage.setItem("preferredCarrier", carrier);
+    
+    // Save to database for logged-in users
+    if (!currentUser?.firebaseUser) return;
+    try {
+      const token = await currentUser.firebaseUser.getIdToken();
+      await fetch(`http://localhost:5001/api/users/${currentUser.uid}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ preferredCarrier: carrier }),
+      });
+    } catch (err) {
+      console.error("Failed to save carrier preference:", err);
+    }
+  };
+
 
   // ------------------------------------------------------------
   // | UI SECTION
@@ -1792,72 +1817,40 @@ export default function PhoneSpecPage({
               </div>
             </div>
             <CollapsibleContent>
-              <div className="space-y-6">
-                <p className="text-[#666] dark:text-[#a0a8b8]">Network support for {phoneData.name}</p>
-
-                <div className="space-y-3">
-                  {phoneData.carrierCompatibility.map((carrier, idx) => (
-                    <div
-                      key={idx}
-                      className="group flex items-center justify-between p-4 rounded-xl border border-[#e0e0e0] dark:border-[#2d3548] hover:border-[#2c3968]/20 dark:hover:border-[#4a7cf6]/20 bg-white dark:bg-[#161b26] hover:bg-gradient-to-r hover:from-[#f7f9fc] hover:to-white dark:hover:from-[#1a1f2e] dark:hover:to-[#161b26] transition-all duration-200"
-                    >
-                      <div className="flex items-center gap-4 flex-1">
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            carrier.compatible
-                              ? "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                              : "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400"
-                          }`}
-                        >
-                          {carrier.compatible ? (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2.5}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-[#1e1e1e] dark:text-white">{carrier.name}</p>
-                          {carrier.notes && (
-                            <p className="text-sm text-[#999] dark:text-[#6b7280] mt-0.5">{carrier.notes}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div
-                        className={`px-3 py-1 rounded-full text-xs ${
-                          carrier.compatible
-                            ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                            : "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                        }`}
-                      >
-                        {carrier.compatible ? "Supported" : "Not Supported"}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex items-start gap-3 p-4 bg-[#f7f9fc] dark:bg-[#1a1f2e] rounded-xl border border-[#2c3968]/10 dark:border-[#4a7cf6]/10">
-                  <div className="w-5 h-5 rounded-full bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <HelpCircle className="w-3 h-3 text-[#2c3968] dark:text-[#4a7cf6]" />
-                  </div>
-                  <p className="text-sm text-[#666] dark:text-[#a0a8b8]">
-                    Compatibility may vary by model variant and region. Verify with your carrier before purchase.
-                  </p>
-                </div>
-              </div>
+              <CarrierCompatibilityChecker
+                carrierCompatibility={phoneData.carrierCompatibility}
+                phoneName={phoneData.name}
+                userCarrier={currentUser?.preferredCarrier || localStorage.getItem("preferredCarrier") || ""}
+                onCarrierChange={handleCarrierChange}
+                networkBands={phoneData.categories?.connectivity ? {
+                  bands4G: String(phoneData.categories.connectivity["4G Bands"] || "").split(",").map((b: string) => b.trim()).filter(Boolean),
+                  bands5G: String(phoneData.categories.connectivity["5G Bands"] || "").split(",").map((b: string) => b.trim()).filter(Boolean),
+                } : undefined}
+              />
             </CollapsibleContent>
           </div>
         </Collapsible>
 
-        {/* 6. Reviews Section */}
+        {/* 6. Performance Benchmarks */}
+        <Collapsible open={true}>
+          <div id="benchmarks" className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-8 mb-8 mt-8">
+            <div className="mb-6">
+              <div className="flex items-center gap-3">
+                <div>
+                  <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-2">Performance Benchmarks</h2>
+                  <div className="h-1 w-20 bg-[#2c3968] dark:bg-[#4a7cf6] rounded-full"></div>
+                </div>
+              </div>
+            </div>
+            <BenchmarkDisplay
+              benchmarks={phoneData.categories?.benchmarks || {}}
+              phoneName={phoneData.name}
+            />
+          </div>
+        </Collapsible>
+
+
+        {/* 7. Reviews Section */}
         <Collapsible open={isReviewsOpen} onOpenChange={setIsReviewsOpen}>
           <div
             id="reviews"

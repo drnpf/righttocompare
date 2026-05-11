@@ -129,11 +129,14 @@ export const updateUser = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     // Prepping update data and only allowing specific fields to be updated for security
-    const { displayName, preferences, wishlist } = req.body;
+    const { displayName, preferences, wishlist, comparisonPhoneIds, preferredCarrier } = req.body;
     const updateData: any = {};
     if (displayName) updateData.displayName = displayName;
     if (preferences) updateData.preferences = preferences;
     if (wishlist) updateData.wishlist = wishlist;
+    if (comparisonPhoneIds) updateData.comparisonPhoneIds = comparisonPhoneIds;
+    if (preferredCarrier !== undefined) updateData.preferredCarrier = preferredCarrier;
+    if (comparisonPhoneIds) updateData.comparisonPhoneIds = comparisonPhoneIds;
 
     // Calling UserService updating function
     const updatedUser = await UserService.updateUserProfile(paramUid, updateData);

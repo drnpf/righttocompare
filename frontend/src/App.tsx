@@ -141,7 +141,7 @@ function AppContent() {
     if (currentUser && isAuthPage) navigate("/profile", { replace: true });
   }, [currentUser, location.pathname, navigate]);
 
-  /**
+/**
    * COMPARISON PERSISTENCE:
    * Signal: Any changes to the comparisonPhoneIds array (i.e. adding new phone)
    * Action: Syncs current comparison ID list to localStorage; keeps compares
@@ -149,8 +149,28 @@ function AppContent() {
    */
   useEffect(() => {
     saveComparisonToStorage(comparisonPhoneIds);
-  }, [comparisonPhoneIds]);
 
+    // Also save to database for logged-in users
+    if (currentUser?.firebaseUser) {
+      const saveToDb = async () => {
+        try {
+          const token = await currentUser.firebaseUser.getIdToken();
+          await fetch(`http://localhost:5001/api/users/${currentUser.uid}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ comparisonPhoneIds }),
+          });
+        } catch (err) {
+          console.error("Failed to save comparisons:", err);
+        }
+      };
+      saveToDb();
+    }
+  }, [comparisonPhoneIds]);
+  
   // Update compare page URL whenever user adds/removes phones to compare cart
   useEffect(() => {
     if (location.pathname !== "/compare") return;

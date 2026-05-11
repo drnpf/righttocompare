@@ -36,6 +36,8 @@ export interface IUser extends Document {
     dailyDigestLastSentAt?: Date | null;
   };
   wishlist: string[];
+  preferredCarrier: string;
+  comparisonPhoneIds: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +77,8 @@ const UserSchema: Schema = new Schema(
       dailyDigestLastSentAt: { type: Date, default: null },
     },
     wishlist: { type: [String], default: [] },
+    preferredCarrier: { type: String, default: "" },
+    comparisonPhoneIds: { type: [String], default: [] },
   },
   {
     timestamps: true,

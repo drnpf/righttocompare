@@ -39,4 +39,6 @@ export interface AppUser {
     dailyDigestLastSentAt?: string | null;
   };
   wishlist: string[];
+  preferredCarrier: string;
+  comparisonPhoneIds: string[];
 }
