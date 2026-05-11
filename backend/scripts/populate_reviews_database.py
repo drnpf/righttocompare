@@ -54,6 +54,7 @@ def clear_all_reviews(db):
 def run_api_seeder(chance, clear):
     client = MongoClient(MONGO_URI)
     db = client[DB_NAME]
+    INTERNAL_BYPASS_KEY = os.getenv("INTERNAL_BYPASS_KEY")
     
     # Handle clearing database first if clear flag
     if clear:
@@ -80,7 +81,7 @@ def run_api_seeder(chance, clear):
         return
 
     # Review injection loop
-    phones = list(db.phones.find({}, {"id": 1, "name": 1}))
+    phones = list(db.phones_test2.find({}, {"id": 1, "name": 1}))
     print(f"\nStarting injection for {len(phones)} phones...")
 
     success_count = 0
@@ -104,7 +105,11 @@ def run_api_seeder(chance, clear):
                 "categoryRatings": tmpl["ratings"]
             }
             
-            headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+            headers = {
+                "Authorization": f"Bearer {token}", 
+                "Content-Type": "application/json",
+                "x-internal-bypass": INTERNAL_BYPASS_KEY  # <--- THE BYPASS KEY
+            }
             
             try:
                 response = requests.post(f"{API_BASE_URL}/{p_id}/reviews", json=payload, headers=headers)

@@ -49,14 +49,24 @@ app.use(
 // | TRAFFIC AND DOS PROTECTION
 // -----------------------------------------------------------
 // Rate limiter
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: "Too many requests. Please try again later.",
-  standardHeaders: true,
-  legacyHeaders: true,
-});
-app.use("/api", limiter);
+//const limiter = rateLimit({
+//  windowMs: 15 * 60 * 1000,
+//  max: 100,
+//  message: "Too many requests. Please try again later.",
+//  skip: (req: Request) => {
+//    // Bypass if the custom secret header is present
+//    const bypassHeader = req.headers["x-internal-bypass"];
+//    const isSecretValid = bypassHeader === process.env.INTERNAL_BYPASS_KEY;
+//
+//    // Bypass if request is from localhost (optional, but helpful for dev)
+//    const isLocalhost = req.ip === "::1" || req.ip === "127.0.0.1";
+//
+//    return isSecretValid || isLocalhost;
+//  },
+//  standardHeaders: true,
+//  legacyHeaders: true,
+//});
+//app.use("/api", limiter);
 
 // ------------------------------------------------------------
 // | DATA PARSING AND SANITIZATION
