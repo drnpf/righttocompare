@@ -38,3 +38,10 @@ tester_uo429@righttocompare.test TestPassword123!
 tester_bf17r@righttocompare.test TestPassword123!
 tester_56jbs@righttocompare.test TestPassword123!
 tester_8bx7u@righttocompare.test TestPassword123!
+tester_aix4l@righttocompare.test TestPassword123!
+tester_57eh3@righttocompare.test TestPassword123!
+tester_t2qaf@righttocompare.test TestPassword123!
+tester_9ny3y@righttocompare.test TestPassword123!
+tester_20ihf@righttocompare.test TestPassword123!
+tester_m5cct@righttocompare.test TestPassword123!
+tester_4a3y7@righttocompare.test TestPassword123!
