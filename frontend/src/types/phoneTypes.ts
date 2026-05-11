@@ -38,6 +38,13 @@ export interface PhoneSummary {
 export interface PhoneCard extends PhoneSummary {
   releaseDate: string;
   quickSpecs: QuickSpec[];
+  hotSignals?: {
+    isNewRelease: boolean;
+    hasPriceDrop: boolean;
+    originalPrice: number | null;
+    latestPrice: number | null;
+    percentDrop: number | null;
+  };
 }
 
 /**

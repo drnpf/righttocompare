@@ -89,6 +89,67 @@ export const getPhonePage = async (req: Request, res: Response) => {
   }
 };
 
+export const getHotPhonePage = async (req: Request, res: Response) => {
+  try {
+    const MAX_LIMIT = 50;
+    const DEFAULT_LIMIT = 12;
+    const PAGE_DEFAULT = 1;
+
+    const page = parseInt(req.query.page as string) || PAGE_DEFAULT;
+    const limit = Math.min(parseInt(req.query.limit as string) || DEFAULT_LIMIT, MAX_LIMIT);
+    const search = String(req.query.search || "");
+
+    const minPrice = req.query.minPrice ? parseFloat(String(req.query.minPrice)) : undefined;
+    const maxPrice = req.query.maxPrice ? parseFloat(String(req.query.maxPrice)) : undefined;
+
+    let ram: number[] = [];
+    if (req.query.ram) {
+      const rawRam = Array.isArray(req.query.ram) ? (req.query.ram as any[]) : [req.query.ram];
+      ram = rawRam.map((val) => Number(String(val)));
+    }
+
+    let storage: number[] = [];
+    if (req.query.storage) {
+      const rawStorage = Array.isArray(req.query.storage) ? (req.query.storage as any[]) : [req.query.storage];
+      storage = rawStorage.map((val) => Number(String(val)));
+    }
+
+    let manufacturer: string[] = [];
+    if (req.query.manufacturer) {
+      const rawManufacturer = Array.isArray(req.query.manufacturer)
+        ? (req.query.manufacturer as any[])
+        : [req.query.manufacturer];
+      manufacturer = rawManufacturer.map((val) => String(val));
+    }
+
+    const { phones, total } = await phoneService.findHotPhonePage(page, limit, {
+      search,
+      manufacturer,
+      minPrice,
+      maxPrice,
+      ram,
+      storage,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Hot phones retrieved successfully",
+      data: phones,
+      pagination: {
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: page,
+        itemsPerPage: limit,
+        hasNextPage: page * limit < total,
+        hasPrevPage: page > 1,
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching hot phones:", err);
+    res.status(500).json({ success: false, message: "Server error fetching hot phones" });
+  }
+};
+
 /**
  * Fetches a specific phone using its ID.
  * @route GET /api/phones/:id
@@ -353,9 +414,14 @@ export const createPhonePriceHistory = async (req: Request, res: Response) => {
       recordedAt: recordedAt ? new Date(recordedAt) : undefined,
     });
 
+    const notificationResult = await import("../services/inAppNotificationService").then((service) =>
+      service.createPriceDropNotificationsForPhone(id),
+    );
+
     res.status(201).json({
       message: "Price history entry created successfully",
       data: createdEntry,
+      notificationResult,
     });
   } catch (error) {
     console.error(`Error creating price history for phone ${req.params.id}:`, error);

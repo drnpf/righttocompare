@@ -92,9 +92,9 @@ export const getReviewsForPhone = async (
 
   // Defining sort stage
   const sortStage: any = {};
-  if (sortBy === "newest") sortStage["reviews.date"] = -1;
-  else if (sortBy === "oldest") sortStage["reviews.date"] = 1;
-  else if (sortBy === "helpful") sortStage["reviews.helpful"] = -1;
+  if (sortBy === "newest") sortStage["date"] = -1;
+  else if (sortBy === "oldest") sortStage["date"] = 1;
+  else if (sortBy === "helpful") sortStage["helpful"] = -1;
 
   // Executing query for getting review page and filtering by sentiments
   const reviews = await Review.find(query).sort(sortStage).skip(skip).limit(limit).lean();

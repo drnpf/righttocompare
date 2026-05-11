@@ -17,12 +17,13 @@ import {
 } from "lucide-react";
 
 // Custom Components & API
-import { phonesData } from "../data/phoneData";
 import { useAuth } from "../context/AuthContext";
 import { AppUser } from "../types/userTypes";
 import { updateUserProfile } from "../api/userApi";
 import { getDiscussionsByUser } from "../api/discussionApi";
 import { DiscussionResponse } from "../types/discussionTypes";
+import { getPhoneSummaries } from "../api/phoneApi";
+import { PhoneSummary } from "../types/phoneTypes";
 
 interface UserProfile {
   name: string;
@@ -72,13 +73,15 @@ interface UserProfilePageProps {
 }
 
 export default function UserProfilePage({ onViewDiscussion }: UserProfilePageProps) {
-  const { currentUser, loading: authLoading } = useAuth();
+  const { currentUser, loading: authLoading, updateCurrentUser } = useAuth();
   const [profile, setProfile] = useState<AppUser | null>(null);
+  const [wishlistPhones, setWishlistPhones] = useState<PhoneSummary[]>([]);
   const [activeSection, setActiveSection] = useState<string | null>("personal");
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [userDiscussions, setUserDiscussions] = useState<DiscussionResponse[]>([]);
   const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(false);
+  const [isLoadingWishlist, setIsLoadingWishlist] = useState(false);
 
   // Update profile when Firebase user changes
   useEffect(() => {
@@ -96,6 +99,30 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
         .finally(() => setIsLoadingDiscussions(false));
     }
   }, [activeSection, currentUser]);
+
+  useEffect(() => {
+    if (activeSection !== "wishlist" || !profile) return;
+
+    if (profile.wishlist.length === 0) {
+      setWishlistPhones([]);
+      return;
+    }
+
+    const loadWishlistPhones = async () => {
+      setIsLoadingWishlist(true);
+      try {
+        const phones = await getPhoneSummaries(profile.wishlist);
+        setWishlistPhones(phones);
+      } catch (error) {
+        console.error("Failed to fetch wishlist phones:", error);
+        setWishlistPhones([]);
+      } finally {
+        setIsLoadingWishlist(false);
+      }
+    };
+
+    loadWishlistPhones();
+  }, [activeSection, profile]);
 
   const getTimeAgo = (dateStr: string) => {
     const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -176,6 +203,7 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
         wishlist: prev.wishlist.filter((id) => id !== phoneId),
       };
     });
+    setWishlistPhones((prev) => prev.filter((phone) => phone.id !== phoneId));
     setHasChanges(true);
   };
 
@@ -196,7 +224,16 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
       const uid = currentUser.uid;
 
       // Updating the user profile
-      const updateUser = await updateUserProfile(uid, token, profile);
+      const updatedUser = await updateUserProfile(uid, token, profile);
+      if (!updatedUser) {
+        throw new Error("Failed to update user profile");
+      }
+
+      updateCurrentUser({
+        displayName: updatedUser.displayName ?? profile.displayName,
+        preferences: updatedUser.preferences ?? profile.preferences,
+        wishlist: updatedUser.wishlist ?? profile.wishlist,
+      });
 
       toast.success("Profile saved!");
       setHasChanges(false);
@@ -547,7 +584,9 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
 
           {activeSection === "wishlist" && (
             <div className="mt-4 bg-white dark:bg-[#161b26] rounded-xl p-6 border border-gray-200 dark:border-[#2d3548] shadow-sm">
-              {profile.wishlist.length === 0 ? (
+              {isLoadingWishlist ? (
+                <div className="text-center py-10 text-gray-500">Loading wishlist...</div>
+              ) : profile.wishlist.length === 0 ? (
                 <div className="text-center py-12">
                   <Heart className="mx-auto text-gray-300 dark:text-[#2d3548] mb-4" size={48} />
                   <p className="text-gray-500 dark:text-[#a0a8b8]">Your wishlist is empty</p>
@@ -557,18 +596,15 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {profile.wishlist.map((phoneId) => {
-                    const phone = phonesData[phoneId];
-                    if (!phone) return null;
-
+                  {wishlistPhones.map((phone) => {
                     return (
                       <div
-                        key={phoneId}
-                        className="relative group border border-gray-200 dark:border-[#2d3548] rounded-lg p-4 hover:border-[#2c3968] dark:hover:border-[#4a7cf6] hover:shadow-md transition-all duration-300"
+                        key={phone.id}
+                        className="relative group border border-gray-200 rounded-lg p-4 hover:border-[#2c3968] hover:shadow-md transition-all duration-300"
                       >
                         <button
-                          onClick={() => handleRemoveFromWishlist(phoneId)}
-                          className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all duration-300 shadow-lg z-10 cursor-pointer"
+                          onClick={() => handleRemoveFromWishlist(phone.id)}
+                          className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all duration-300 shadow-lg z-10"
                         >
                           <X size={16} />
                         </button>

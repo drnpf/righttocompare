@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "sonner@2.0.3";
+import CarrierCompatibilityChecker from "./CarrierCompatibilityChecker";
 
 // UI Components
 import { Card, CardContent, CardHeader } from "./ui/card";
@@ -84,6 +85,10 @@ import { ReviewData } from "../types/reviewTypes";
 import { getPhoneReviews, submitReview, voteOnReview, deleteReview } from "../api/reviewApi";
 import { PhoneSummary, PhoneData } from "../types/phoneTypes";
 import { getPhoneById, getPhoneSummaries } from "../api/phoneApi";
+import { SentimentSummary } from "../types/sentimentTypes";
+import { getPhoneReviewSentiment } from "../api/reviewApi";
+import BenchmarkDisplay from "./BenchmarkDisplay";
+import { updateUserProfile } from "../api/userApi";
 
 // Category icons mapping - minimalistic uniform color scheme
 const categoryConfig: Record<string, { icon: any }> = {
@@ -103,6 +108,54 @@ const categoryConfig: Record<string, { icon: any }> = {
 // ------------------------------------------------------------
 const REVIEW_FETCH_FILTER_DEBOUNCE_MS = 300;
 
+const retailerLogoData: Record<string, string> = {
+  Amazon:
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40">
+      <rect width="120" height="40" rx="10" fill="#111111"/>
+      <text x="18" y="21" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#ffffff">amazon</text>
+      <path d="M26 27c18 10 46 8 64-2" fill="none" stroke="#ff9900" stroke-width="3.2" stroke-linecap="round"/>
+      <path d="M87 22l5 4-6 1" fill="none" stroke="#ff9900" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `),
+  "Best Buy":
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40">
+      <rect width="120" height="40" rx="10" fill="#0046be"/>
+      <path d="M18 8h72l14 12-14 12H18z" fill="#ffde00"/>
+      <circle cx="87" cy="20" r="2.2" fill="#0046be"/>
+      <text x="30" y="18" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#111111">BEST</text>
+      <text x="30" y="29" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#111111">BUY</text>
+    </svg>
+  `),
+  Walmart:
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40">
+      <rect width="120" height="40" rx="10" fill="#0071ce"/>
+      <text x="14" y="24" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#ffffff">Walmart</text>
+      <g transform="translate(95 20)" stroke="#ffc220" stroke-width="3" stroke-linecap="round">
+        <path d="M0-8V-3"/><path d="M0 3V8"/><path d="M-8 0h5"/><path d="M3 0h5"/>
+        <path d="M-5.5-5.5l3.5 3.5"/><path d="M2 2l3.5 3.5"/><path d="M-5.5 5.5l3.5-3.5"/><path d="M2-2l3.5-3.5"/>
+      </g>
+    </svg>
+  `),
+  Target:
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40">
+      <rect width="120" height="40" rx="10" fill="#ffffff"/>
+      <circle cx="24" cy="20" r="11" fill="none" stroke="#cc0000" stroke-width="5"/>
+      <circle cx="24" cy="20" r="4.5" fill="#cc0000"/>
+      <text x="42" y="25" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" fill="#cc0000">Target</text>
+    </svg>
+  `),
+};
+
+const accessoryLabels = ["Case", "Screen Protector", "Charger", "Earbuds", "Power Bank"];
+
 // Phone Spec Page interface
 interface PhoneSpecPageProps {
   comparisonPhoneIds: string[];
@@ -110,6 +163,9 @@ interface PhoneSpecPageProps {
   recentlyViewedPhones: string[];
   onAddToRecentlyViewed: (phoneId: string) => void;
   onNavigateToComparison: () => void;
+  sessionSelectedSpecs: Record<string, string[]> | null;
+  onSessionSelectedSpecsChange: React.Dispatch<React.SetStateAction<Record<string, string[]> | null>>;
+  sessionStateHydrated: boolean;
 }
 
 interface PriceHistoryPoint {
@@ -138,6 +194,9 @@ export default function PhoneSpecPage({
   recentlyViewedPhones,
   onAddToRecentlyViewed,
   onNavigateToComparison,
+  sessionSelectedSpecs,
+  onSessionSelectedSpecsChange,
+  sessionStateHydrated,
 }: PhoneSpecPageProps) {
   // ------------------------------------------------------------
   // | HOOKS
@@ -145,9 +204,10 @@ export default function PhoneSpecPage({
   // Routing & User Authentication
   const { phoneId } = useParams<{ phoneId: string }>();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, updateCurrentUser } = useAuth();
   const reviewsSectionRef = useRef<HTMLDivElement>(null);
   const hasAddedToHistory = useRef<string | null>(null); // Tracking if a phone has already been added to recently viewed
+  const isSyncingSessionFromLocalChange = useRef(false);
 
   // -- Phone Specification States --
   const [phoneData, setPhoneData] = useState<PhoneData | null>(null);
@@ -164,6 +224,7 @@ export default function PhoneSpecPage({
   const [isPriceTrackingOpen, setIsPriceTrackingOpen] = useState(true);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isPriceAlertOpen, setIsPriceAlertOpen] = useState(false);
+  const [isShopDialogOpen, setIsShopDialogOpen] = useState(false);
   const [priceAlertEmail, setPriceAlertEmail] = useState("");
   const [targetPrice, setTargetPrice] = useState("");
 
@@ -197,6 +258,34 @@ export default function PhoneSpecPage({
   const categories = useMemo(() => {
     return phoneData ? Object.keys(phoneData.categories) : [];
   }, [phoneData]);
+
+  const buildAllSpecsForPhone = useCallback((data: PhoneData) => {
+    const allSpecs: Record<string, string[]> = {};
+    Object.keys(data.categories).forEach((categoryName) => {
+      const categoryData = data.categories[categoryName as keyof typeof data.categories];
+      allSpecs[categoryName] = Object.keys(categoryData);
+    });
+    return allSpecs;
+  }, []);
+
+  const buildInitialSpecsForPhone = useCallback(
+    (data: PhoneData, persistedSpecs: Record<string, string[]> | null) => {
+      const allSpecs = buildAllSpecsForPhone(data);
+
+      return Object.fromEntries(
+        Object.entries(allSpecs).map(([category, availableSpecs]) => {
+          if (persistedSpecs && Object.prototype.hasOwnProperty.call(persistedSpecs, category)) {
+            const persistedCategorySpecs = persistedSpecs[category] || [];
+            return [category, availableSpecs.filter((spec) => persistedCategorySpecs.includes(spec))];
+          }
+
+          const priorityScore = currentUser?.preferences.priorityFeatures[category as keyof typeof currentUser.preferences.priorityFeatures];
+          return [category, priorityScore != null && priorityScore < 3 ? [] : availableSpecs];
+        }),
+      );
+    },
+    [buildAllSpecsForPhone, currentUser],
+  );
 
   // Comparison cart items to be fetched
   const comparisonPhones = useMemo<PhoneSummary[]>(() => {
@@ -291,6 +380,7 @@ export default function PhoneSpecPage({
    * Action: Fetches full phone specification data from the backend.
    */
   useEffect(() => {
+    if (!sessionStateHydrated) return;
     const initPage = async () => {
       if (!phoneId) return; // Short circuit to no phone found
 
@@ -302,12 +392,7 @@ export default function PhoneSpecPage({
         setPhoneData(data);
 
         // Initializing labels for each category of phone spec
-        const specLabels: Record<string, string[]> = {};
-        Object.keys(data.categories).forEach((categoryName) => {
-          const categoryData = data.categories[categoryName as keyof typeof data.categories];
-          specLabels[categoryName] = Object.keys(categoryData);
-        });
-        setSelectedSpecs(specLabels);
+        setSelectedSpecs(buildInitialSpecsForPhone(data, sessionSelectedSpecs));
 
         // Adding fetched phone to recently viewed if it has not already been added
         if (onAddToRecentlyViewed && hasAddedToHistory.current !== phoneId) {
@@ -328,7 +413,26 @@ export default function PhoneSpecPage({
         hasAddedToHistory.current = null;
       }
     };
-  }, [phoneId, fetchReviews, onAddToRecentlyViewed]);
+  }, [buildInitialSpecsForPhone, onAddToRecentlyViewed, phoneId, sessionStateHydrated]);
+
+  useEffect(() => {
+    if (!sessionStateHydrated) return;
+    if (!phoneData) return;
+    if (isSyncingSessionFromLocalChange.current) {
+      isSyncingSessionFromLocalChange.current = false;
+      return;
+    }
+    setSelectedSpecs(buildInitialSpecsForPhone(phoneData, sessionSelectedSpecs));
+  }, [buildInitialSpecsForPhone, phoneData, sessionSelectedSpecs, sessionStateHydrated]);
+
+  useEffect(() => {
+    if (!phoneData || !currentUser) {
+      setIsWishlisted(false);
+      return;
+    }
+
+    setIsWishlisted(currentUser.wishlist.includes(phoneData.id));
+  }, [phoneData, currentUser]);
 
   useEffect(() => {
     const fetchPriceTrackingData = async () => {
@@ -366,6 +470,15 @@ export default function PhoneSpecPage({
 
     fetchPriceTrackingData();
   }, [phoneId]);
+
+  useEffect(() => {
+    if (!currentUser?.wishlist || !phoneData?.id) {
+      setIsWishlisted(false);
+      return;
+    }
+
+    setIsWishlisted(currentUser.wishlist.includes(phoneData.id));
+  }, [currentUser, phoneData?.id]);
 
   /**
    * SYNC: Comparison Cart Metadata Cache
@@ -471,6 +584,41 @@ export default function PhoneSpecPage({
     setTimeout(() => {
       reviewsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
+  };
+
+  const getRetailerUrl = (retailer: "Amazon" | "Best Buy" | "Walmart" | "Target") => {
+    const encodedPhoneName = encodeURIComponent(phoneData.name);
+
+    const retailerUrls = {
+      Amazon: `https://www.amazon.com/s?k=${encodedPhoneName}`,
+      "Best Buy": `https://www.bestbuy.com/site/searchpage.jsp?st=${encodedPhoneName}`,
+      Walmart: `https://www.walmart.com/search?q=${encodedPhoneName}`,
+      Target: `https://www.target.com/s?searchTerm=${encodedPhoneName}`,
+    };
+
+    return retailerUrls[retailer];
+  };
+
+  const openSearchWindow = (url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleBuyPhoneFromRetailer = (retailer: "Amazon" | "Best Buy" | "Walmart" | "Target") => {
+    openSearchWindow(getRetailerUrl(retailer));
+    toast.success(`Opening ${retailer}`, {
+      description: `Searching ${retailer} for ${phoneData.name}`,
+      duration: 3000,
+    });
+  };
+
+  const handleBuyAccessory = (accessory: string) => {
+    const accessoryUrl = `https://www.amazon.com/s?k=${encodeURIComponent(`${phoneData.name} ${accessory}`)}`;
+
+    openSearchWindow(accessoryUrl);
+    toast.success(`Opening ${accessory}`, {
+      description: `Searching Amazon for ${phoneData.name} ${accessory}`,
+      duration: 3000,
+    });
   };
 
   // Handle voting on reviews via API
@@ -581,7 +729,10 @@ export default function PhoneSpecPage({
       const newCategorySpecs = categorySpecs.includes(specName)
         ? categorySpecs.filter((s) => s !== specName)
         : [...categorySpecs, specName];
-      return { ...prev, [category]: newCategorySpecs };
+      const nextSpecs = { ...prev, [category]: newCategorySpecs };
+      isSyncingSessionFromLocalChange.current = true;
+      onSessionSelectedSpecsChange(nextSpecs);
+      return nextSpecs;
     });
   };
 
@@ -590,10 +741,9 @@ export default function PhoneSpecPage({
   };
 
   const selectAllSpecs = () => {
-    const allSpecs: Record<string, string[]> = {};
-    categories.forEach((category) => {
-      allSpecs[category] = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
-    });
+    const allSpecs = buildAllSpecsForPhone(phoneData);
+    isSyncingSessionFromLocalChange.current = true;
+    onSessionSelectedSpecsChange(allSpecs);
     setSelectedSpecs(allSpecs);
   };
 
@@ -602,6 +752,8 @@ export default function PhoneSpecPage({
     categories.forEach((category) => {
       emptySpecs[category] = [];
     });
+    isSyncingSessionFromLocalChange.current = true;
+    onSessionSelectedSpecsChange(emptySpecs);
     setSelectedSpecs(emptySpecs);
   };
 
@@ -619,19 +771,41 @@ export default function PhoneSpecPage({
   const toggleAllCategorySpecs = (category: string) => {
     const allSpecs = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
     const isFullySelected = isCategoryFullySelected(category);
-    setSelectedSpecs((prev) => ({
-      ...prev,
-      [category]: isFullySelected ? [] : allSpecs,
-    }));
+    setSelectedSpecs((prev) => {
+      const nextSpecs = {
+        ...prev,
+        [category]: isFullySelected ? [] : allSpecs,
+      };
+      isSyncingSessionFromLocalChange.current = true;
+      onSessionSelectedSpecsChange(nextSpecs);
+      return nextSpecs;
+    });
   };
 
   // -- WISHLIST --
-  const handleWishlistToggle = () => {
-    setIsWishlisted(!isWishlisted);
-    if (!isWishlisted) {
-      toast.success(`${phoneData.name} added to wishlist!`);
-    } else {
-      toast.success(`${phoneData.name} removed from wishlist`);
+  const handleWishlistToggle = async () => {
+    if (!currentUser?.firebaseUser) {
+      toast.error("Please sign in to update your wishlist");
+      return;
+    }
+
+    const newWishlist = isWishlisted
+      ? currentUser.wishlist.filter((id) => id !== phoneData.id)
+      : [...currentUser.wishlist, phoneData.id];
+
+    try {
+      const token = await currentUser.firebaseUser.getIdToken();
+      const updatedUser = await updateUserProfile(currentUser.uid, token, { wishlist: newWishlist });
+
+      if (!updatedUser) {
+        throw new Error("Failed to update wishlist");
+      }
+
+      updateCurrentUser({ wishlist: updatedUser.wishlist ?? newWishlist });
+      setIsWishlisted(!isWishlisted);
+      toast.success(`${phoneData.name} ${isWishlisted ? "removed from" : "added to"} wishlist!`);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update wishlist");
     }
   };
 
@@ -725,6 +899,29 @@ export default function PhoneSpecPage({
     // The cart will automatically hide when there are no phones/closing minimizes the cart
     setShowComparisonCart(false);
   };
+
+  // Saves the user's carrier preference to their profile in the database
+  const handleCarrierChange = async (carrier: string) => {
+    // Save to localStorage so it works immediately
+    localStorage.setItem("preferredCarrier", carrier);
+    
+    // Save to database for logged-in users
+    if (!currentUser?.firebaseUser) return;
+    try {
+      const token = await currentUser.firebaseUser.getIdToken();
+      await fetch(`http://localhost:5001/api/users/${currentUser.uid}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ preferredCarrier: carrier }),
+      });
+    } catch (err) {
+      console.error("Failed to save carrier preference:", err);
+    }
+  };
+
 
   // ------------------------------------------------------------
   // | UI SECTION
@@ -931,8 +1128,8 @@ export default function PhoneSpecPage({
                 </Dialog>
               </div>
 
-              {/* Add to Compare Button - Second Row */}
-              <div className="flex justify-center mt-3 w-full px-4 sm:px-0">
+              {/* Add to Compare and Shop Actions */}
+              <div className="flex flex-col items-center gap-3 mt-3 w-full px-4 sm:px-0">
                 <Button
                   className={
                     comparisonPhones.some((phone) => phone.id === phoneData.id)
@@ -954,6 +1151,78 @@ export default function PhoneSpecPage({
                     </>
                   )}
                 </Button>
+
+                <Dialog open={isShopDialogOpen} onOpenChange={setIsShopDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      className="bg-white dark:bg-[#161b26] text-[#2c3968] dark:text-[#dbe7ff] border border-[#2c3968]/20 dark:border-[#4a7cf6]/30 hover:bg-[#f7f9fc] dark:hover:bg-[#1c2433] shadow-md w-full sm:w-auto"
+                      variant="outline"
+                    >
+                      <DollarSign className="w-4 h-4 mr-2" />
+                      Shop Now
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="w-full max-w-[min(92vw,48rem)] rounded-2xl border-[#2c3968]/15 p-5 sm:p-6">
+                    <DialogHeader>
+                      <DialogTitle className="text-[#2c3968]">Shop for {phoneData.name}</DialogTitle>
+                      <DialogDescription>
+                        Pick a retailer to shop for the phone, or jump straight to common accessories on Amazon.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <section className="rounded-2xl border border-[#2c3968]/10 bg-[#f7f9fc] p-4">
+                        <div className="mb-4">
+                          <h3 className="text-base font-semibold text-[#2c3968]">Buy the Phone</h3>
+                          <p className="text-sm text-[#666]">Search this model at major retailers.</p>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          {(["Amazon", "Best Buy", "Walmart", "Target"] as const).map((retailer) => (
+                            <div key={retailer} className="rounded-xl border border-[#2c3968]/10 bg-white p-4 shadow-sm">
+                              <div className="flex flex-col items-center gap-3">
+                                <div className="flex min-h-14 items-center justify-center rounded-lg border border-[#e6ebf5] bg-white px-3 py-2">
+                                  <img
+                                    src={retailerLogoData[retailer]}
+                                    alt={`${retailer} logo`}
+                                    className="h-10 w-auto object-contain"
+                                  />
+                                </div>
+                                <Button
+                                  className="min-w-[150px] bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] text-white hover:from-[#243059] hover:to-[#354368]"
+                                  onClick={() => handleBuyPhoneFromRetailer(retailer)}
+                                >
+                                  Shop Now
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+
+                      <section className="rounded-2xl border border-[#2c3968]/10 bg-white p-4">
+                        <div className="mb-4">
+                          <h3 className="text-base font-semibold text-[#2c3968]">Buy Accessories</h3>
+                          <p className="text-sm text-[#666]">
+                            Open Amazon searches for accessories that fit this phone.
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          {accessoryLabels.map((accessory) => (
+                            <Button
+                              key={accessory}
+                              className="w-[180px] justify-center self-start bg-gradient-to-r from-[#2c3968] to-[#3d4b7d] text-white hover:from-[#243059] hover:to-[#354368]"
+                              onClick={() => handleBuyAccessory(accessory)}
+                            >
+                              {accessory}
+                            </Button>
+                          ))}
+                        </div>
+                      </section>
+                    </div>
+                    <DialogFooter className="mt-4 sm:justify-start">
+                      <p className="text-xs text-[#666]">Each button opens one search in a new tab.</p>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
 
               {/* Mobile Browse Phones Section - Shows below XL screens */}
@@ -1167,7 +1436,7 @@ export default function PhoneSpecPage({
                     </ResponsiveContainer>
                   )}
                   <p className="text-xs text-[#666] dark:text-[#a0a8b8] mt-4 text-center">
-                    💡 Tip: Set a price alert above to get notified when the price drops to your target
+                    ?? Tip: Set a price alert above to get notified when the price drops to your target
                   </p>
                 </div>
               </div>
@@ -1598,72 +1867,40 @@ export default function PhoneSpecPage({
               </div>
             </div>
             <CollapsibleContent>
-              <div className="space-y-6">
-                <p className="text-[#666] dark:text-[#a0a8b8]">Network support for {phoneData.name}</p>
-
-                <div className="space-y-3">
-                  {phoneData.carrierCompatibility.map((carrier, idx) => (
-                    <div
-                      key={idx}
-                      className="group flex items-center justify-between p-4 rounded-xl border border-[#e0e0e0] dark:border-[#2d3548] hover:border-[#2c3968]/20 dark:hover:border-[#4a7cf6]/20 bg-white dark:bg-[#161b26] hover:bg-gradient-to-r hover:from-[#f7f9fc] hover:to-white dark:hover:from-[#1a1f2e] dark:hover:to-[#161b26] transition-all duration-200"
-                    >
-                      <div className="flex items-center gap-4 flex-1">
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            carrier.compatible
-                              ? "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                              : "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400"
-                          }`}
-                        >
-                          {carrier.compatible ? (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2.5}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-[#1e1e1e] dark:text-white">{carrier.name}</p>
-                          {carrier.notes && (
-                            <p className="text-sm text-[#999] dark:text-[#6b7280] mt-0.5">{carrier.notes}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div
-                        className={`px-3 py-1 rounded-full text-xs ${
-                          carrier.compatible
-                            ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                            : "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                        }`}
-                      >
-                        {carrier.compatible ? "Supported" : "Not Supported"}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex items-start gap-3 p-4 bg-[#f7f9fc] dark:bg-[#1a1f2e] rounded-xl border border-[#2c3968]/10 dark:border-[#4a7cf6]/10">
-                  <div className="w-5 h-5 rounded-full bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <HelpCircle className="w-3 h-3 text-[#2c3968] dark:text-[#4a7cf6]" />
-                  </div>
-                  <p className="text-sm text-[#666] dark:text-[#a0a8b8]">
-                    Compatibility may vary by model variant and region. Verify with your carrier before purchase.
-                  </p>
-                </div>
-              </div>
+              <CarrierCompatibilityChecker
+                carrierCompatibility={phoneData.carrierCompatibility}
+                phoneName={phoneData.name}
+                userCarrier={currentUser?.preferredCarrier || localStorage.getItem("preferredCarrier") || ""}
+                onCarrierChange={handleCarrierChange}
+                networkBands={phoneData.categories?.connectivity ? {
+                  bands4G: String(phoneData.categories.connectivity["4G Bands"] || "").split(",").map((b: string) => b.trim()).filter(Boolean),
+                  bands5G: String(phoneData.categories.connectivity["5G Bands"] || "").split(",").map((b: string) => b.trim()).filter(Boolean),
+                } : undefined}
+              />
             </CollapsibleContent>
           </div>
         </Collapsible>
 
-        {/* 6. Reviews Section */}
+        {/* 6. Performance Benchmarks */}
+        <Collapsible open={true}>
+          <div id="benchmarks" className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm p-8 mb-8 mt-8">
+            <div className="mb-6">
+              <div className="flex items-center gap-3">
+                <div>
+                  <h2 className="text-[#2c3968] dark:text-[#4a7cf6] mb-2">Performance Benchmarks</h2>
+                  <div className="h-1 w-20 bg-[#2c3968] dark:bg-[#4a7cf6] rounded-full"></div>
+                </div>
+              </div>
+            </div>
+            <BenchmarkDisplay
+              benchmarks={phoneData.categories?.benchmarks || {}}
+              phoneName={phoneData.name}
+            />
+          </div>
+        </Collapsible>
+
+
+        {/* 7. Reviews Section */}
         <Collapsible open={isReviewsOpen} onOpenChange={setIsReviewsOpen}>
           <div
             id="reviews"

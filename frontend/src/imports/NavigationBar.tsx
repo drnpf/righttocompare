@@ -1,9 +1,14 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { User, LogOut, UserCircle, Shield, Moon } from "lucide-react";
+import { User, LogOut, UserCircle, Shield, Moon, Mailbox } from "lucide-react";
 import svgPaths from "./svg-caqd896ugm";
 import { useDarkMode } from "../components/DarkModeContext";
 import { AppUser } from "../types/userTypes";
+import {
+  getMyNotifications,
+  markAllNotificationsRead,
+  AppNotification,
+} from "../api/notificationApi";
 
 function LogoButton({ className, onClick }: { className?: string; onClick?: () => void }) {
   return (
@@ -55,15 +60,55 @@ function NavigationBarLinks({
   onAdminClick?: () => void;
   onCatalogClick?: () => void;
 }) {
+  const location = useLocation();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showMailbox, setShowMailbox] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const mailboxRef = useRef<HTMLDivElement>(null);
   const { isDarkMode, toggleDarkMode } = useDarkMode();
 
-  // Close dropdown when clicking outside
+  const fetchNotifications = useCallback(
+    async (options?: { markRead?: boolean }) => {
+      if (!user?.firebaseUser) return null;
+
+      try {
+        const token = await user.firebaseUser.getIdToken();
+        const data = await getMyNotifications(token, options);
+
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+
+        return data;
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+        return null;
+      }
+    },
+    [user],
+  );
+
+  useEffect(() => {
+    if (isAuthenticated && user?.firebaseUser) {
+      fetchNotifications();
+    } else {
+      setNotifications([]);
+      setUnreadCount(0);
+    }
+  }, [isAuthenticated, user, fetchNotifications]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
         setShowDropdown(false);
+      }
+
+      if (mailboxRef.current && !mailboxRef.current.contains(target)) {
+        setShowMailbox(false);
       }
     };
 
@@ -71,27 +116,17 @@ function NavigationBarLinks({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  /**
-   * Safe function for getting display name.
-   * @returns Returns current user's display name
-   */
   const getDisplayName = () => {
     if (!user) return "";
     return user.displayName || user.email?.split("@")[0] || "User";
   };
+
   const displayName = getDisplayName();
 
-  /**
-   * Helper function to handle refresh if same page logic
-   * @param path Path to the page being navigated to
-   * @param originalCallback The original callback
-   */
   const handleNavInteraction = (path: string, originalCallback?: () => void) => {
     if (location.pathname === path) {
-      // Force hard refresh to clear all states/filters/scroll
       window.location.href = path;
     } else {
-      // Otherwise use the standard navigation provided by the parent
       originalCallback?.();
     }
   };
@@ -126,11 +161,106 @@ function NavigationBarLinks({
           )}
         </div>
       </button>
+
+      <div className="relative" ref={mailboxRef}>
+        <button
+          onClick={async () => {
+            const nextOpen = !showMailbox;
+            setShowMailbox(nextOpen);
+
+            if (nextOpen) {
+              await fetchNotifications({ markRead: true });
+            }
+          }}
+          className="relative overflow-clip shrink-0 size-[32px] hover:opacity-70 transition-opacity cursor-pointer"
+          data-name="Price Alert Mailbox"
+          title="Price alerts for wishlisted phones"
+        >
+          <Mailbox className="w-full h-full text-[#1e1e1e] dark:text-white" strokeWidth={2.2} />
+
+          {isAuthenticated && unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-[18px] h-[18px] flex items-center justify-center font-bold">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </button>
+
+        {showMailbox && (
+          <div className="absolute right-0 top-full mt-3 bg-white dark:bg-[#1a1f2e] rounded-xl shadow-xl border border-[#e5e5e5] dark:border-[#2d3548] min-w-[320px] max-w-[360px] z-[9999] overflow-visible">
+            <div className="px-4 py-3 border-b border-[#e5e5e5] dark:border-[#2d3548] flex items-center justify-between">
+              <p className="font-bold text-[#1e1e1e] dark:text-white">Price Alerts</p>
+
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onMouseDown={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    console.log("Mark all read mouse down");
+
+                    if (!user?.firebaseUser) return;
+
+                    try {
+                      const token = await user.firebaseUser.getIdToken();
+                      await markAllNotificationsRead(token);
+
+                      setNotifications((prev) =>
+                        prev.map((notification) => ({
+                          ...notification,
+                          isRead: true,
+                        })),
+                      );
+
+                      setUnreadCount(0);
+                    } catch (error) {
+                      console.error("Failed to mark all notifications as read:", error);
+                    }
+                  }}
+                  className="text-xs text-[#2c3968] dark:text-[#4a7cf6] hover:underline cursor-pointer"
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
+
+            <div className="max-h-[360px] overflow-y-auto">
+              {!isAuthenticated ? (
+                <div className="p-4 text-sm text-[#666] dark:text-[#a0a0a0]">
+                  Sign in to view price alerts.
+                </div>
+              ) : notifications.length === 0 ? (
+                <div className="p-4 text-sm text-[#666] dark:text-[#a0a0a0]">
+                  No price alerts yet.
+                </div>
+              ) : (
+                notifications.map((notification) => (
+                  <div
+                    key={notification._id}
+                    className={`px-4 py-3 border-b border-[#f0f0f0] dark:border-[#2d3548] ${notification.isRead ? "bg-white dark:bg-[#1a1f2e]" : "bg-[#f7f9ff] dark:bg-[#20283a]"
+                      }`}
+                  >
+                    <p className="font-bold text-sm text-[#1e1e1e] dark:text-white">
+                      {notification.title}
+                    </p>
+                    <p className="text-sm text-[#666] dark:text-[#a0a0a0] mt-1">
+                      {notification.message}
+                    </p>
+                    <p className="text-xs text-[#999] mt-2">
+                      {new Date(notification.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div
         className="content-start flex flex-wrap gap-[8px] items-center relative shrink-0"
         data-name="Navigation Bar Pill List"
       >
-        {/* Catalog Page */}
         <button
           onClick={() => handleNavInteraction("/", onCatalogClick)}
           className="box-border content-stretch flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
@@ -141,7 +271,6 @@ function NavigationBarLinks({
           </div>
         </button>
 
-        {/* Trends Page */}
         <button
           onClick={() => handleNavInteraction("/trends", onTrendsClick)}
           className="box-border content-stretch flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
@@ -152,7 +281,6 @@ function NavigationBarLinks({
           </div>
         </button>
 
-        {/* Comparison Tool Page */}
         <button
           onClick={() => handleNavInteraction("/compare", onComparisonToolClick)}
           className="box-border content-stretch flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
@@ -165,7 +293,6 @@ function NavigationBarLinks({
           </div>
         </button>
 
-        {/* Discussion Page */}
         <button
           onClick={() => handleNavInteraction("/discussions", onDiscussionsClick)}
           className="box-border content-stretch hidden lg:flex gap-[8px] items-center justify-center p-[8px] relative rounded-[8px] shrink-0 hover:bg-[#f0f0f0] dark:hover:bg-[#1e2530] transition-colors cursor-pointer"
@@ -195,13 +322,13 @@ function NavigationBarLinks({
               </div>
             </button>
 
-            {/* Dropdown Menu */}
             {showDropdown && (
               <div className="absolute right-0 top-full mt-2 bg-white dark:bg-[#1a1f2e] rounded-xl shadow-xl border border-[#e5e5e5] dark:border-[#2d3548] py-2 min-w-[200px] z-[1000]">
                 <div className="px-4 py-3 border-b border-[#e5e5e5] dark:border-[#2d3548]">
                   <p className="font-['Inter:Bold',sans-serif] text-[#1e1e1e] dark:text-white">{displayName}</p>
                   <p className="text-[#666] dark:text-[#a0a0a0] text-[14px]">{user.email}</p>
                 </div>
+
                 <button
                   onClick={() => {
                     onProfileClick?.();
@@ -212,6 +339,7 @@ function NavigationBarLinks({
                   <UserCircle size={18} className="text-[#666] dark:text-[#a0a0a0]" />
                   <span className="text-[#1e1e1e] dark:text-white">Profile</span>
                 </button>
+
                 {user.role === "admin" && (
                   <button
                     onClick={() => {
@@ -224,6 +352,7 @@ function NavigationBarLinks({
                     <span className="text-[#1e1e1e] dark:text-white">Admin Dashboard</span>
                   </button>
                 )}
+
                 <button
                   onClick={() => {
                     onSignOut?.();
@@ -279,6 +408,7 @@ function NavigationBarLayout({
   onLogoClick?: () => void;
 }) {
   const navigate = useNavigate();
+
   return (
     <div
       className="absolute content-stretch flex h-[80px] items-center justify-between left-0 right-0 top-1/2 translate-y-[-50%] w-full max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-6 gap-2 md:gap-4"

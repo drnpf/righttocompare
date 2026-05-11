@@ -29,7 +29,7 @@ def clear_all_reviews(db):
     rev_result = db.reviews.delete_many({})
     
     # Reset all phone metadata fields to default/empty state
-    phone_result = db.phones.update_many({}, {
+    phone_result = db.phones_test2.update_many({}, {
         "$set": {
             "totalReviews": 0,
             "aggregateRating": 0,

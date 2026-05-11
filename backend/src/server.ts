@@ -16,7 +16,10 @@ import discussionRoutes from "./routes/discussionRoutes";
 import scraperRoutes from "./routes/scraperRoutes";
 import chatbotRoutes from "./routes/chatbotRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
+import { initializeEmailService } from "./services/emailService";
+import { startDailyDigestScheduler } from "./services/notificationService";
 import trendsRoutes from "./routes/trendsRoutes";
+import inAppNotificationRoutes from "./routes/inAppNotificationRoutes";
 
 dotenv.config();
 
@@ -82,6 +85,7 @@ app.use(hpp()); // HTTP sanitization against input manipulation attacks
 // | DATABASE AND API ROUTES
 // -----------------------------------------------------------
 connectDB();
+initializeEmailService();
 
 app.use("/api/users", userRoutes);
 app.use("/api/phones", phoneRoutes);
@@ -91,6 +95,7 @@ app.use("/api/scraper", scraperRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/trends", trendsRoutes);
+app.use("/api/notifications", inAppNotificationRoutes);
 
 // ------------------------------------------------------------
 // | HEALTH CHECK AND ERROR HANDLING
@@ -102,4 +107,5 @@ app.get("/", (req: Request, res: Response) => {
 // Starting server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  startDailyDigestScheduler();
 });

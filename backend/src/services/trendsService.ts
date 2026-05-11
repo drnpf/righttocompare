@@ -38,7 +38,7 @@ export const getGlobalTrends = async (months: number = 6): Promise<GlobalTrendsR
         brandRadar: [
           {
             $lookup: {
-              from: "phones",
+              from: "phones_test2",
               localField: "phoneId",
               foreignField: "id",
               as: "phone",

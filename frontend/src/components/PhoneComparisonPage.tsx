@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useEffect } from "react";
+﻿import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner@2.0.3";
+import { useAuth } from "../context/AuthContext";
 
 // UI Components
 import { Button } from "./ui/button";
@@ -31,7 +32,10 @@ import {
   Share2,
   ChevronLeft,
   ChevronRight,
+  FileText,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // Custom Components & APIs
 import { PhoneCard, PhoneData } from "../types/phoneTypes";
@@ -97,6 +101,9 @@ interface PhoneComparisonPageProps {
   onAddPhone: (phoneId: string) => void;
   onNavigate: (phoneId: string) => void;
   recentlyViewedPhones?: string[];
+  sessionSelectedSpecs: Record<string, string[]> | null;
+  onSessionSelectedSpecsChange: React.Dispatch<React.SetStateAction<Record<string, string[]> | null>>;
+  sessionStateHydrated: boolean;
 }
 
 // ------------------------------------------------------------
@@ -117,11 +124,16 @@ export default function PhoneComparisonPage({
   onAddPhone,
   onNavigate,
   recentlyViewedPhones,
+  sessionSelectedSpecs,
+  onSessionSelectedSpecsChange,
+  sessionStateHydrated,
 }: PhoneComparisonPageProps) {
   // ------------------------------------------------------------
   // | HOOKS
   // ------------------------------------------------------------
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const isSyncingSessionFromLocalChange = React.useRef(false);
 
   // --- Phone Data States ---
   const [phoneDataList, setPhoneDataList] = useState<PhoneData[]>([]);
@@ -280,6 +292,31 @@ export default function PhoneComparisonPage({
     return Array.from(categoriesSet);
   }, [phones]);
 
+  const buildAllSpecsForComparison = useMemo(
+    () => () => {
+      const allSpecs: Record<string, string[]> = {};
+      allCategories.forEach((category) => {
+        const specs = new Set<string>();
+        if (category === "carrier-compatibility") {
+          phones.forEach((phone) => {
+            phone.carrierCompatibility?.forEach((carrier) => {
+              specs.add(carrier.name);
+            });
+          });
+        } else {
+          phones.forEach((phone) => {
+            if (phone.categories[category]) {
+              Object.keys(phone.categories[category]).forEach((key) => specs.add(key));
+            }
+          });
+        }
+        allSpecs[category] = Array.from(specs);
+      });
+      return allSpecs;
+    },
+    [allCategories, phones],
+  );
+
   useEffect(() => {
     const handleScroll = () => {
       // 1. Only run logic if loading is done
@@ -302,29 +339,37 @@ export default function PhoneComparisonPage({
 
   // Initialize and reset filters when phones change
   useEffect(() => {
-    if (phones.length > 0) {
-      const newSelectedSpecs: Record<string, string[]> = {};
-      allCategories.forEach((category) => {
-        const specs = new Set<string>();
-        if (category === "carrier-compatibility") {
-          // Handle carrier compatibility separately
-          phones.forEach((phone) => {
-            phone.carrierCompatibility?.forEach((carrier) => {
-              specs.add(carrier.name);
-            });
-          });
-        } else {
-          phones.forEach((phone) => {
-            if (phone.categories[category]) {
-              Object.keys(phone.categories[category]).forEach((key) => specs.add(key));
-            }
-          });
-        }
-        newSelectedSpecs[category] = Array.from(specs);
-      });
-      setSelectedSpecs(newSelectedSpecs);
+    if (!sessionStateHydrated) return;
+    if (phones.length === 0) {
+      setSelectedSpecs({});
+      return;
     }
-  }, [phones.length, allCategories.length]);
+
+    if (isSyncingSessionFromLocalChange.current) {
+      isSyncingSessionFromLocalChange.current = false;
+      return;
+    }
+
+    const allSpecs = buildAllSpecsForComparison();
+    const nextSelectedSpecs = Object.fromEntries(
+      Object.entries(allSpecs).map(([category, availableSpecs]) => {
+        if (sessionSelectedSpecs && Object.prototype.hasOwnProperty.call(sessionSelectedSpecs, category)) {
+          const persistedCategorySpecs = sessionSelectedSpecs[category] || [];
+          return [category, availableSpecs.filter((spec) => persistedCategorySpecs.includes(spec))];
+        }
+
+        const priorityFeatures = currentUser?.preferences.priorityFeatures;
+        const priorityScore =
+          priorityFeatures && category in priorityFeatures
+            ? priorityFeatures[category as keyof typeof priorityFeatures]
+            : undefined;
+
+        return [category, priorityScore != null && priorityScore < 3 ? [] : availableSpecs];
+      }),
+    );
+
+    setSelectedSpecs(nextSelectedSpecs);
+  }, [buildAllSpecsForComparison, currentUser, phones.length, sessionSelectedSpecs, sessionStateHydrated]);
 
   // ------------------------------------------------------------
   // | COMPONENT LOGIC
@@ -360,7 +405,10 @@ export default function PhoneComparisonPage({
       const newCategorySpecs = categorySpecs.includes(specName)
         ? categorySpecs.filter((s) => s !== specName)
         : [...categorySpecs, specName];
-      return { ...prev, [category]: newCategorySpecs };
+      const nextSpecs = { ...prev, [category]: newCategorySpecs };
+      isSyncingSessionFromLocalChange.current = true;
+      onSessionSelectedSpecsChange(nextSpecs);
+      return nextSpecs;
     });
   };
 
@@ -369,25 +417,9 @@ export default function PhoneComparisonPage({
   };
 
   const selectAllSpecs = () => {
-    const allSpecs: Record<string, string[]> = {};
-    allCategories.forEach((category) => {
-      const specs = new Set<string>();
-      if (category === "carrier-compatibility") {
-        // Handle carrier compatibility separately
-        phones.forEach((phone) => {
-          phone.carrierCompatibility?.forEach((carrier) => {
-            specs.add(carrier.name);
-          });
-        });
-      } else {
-        phones.forEach((phone) => {
-          if (phone.categories[category]) {
-            Object.keys(phone.categories[category]).forEach((key) => specs.add(key));
-          }
-        });
-      }
-      allSpecs[category] = Array.from(specs);
-    });
+    const allSpecs = buildAllSpecsForComparison();
+    isSyncingSessionFromLocalChange.current = true;
+    onSessionSelectedSpecsChange(allSpecs);
     setSelectedSpecs(allSpecs);
   };
 
@@ -396,6 +428,8 @@ export default function PhoneComparisonPage({
     allCategories.forEach((category) => {
       emptySpecs[category] = [];
     });
+    isSyncingSessionFromLocalChange.current = true;
+    onSessionSelectedSpecsChange(emptySpecs);
     setSelectedSpecs(emptySpecs);
   };
 
@@ -441,10 +475,179 @@ export default function PhoneComparisonPage({
     }
     const allSpecs = Array.from(allSpecsSet);
     const isFullySelected = isCategoryFullySelected(category);
-    setSelectedSpecs((prev) => ({
-      ...prev,
-      [category]: isFullySelected ? [] : allSpecs,
-    }));
+    setSelectedSpecs((prev) => {
+      const nextSpecs = {
+        ...prev,
+        [category]: isFullySelected ? [] : allSpecs,
+      };
+      isSyncingSessionFromLocalChange.current = true;
+      onSessionSelectedSpecsChange(nextSpecs);
+      return nextSpecs;
+    });
+  };
+
+  const handleExportToPdf = () => {
+    if (phones.length === 0) {
+      toast.error("Add phones to export a comparison");
+      return;
+    }
+
+    const visibleCategories = allCategories
+      .map((category) => {
+        if (category === "carrier-compatibility") {
+          const carriers = Array.from(
+            new Set(phones.flatMap((phone) => phone.carrierCompatibility?.map((carrier) => carrier.name) || [])),
+          ).filter((carrier) => (selectedSpecs["carrier-compatibility"] || []).includes(carrier));
+
+          return carriers.length > 0 ? { category, specs: carriers } : null;
+        }
+
+        const specKeys = Array.from(new Set(phones.flatMap((phone) => Object.keys(phone.categories[category] || {}))))
+          .filter((specKey) => (selectedSpecs[category] || []).includes(specKey));
+
+        return specKeys.length > 0 ? { category, specs: specKeys } : null;
+      })
+      .filter((entry): entry is { category: string; specs: string[] } => Boolean(entry));
+
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "pt",
+      format: "letter",
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const headerColor: [number, number, number] = [44, 57, 104];
+    const bodyTextColor: [number, number, number] = [30, 30, 30];
+    const subtleTextColor: [number, number, number] = [95, 107, 133];
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(...headerColor);
+    doc.text("Phone Comparison", 40, 42);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(...subtleTextColor);
+    doc.text("Export generated from the currently visible comparison specs.", 40, 60);
+    doc.text(phones.map((phone) => `${phone.manufacturer} ${phone.name}`).join("  |  "), 40, 76, {
+      maxWidth: pageWidth - 80,
+    });
+
+    const getLastTableY = () =>
+      (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? 76;
+
+    const ensureSectionSpace = (requiredHeight = 80) => {
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const nextY = getLastTableY();
+
+      if (nextY + requiredHeight > pageHeight - 40) {
+        doc.addPage();
+      }
+    };
+
+    const tableHead = [["Specification", ...phones.map((phone) => `${phone.manufacturer} ${phone.name}`)]];
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(...headerColor);
+    doc.text("Quick Overview", 40, 88);
+
+    autoTable(doc, {
+      startY: 92,
+      head: tableHead,
+      body: (phones[0]?.quickSpecs || []).map((spec) => [
+        spec.label,
+        ...phones.map((phone) => phone.quickSpecs.find((item) => item.label === spec.label)?.value || "N/A"),
+      ]),
+      theme: "grid",
+      styles: {
+        font: "helvetica",
+        fontSize: 9,
+        cellPadding: 6,
+        textColor: bodyTextColor,
+        overflow: "linebreak",
+      },
+      headStyles: {
+        fillColor: [238, 242, 248],
+        textColor: headerColor,
+        fontStyle: "bold",
+      },
+      columnStyles: {
+        0: {
+          cellWidth: 140,
+          fillColor: [249, 251, 255],
+          textColor: [79, 91, 117],
+          fontStyle: "bold",
+        },
+      },
+      margin: { left: 40, right: 40 },
+    });
+
+    visibleCategories.forEach(({ category, specs }) => {
+      const heading =
+        category === "carrier-compatibility"
+          ? "Carrier Compatibility"
+          : category.replace(/([A-Z])/g, " $1").trim().replace(/\b\w/g, (char) => char.toUpperCase());
+
+      ensureSectionSpace();
+      const sectionTitleY = getLastTableY() + 22;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.setTextColor(...headerColor);
+      doc.text(heading, 40, sectionTitleY);
+
+      autoTable(doc, {
+        startY: sectionTitleY + 8,
+        head: tableHead,
+        body: specs.map((specKey) => [
+          specKey,
+          ...phones.map((phone) => {
+            if (category === "carrier-compatibility") {
+              const carrierInfo = phone.carrierCompatibility?.find((carrier) => carrier.name === specKey);
+              if (!carrierInfo) return "N/A";
+
+              return carrierInfo.notes
+                ? `${carrierInfo.compatible ? "Compatible" : "Not Compatible"} - ${carrierInfo.notes}`
+                : carrierInfo.compatible
+                  ? "Compatible"
+                  : "Not Compatible";
+            }
+
+            return phone.categories[category]?.[specKey] || "N/A";
+          }),
+        ]),
+        theme: "grid",
+        styles: {
+          font: "helvetica",
+          fontSize: 9,
+          cellPadding: 6,
+          textColor: bodyTextColor,
+          overflow: "linebreak",
+        },
+        headStyles: {
+          fillColor: [238, 242, 248],
+          textColor: headerColor,
+          fontStyle: "bold",
+        },
+        columnStyles: {
+          0: {
+            cellWidth: 140,
+            fillColor: [249, 251, 255],
+            textColor: [79, 91, 117],
+            fontStyle: "bold",
+          },
+        },
+        margin: { left: 40, right: 40 },
+      });
+    });
+
+    const fileName = `comparison-${phones.map((phone) => phone.id).join("-")}.pdf`;
+    doc.save(fileName);
+
+    toast.success("PDF downloaded", {
+      description: "The comparison PDF has been saved to your browser's default downloads location.",
+    });
   };
 
   // ------------------------------------------------------------
@@ -695,13 +898,22 @@ export default function PhoneComparisonPage({
                     : `Comparing ${phones.length} ${phones.length === 1 ? "phone" : "phones"} • Detailed specifications, features, and ratings at a glance`}
                 </p>
                 {phones.length > 0 && (
-                  <Button
-                    onClick={handleShareComparison}
-                    className="bg-[#2c3968] hover:bg-[#1f2747] text-white px-6 py-2 rounded-lg transition-colors duration-200 inline-flex items-center gap-2 cursor-pointer"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    Share Comparison
-                  </Button>
+                  <div className="flex flex-col items-center gap-3">
+                    <Button
+                      onClick={handleShareComparison}
+                      className="w-[190px] bg-[#2c3968] hover:bg-[#1f2747] text-white px-6 py-2 rounded-lg transition-colors duration-200 inline-flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      Share Comparison
+                    </Button>
+                    <Button
+                      onClick={handleExportToPdf}
+                      className="w-[190px] bg-[#2c3968] hover:bg-[#1f2747] text-white px-6 py-2 rounded-lg transition-colors duration-200 inline-flex items-center justify-center gap-2"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Export to PDF
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -1134,7 +1346,7 @@ export default function PhoneComparisonPage({
                                         <span
                                           className={`text-sm font-medium ${carrierInfo.compatible ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
                                         >
-                                          {carrierInfo.compatible ? "✓ Compatible" : "✗ Not Compatible"}
+                                          {carrierInfo.compatible ? "? Compatible" : "? Not Compatible"}
                                         </span>
                                         {carrierInfo.notes && (
                                           <span className="text-xs text-[#999] dark:text-[#6b7280]">
@@ -1194,3 +1406,4 @@ export default function PhoneComparisonPage({
     </div>
   );
 }
+

@@ -32,7 +32,12 @@ export interface IUser extends Document {
       push: boolean;
     };
   };
+  notificationState: {
+    dailyDigestLastSentAt?: Date | null;
+  };
   wishlist: string[];
+  preferredCarrier: string;
+  comparisonPhoneIds: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,7 +73,12 @@ const UserSchema: Schema = new Schema(
         push: { type: Boolean, default: true },
       },
     },
+    notificationState: {
+      dailyDigestLastSentAt: { type: Date, default: null },
+    },
     wishlist: { type: [String], default: [] },
+    preferredCarrier: { type: String, default: "" },
+    comparisonPhoneIds: { type: [String], default: [] },
   },
   {
     timestamps: true,

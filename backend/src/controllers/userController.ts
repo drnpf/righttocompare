@@ -1,6 +1,15 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/authentication";
 import * as UserService from "../services/userService";
+import { sendUserNotificationDigest } from "../services/notificationService";
+
+const getSingleRouteParam = (param: string | string[] | undefined): string | undefined => {
+  if (Array.isArray(param)) {
+    return param[0];
+  }
+
+  return param;
+};
 
 /**
  * Sync Firebase User to MongoDB (for Retrieval or Creation).
@@ -70,7 +79,12 @@ export const syncUser = async (req: AuthRequest, res: Response): Promise<void> =
 export const getUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const tokenUid = req.user?.uid; // Who is logged in (from Token)
-    const uid = req.params.uid; // Who the edit is attempted on (from URL)
+    const uid = getSingleRouteParam(req.params.uid); // Who the edit is attempted on (from URL)
+
+    if (!uid) {
+      res.status(400).json({ message: "Missing user ID" });
+      return;
+    }
 
     // Authorization check of URL uid from request against the token uid
     if (tokenUid !== uid) {
@@ -101,7 +115,12 @@ export const getUser = async (req: AuthRequest, res: Response): Promise<void> =>
 export const updateUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const tokenUid = req.user?.uid; // Who is logged in (from Token)
-    const paramUid = req.params.uid; // Who the edit is attempted on (from URL)
+    const paramUid = getSingleRouteParam(req.params.uid); // Who the edit is attempted on (from URL)
+
+    if (!paramUid) {
+      res.status(400).json({ message: "Missing user ID" });
+      return;
+    }
 
     // Authorization check of URL uid from request against the token uid
     if (tokenUid !== paramUid) {
@@ -110,11 +129,14 @@ export const updateUser = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     // Prepping update data and only allowing specific fields to be updated for security
-    const { displayName, preferences, wishlist } = req.body;
+    const { displayName, preferences, wishlist, comparisonPhoneIds, preferredCarrier } = req.body;
     const updateData: any = {};
     if (displayName) updateData.displayName = displayName;
     if (preferences) updateData.preferences = preferences;
     if (wishlist) updateData.wishlist = wishlist;
+    if (comparisonPhoneIds) updateData.comparisonPhoneIds = comparisonPhoneIds;
+    if (preferredCarrier !== undefined) updateData.preferredCarrier = preferredCarrier;
+    if (comparisonPhoneIds) updateData.comparisonPhoneIds = comparisonPhoneIds;
 
     // Calling UserService updating function
     const updatedUser = await UserService.updateUserProfile(paramUid, updateData);
@@ -126,5 +148,43 @@ export const updateUser = async (req: AuthRequest, res: Response): Promise<void>
   } catch (error) {
     console.error("Error updating user:", error);
     res.status(500).json({ message: "Server Error updating user" });
+  }
+};
+
+export const sendTestNotificationEmail = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const paramUid = getSingleRouteParam(req.params.uid);
+
+    if (!paramUid) {
+      res.status(400).json({ message: "Missing user ID" });
+      return;
+    }
+
+    const user = await UserService.findUserByUid(paramUid);
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    const result = await sendUserNotificationDigest(user, {
+      forceSend: true,
+      allowEmpty: true,
+    });
+
+    if (!result.sent) {
+      res.status(400).json({
+        message: "Test notification email was not sent",
+        reason: result.reason,
+      });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Test notification email sent successfully",
+      payload: result.payload,
+    });
+  } catch (error) {
+    console.error("Error sending test notification email:", error);
+    res.status(500).json({ message: "Server Error sending test notification email" });
   }
 };

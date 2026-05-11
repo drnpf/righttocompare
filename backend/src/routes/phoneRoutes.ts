@@ -1,5 +1,7 @@
 import { Router } from "express";
 import * as phoneController from "../controllers/phoneController";
+import { protect } from "../middleware/authentication";
+import { requireAdmin } from "../middleware/adminMiddleware";
 
 const router = Router();
 
@@ -9,6 +11,12 @@ const router = Router();
  * @route GET /api/phones/manufacturers
  */
 router.get("/manufacturers", phoneController.getManufacturers);
+
+/**
+ * Get a paginated list of hot phones
+ * @route GET /api/phones/hot
+ */
+router.get("/hot", phoneController.getHotPhonePage);
 
 /**
  * Get multiple full phone data by IDs
@@ -69,18 +77,17 @@ router.get("/", phoneController.getPhonePage);
  * Create a new phone
  * @route POST /api/phones
  */
-router.post("/", phoneController.createPhone);
-
+router.post("/", protect, requireAdmin, phoneController.createPhone);
 /**
  * Update an existing phone by ID
  * @route PUT /api/phones/:id
  */
-router.put("/:id", phoneController.updatePhone);
+router.put("/:id", protect, requireAdmin, phoneController.updatePhone);
 
 /**
  * Delete a phone by ID
  * @route DELETE /api/phones/:id
  */
-router.delete("/:id", phoneController.deletePhone);
+router.delete("/:id", protect, requireAdmin, phoneController.deletePhone);
 
 export default router;

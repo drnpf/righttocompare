@@ -93,6 +93,8 @@ export const updateUserProfile = async (uid: string, token: string, updates: Par
         displayName: updates.displayName,
         preferences: updates.preferences,
         wishlist: updates.wishlist,
+        comparisonPhoneIds: updates.comparisonPhoneIds,
+        preferredCarrier: updates.preferredCarrier,
       }),
     });
 

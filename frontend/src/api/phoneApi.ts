@@ -85,6 +85,52 @@ export const getPhonePage = async (
   }
 };
 
+export const getHotPhonePage = async (
+  page: number = 1,
+  limit: number = DEFAULT_PHONE_LIMIT,
+  options: {
+    search?: string;
+    manufacturer?: string[];
+    minPrice?: number;
+    maxPrice?: number;
+    ram?: number[];
+    storage?: number[];
+  },
+): Promise<PaginatedPhoneResponse> => {
+  try {
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("limit", limit.toString());
+
+    if (options.search) params.append("search", options.search);
+    options.manufacturer?.forEach((m) => params.append("manufacturer", m));
+    if (options.minPrice != null) params.append("minPrice", options.minPrice.toString());
+    if (options.maxPrice != null) params.append("maxPrice", options.maxPrice.toString());
+    options.ram?.forEach((r) => params.append("ram", r.toString()));
+    options.storage?.forEach((s) => params.append("storage", s.toString()));
+
+    const response = await fetch(`${API_URL}/hot?${params.toString()}`);
+    if (!response.ok) throw new Error(`Failed to fetch hot phone page: ${response.statusText}`);
+
+    const rawJson = await response.json();
+    const mappedPhones = rawJson.data.map((dbPhone: any) => mapJsonToPhoneCard(dbPhone));
+    return { phones: mappedPhones, pagination: rawJson.pagination };
+  } catch (error) {
+    console.error("Error fetching hot phones from backend:", error);
+    return {
+      phones: [],
+      pagination: {
+        totalItems: 0,
+        totalPages: 0,
+        currentPage: 1,
+        itemsPerPage: DEFAULT_PHONE_LIMIT,
+        hasNextPage: false,
+        hasPrevPage: false,
+      },
+    };
+  }
+};
+
 /**
  * Fetches the details of a single phone by its ID from the backend.
  * @param id The ID of the phone to fetch
@@ -217,3 +263,80 @@ export const getManufacturers = async (): Promise<string[]> => {
   if (!response.ok) throw new Error(`Manufacturer failed to fetch: ${response.status}`);
   return await response.json();
 };
+
+// =======================
+// Simon's admin CRUD 
+// =======================
+
+/**
+ * Create a new phone (admin only)
+ * @param phone The phone data to create
+ * @param token Firebase auth token
+ */
+export async function createPhone(phone: any, token: string): Promise<any> {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(phone),
+  });
+
+  if (!res.ok) {
+    const msg = await safeError(res);
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+/**
+ * Update an existing phone by ID (admin only)
+ * @param id The phone ID to update
+ * @param phone The updated phone data
+ * @param token Firebase auth token
+ */
+export async function updatePhone(id: string, phone: any, token: string): Promise<any> {
+  const res = await fetch(`${API_URL}/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(phone),
+  });
+
+  if (!res.ok) {
+    const msg = await safeError(res);
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+/**
+ * Delete a phone by ID (admin only)
+ * @param id The phone ID to delete
+ * @param token Firebase auth token
+ */
+export async function deletePhone(id: string, token: string): Promise<void> {
+  const res = await fetch(`${API_URL}/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    const msg = await safeError(res);
+    throw new Error(msg);
+  }
+}
+
+async function safeError(res: Response): Promise<string> {
+  try {
+    const body = await res.json();
+    return body?.message || `Request failed (${res.status})`;
+  } catch {
+    return `Request failed (${res.status})`;
+  }
+}
