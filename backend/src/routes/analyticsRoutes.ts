@@ -13,6 +13,6 @@ router.post("/compare", analyticsController.logComparison);
  * Get a list of the most popular comparisons for the popular tab
  * @route GET /api/analytics/popular
  */
-router.post("/popular", analyticsController.getTrending);
+router.get("/popular", analyticsController.getTrending);
 
 export default router;

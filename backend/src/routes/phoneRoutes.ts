@@ -13,6 +13,12 @@ const router = Router();
 router.get("/manufacturers", phoneController.getManufacturers);
 
 /**
+ * Get a paginated list of hot phones
+ * @route GET /api/phones/hot
+ */
+router.get("/hot", phoneController.getHotPhonePage);
+
+/**
  * Get multiple full phone data by IDs
  * @route GET /api/phones/batch?ids=id1,id2,id3
  */
