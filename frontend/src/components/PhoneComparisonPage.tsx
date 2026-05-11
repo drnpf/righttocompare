@@ -131,6 +131,7 @@ export default function PhoneComparisonPage({
   // ------------------------------------------------------------
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const isSyncingSessionFromLocalChange = React.useRef(false);
 
   // --- Phone Data States ---
   const [phoneDataList, setPhoneDataList] = useState<PhoneData[]>([]);
@@ -341,6 +342,11 @@ export default function PhoneComparisonPage({
       return;
     }
 
+    if (isSyncingSessionFromLocalChange.current) {
+      isSyncingSessionFromLocalChange.current = false;
+      return;
+    }
+
     const allSpecs = buildAllSpecsForComparison();
     const nextSelectedSpecs = Object.fromEntries(
       Object.entries(allSpecs).map(([category, availableSpecs]) => {
@@ -397,6 +403,7 @@ export default function PhoneComparisonPage({
         ? categorySpecs.filter((s) => s !== specName)
         : [...categorySpecs, specName];
       const nextSpecs = { ...prev, [category]: newCategorySpecs };
+      isSyncingSessionFromLocalChange.current = true;
       onSessionSelectedSpecsChange(nextSpecs);
       return nextSpecs;
     });
@@ -408,6 +415,7 @@ export default function PhoneComparisonPage({
 
   const selectAllSpecs = () => {
     const allSpecs = buildAllSpecsForComparison();
+    isSyncingSessionFromLocalChange.current = true;
     onSessionSelectedSpecsChange(allSpecs);
     setSelectedSpecs(allSpecs);
   };
@@ -417,6 +425,7 @@ export default function PhoneComparisonPage({
     allCategories.forEach((category) => {
       emptySpecs[category] = [];
     });
+    isSyncingSessionFromLocalChange.current = true;
     onSessionSelectedSpecsChange(emptySpecs);
     setSelectedSpecs(emptySpecs);
   };
@@ -468,6 +477,7 @@ export default function PhoneComparisonPage({
         ...prev,
         [category]: isFullySelected ? [] : allSpecs,
       };
+      isSyncingSessionFromLocalChange.current = true;
       onSessionSelectedSpecsChange(nextSpecs);
       return nextSpecs;
     });

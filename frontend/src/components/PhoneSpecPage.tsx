@@ -203,6 +203,7 @@ export default function PhoneSpecPage({
   const { currentUser, updateCurrentUser } = useAuth();
   const reviewsSectionRef = useRef<HTMLDivElement>(null);
   const hasAddedToHistory = useRef<string | null>(null); // Tracking if a phone has already been added to recently viewed
+  const isSyncingSessionFromLocalChange = useRef(false);
 
   // -- Phone Specification States --
   const [phoneData, setPhoneData] = useState<PhoneData | null>(null);
@@ -407,10 +408,14 @@ export default function PhoneSpecPage({
         hasAddedToHistory.current = null;
       }
     };
-  }, [buildInitialSpecsForPhone, phoneId, fetchReviews, onAddToRecentlyViewed, sessionSelectedSpecs]);
+  }, [buildInitialSpecsForPhone, phoneId, fetchReviews, onAddToRecentlyViewed]);
 
   useEffect(() => {
     if (!phoneData) return;
+    if (isSyncingSessionFromLocalChange.current) {
+      isSyncingSessionFromLocalChange.current = false;
+      return;
+    }
     setSelectedSpecs(buildInitialSpecsForPhone(phoneData, sessionSelectedSpecs));
   }, [buildInitialSpecsForPhone, phoneData, sessionSelectedSpecs]);
 
@@ -710,6 +715,7 @@ export default function PhoneSpecPage({
         ? categorySpecs.filter((s) => s !== specName)
         : [...categorySpecs, specName];
       const nextSpecs = { ...prev, [category]: newCategorySpecs };
+      isSyncingSessionFromLocalChange.current = true;
       onSessionSelectedSpecsChange(nextSpecs);
       return nextSpecs;
     });
@@ -721,6 +727,7 @@ export default function PhoneSpecPage({
 
   const selectAllSpecs = () => {
     const allSpecs = buildAllSpecsForPhone(phoneData);
+    isSyncingSessionFromLocalChange.current = true;
     onSessionSelectedSpecsChange(allSpecs);
     setSelectedSpecs(allSpecs);
   };
@@ -730,6 +737,7 @@ export default function PhoneSpecPage({
     categories.forEach((category) => {
       emptySpecs[category] = [];
     });
+    isSyncingSessionFromLocalChange.current = true;
     onSessionSelectedSpecsChange(emptySpecs);
     setSelectedSpecs(emptySpecs);
   };
@@ -753,6 +761,7 @@ export default function PhoneSpecPage({
         ...prev,
         [category]: isFullySelected ? [] : allSpecs,
       };
+      isSyncingSessionFromLocalChange.current = true;
       onSessionSelectedSpecsChange(nextSpecs);
       return nextSpecs;
     });
