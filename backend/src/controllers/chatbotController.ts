@@ -44,11 +44,15 @@ export async function postChatbotMessage(req: Request, res: Response) {
 
         const chatbotResponse = await getChatbotReply(sessionId, message);
 
-        await logChatbotTurn({
-            sessionId,
-            message,
-            chatbotResponse,
-        });
+        try {
+            await logChatbotTurn({
+                sessionId,
+                message,
+                chatbotResponse,
+            });
+        } catch (logError: any) {
+            console.error("Chatbot log save error:", logError.message);
+        }
 
         return res.json(chatbotResponse);
     } catch (error: any) {
