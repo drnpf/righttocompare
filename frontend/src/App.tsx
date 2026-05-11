@@ -28,9 +28,17 @@ const TrendsPage = lazy(() => import("./components/TrendsPage"));
 const AIChatWidget = lazy(() => import("./components/AIChatWidget"));
 
 type SelectedSpecsState = Record<string, string[]>;
+type CatalogFiltersSessionState = {
+  selectedManufacturers: string[];
+  minPrice: number;
+  maxPrice: number;
+  selectedRAM: number[];
+  selectedStorage: number[];
+};
 
 const SPEC_PAGE_FILTERS_SESSION_KEY = "specPageSelectedSpecs";
 const COMPARISON_PAGE_FILTERS_SESSION_KEY = "comparisonPageSelectedSpecs";
+const CATALOG_FILTERS_SESSION_KEY = "catalogFilters";
 
 // Helper function for getting Recently Viewed phones from localStorage
 const getRecentlyViewedFromStorage = (): string[] => {
@@ -104,6 +112,39 @@ const clearSelectedSpecsSessionState = () => {
   }
 };
 
+const getCatalogFiltersFromSession = (): CatalogFiltersSessionState | null => {
+  try {
+    const stored = sessionStorage.getItem(CATALOG_FILTERS_SESSION_KEY);
+    if (!stored) return null;
+
+    const parsed = JSON.parse(stored);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveCatalogFiltersToSession = (filters: CatalogFiltersSessionState | null) => {
+  try {
+    if (!filters) {
+      sessionStorage.removeItem(CATALOG_FILTERS_SESSION_KEY);
+      return;
+    }
+
+    sessionStorage.setItem(CATALOG_FILTERS_SESSION_KEY, JSON.stringify(filters));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
+const clearCatalogFiltersSessionState = () => {
+  try {
+    sessionStorage.removeItem(CATALOG_FILTERS_SESSION_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+};
+
 function AppContent() {
   // ------------------------------------------------------------
   // | HOOKS
@@ -120,6 +161,8 @@ function AppContent() {
   const [currentDiscussionId, setCurrentDiscussionId] = useState<string>("");
   const [sessionSpecPageFilters, setSessionSpecPageFilters] = useState<SelectedSpecsState | null>(null);
   const [sessionComparisonPageFilters, setSessionComparisonPageFilters] = useState<SelectedSpecsState | null>(null);
+  const [sessionCatalogFilters, setSessionCatalogFilters] = useState<CatalogFiltersSessionState | null>(null);
+  const [sessionStateHydrated, setSessionStateHydrated] = useState(false);
   const hadResolvedGuestSessionRef = useRef(false);
 
   // ------------------------------------------------------------
@@ -155,6 +198,8 @@ function AppContent() {
 
     setSessionSpecPageFilters(getSelectedSpecsFromSession(SPEC_PAGE_FILTERS_SESSION_KEY));
     setSessionComparisonPageFilters(getSelectedSpecsFromSession(COMPARISON_PAGE_FILTERS_SESSION_KEY));
+    setSessionCatalogFilters(getCatalogFiltersFromSession());
+    setSessionStateHydrated(true);
   }, []);
 
   /**
@@ -196,8 +241,10 @@ function AppContent() {
 
     if (hadResolvedGuestSessionRef.current) {
       clearSelectedSpecsSessionState();
+      clearCatalogFiltersSessionState();
       setSessionSpecPageFilters(null);
       setSessionComparisonPageFilters(null);
+      setSessionCatalogFilters(null);
       hadResolvedGuestSessionRef.current = false;
     }
   }, [authLoading, currentUser]);
@@ -213,12 +260,19 @@ function AppContent() {
   }, [comparisonPhoneIds]);
 
   useEffect(() => {
+    if (!sessionStateHydrated) return;
     saveSelectedSpecsToSession(SPEC_PAGE_FILTERS_SESSION_KEY, sessionSpecPageFilters);
-  }, [sessionSpecPageFilters]);
+  }, [sessionSpecPageFilters, sessionStateHydrated]);
 
   useEffect(() => {
+    if (!sessionStateHydrated) return;
     saveSelectedSpecsToSession(COMPARISON_PAGE_FILTERS_SESSION_KEY, sessionComparisonPageFilters);
-  }, [sessionComparisonPageFilters]);
+  }, [sessionComparisonPageFilters, sessionStateHydrated]);
+
+  useEffect(() => {
+    if (!sessionStateHydrated) return;
+    saveCatalogFiltersToSession(sessionCatalogFilters);
+  }, [sessionCatalogFilters, sessionStateHydrated]);
 
   // Update compare page URL whenever user adds/removes phones to compare cart
   useEffect(() => {
@@ -299,8 +353,10 @@ function AppContent() {
   const handleSignOut = async () => {
     await signOut();
     clearSelectedSpecsSessionState();
+    clearCatalogFiltersSessionState();
     setSessionSpecPageFilters(null);
     setSessionComparisonPageFilters(null);
+    setSessionCatalogFilters(null);
     navigate("/");
   };
 
@@ -364,6 +420,9 @@ function AppContent() {
                     onComparisonChange={setComparisonPhoneIds}
                     onNavigateToComparison={handleNavigateToComparison}
                     recentlyViewedPhones={recentlyViewedPhones}
+                    sessionCatalogFilters={sessionCatalogFilters}
+                    onSessionCatalogFiltersChange={setSessionCatalogFilters}
+                    sessionStateHydrated={sessionStateHydrated}
                   />
                 }
               />
@@ -380,6 +439,7 @@ function AppContent() {
                     onNavigateToComparison={handleNavigateToComparison}
                     sessionSelectedSpecs={sessionSpecPageFilters}
                     onSessionSelectedSpecsChange={setSessionSpecPageFilters}
+                    sessionStateHydrated={sessionStateHydrated}
                   />
                 }
               />
@@ -396,6 +456,7 @@ function AppContent() {
                     onNavigate={handleNavigateToPhone}
                     sessionSelectedSpecs={sessionComparisonPageFilters}
                     onSessionSelectedSpecsChange={setSessionComparisonPageFilters}
+                    sessionStateHydrated={sessionStateHydrated}
                   />
                 }
               />

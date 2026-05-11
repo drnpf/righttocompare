@@ -163,6 +163,7 @@ interface PhoneSpecPageProps {
   onNavigateToComparison: () => void;
   sessionSelectedSpecs: Record<string, string[]> | null;
   onSessionSelectedSpecsChange: React.Dispatch<React.SetStateAction<Record<string, string[]> | null>>;
+  sessionStateHydrated: boolean;
 }
 
 interface PriceHistoryPoint {
@@ -193,6 +194,7 @@ export default function PhoneSpecPage({
   onNavigateToComparison,
   sessionSelectedSpecs,
   onSessionSelectedSpecsChange,
+  sessionStateHydrated,
 }: PhoneSpecPageProps) {
   // ------------------------------------------------------------
   // | HOOKS
@@ -376,6 +378,7 @@ export default function PhoneSpecPage({
    * Action: Fetches full phone specification data from the backend.
    */
   useEffect(() => {
+    if (!sessionStateHydrated) return;
     const initPage = async () => {
       if (!phoneId) return; // Short circuit to no phone found
 
@@ -408,16 +411,17 @@ export default function PhoneSpecPage({
         hasAddedToHistory.current = null;
       }
     };
-  }, [buildInitialSpecsForPhone, phoneId, fetchReviews, onAddToRecentlyViewed]);
+  }, [buildInitialSpecsForPhone, onAddToRecentlyViewed, phoneId, sessionStateHydrated]);
 
   useEffect(() => {
+    if (!sessionStateHydrated) return;
     if (!phoneData) return;
     if (isSyncingSessionFromLocalChange.current) {
       isSyncingSessionFromLocalChange.current = false;
       return;
     }
     setSelectedSpecs(buildInitialSpecsForPhone(phoneData, sessionSelectedSpecs));
-  }, [buildInitialSpecsForPhone, phoneData, sessionSelectedSpecs]);
+  }, [buildInitialSpecsForPhone, phoneData, sessionSelectedSpecs, sessionStateHydrated]);
 
   useEffect(() => {
     const fetchPriceTrackingData = async () => {

@@ -103,6 +103,7 @@ interface PhoneComparisonPageProps {
   recentlyViewedPhones?: string[];
   sessionSelectedSpecs: Record<string, string[]> | null;
   onSessionSelectedSpecsChange: React.Dispatch<React.SetStateAction<Record<string, string[]> | null>>;
+  sessionStateHydrated: boolean;
 }
 
 // ------------------------------------------------------------
@@ -125,6 +126,7 @@ export default function PhoneComparisonPage({
   recentlyViewedPhones,
   sessionSelectedSpecs,
   onSessionSelectedSpecsChange,
+  sessionStateHydrated,
 }: PhoneComparisonPageProps) {
   // ------------------------------------------------------------
   // | HOOKS
@@ -337,6 +339,7 @@ export default function PhoneComparisonPage({
 
   // Initialize and reset filters when phones change
   useEffect(() => {
+    if (!sessionStateHydrated) return;
     if (phones.length === 0) {
       setSelectedSpecs({});
       return;
@@ -366,7 +369,7 @@ export default function PhoneComparisonPage({
     );
 
     setSelectedSpecs(nextSelectedSpecs);
-  }, [buildAllSpecsForComparison, currentUser, phones.length, sessionSelectedSpecs]);
+  }, [buildAllSpecsForComparison, currentUser, phones.length, sessionSelectedSpecs, sessionStateHydrated]);
 
   // ------------------------------------------------------------
   // | COMPONENT LOGIC
