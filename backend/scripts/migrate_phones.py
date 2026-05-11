@@ -16,7 +16,7 @@ def parse_numeric(text):
 
 def parse_storage(internal_str):
     if not internal_str: return []
-    matches = re.findall(r"(\d+)(GB|TB)", str(internal_str))
+    matches = re.findall(r"(\d+)(GB|TB)(?!\s*RAM)", str(internal_str))
     storage = []
     for val, unit in matches:
         n = int(val)
@@ -31,41 +31,69 @@ def parse_ram(internal_str):
 
 def get_benchmark(test_str, key):
     if not test_str: return 0
-    pattern = rf"{key}:\s*(\d+)"
-    match = re.search(pattern, str(test_str), re.IGNORECASE)
+    pattern = rf"{key}:\s*([\d,]+)"
+    matches = re.findall(pattern, str(test_str), re.IGNORECASE)
+    if not matches:
+        return 0
+    scores = [int(m.replace(",", "")) for m in matches]
+    return max(scores)
+
+def parse_os_version(os_str):
+    if not os_str: return 0
+    # Specifically looking for the first digit after "Android" or "iOS"
+    match = re.search(r"(?:Android|iOS)\s*(\d+)", str(os_str), re.I)
     return int(match.group(1)) if match else 0
+
+def check_us_compatibility(network_doc):
+    bands = str(network_doc.get("bands4G", "")) + str(network_doc.get("bands5G", ""))
+    # Common US Band markers often found in GSMArena strings
+    us_markers = ["12", "13", "17", "66", "71", "n260", "n261"]
+    return any(m in bands for m in us_markers) or "usa" in bands.lower()
 
 def transform_to_prod(doc):
     raw = doc.get("raw", {}) or {}
     ext = doc.get("extracted", {}) or {}
-    tests = raw.get("Our Tests", {}) or {}
     
+    tests = raw.get("Our Tests", {}) or raw.get("Tests", {}) or {}
+    perf_str = tests.get("Performance", "")
+
     # Prices
     price_container = ext.get("price", {}) or {}
     prices_list = price_container.get("prices", []) or []
     
+    # Approx 2026 Conversion Rates
+    rates = {
+        "USD": 1.0,
+        "GBP": 1.28,
+        "EUR": 1.09,
+        "CAD": 0.74,
+        "INR": 0.012
+    }
+    
     price_val = 0
-    if prices_list:
-        # 1. Try to find USD first if it's already there
-        usd_entry = next((p for p in prices_list if p.get("currency") == "USD"), None)
+    plausible_usd_prices = []
+
+    for p in prices_list:
+        curr = p.get("currency", "USD").upper()
+        amt = p.get("amount", 0)
         
-        if usd_entry:
-            price_val = usd_entry.get("amount", 0)
+        # Convert to a common baseline (USD)
+        usd_converted = amt * rates.get(curr, 1.0)
+        
+        # Checks if price is within a plausible range
+        if 50 < usd_converted < 2500:
+            plausible_usd_prices.append({
+                "val": usd_converted,
+                "is_native_usd": (curr == "USD")
+            })
+
+    if plausible_usd_prices:
+        # Favor the native USD price if in plausible list
+        native_usd = next((x for x in plausible_usd_prices if x["is_native_usd"]), None)
+        if native_usd:
+            price_val = round(native_usd["val"], 2)
         else:
-            # 2. Convert the first available currency (likely EUR or GBP)
-            first_price = prices_list[0]
-            amount = first_price.get("amount", 0)
-            currency = first_price.get("currency", "USD").upper()
-            
-            # Approx 2026 Conversion Rates
-            conversion_rates = {
-                "GBP": 1.28,
-                "EUR": 1.09,
-                "USD": 1.0
-            }
-            
-            rate = conversion_rates.get(currency, 1.0)
-            price_val = round(amount * rate, 2)
+            price_val = round(max(p["val"] for p in plausible_usd_prices), 2)
 
     cam_section = raw.get("Main Camera", {}) or {}
     cam_spec_str = ""
@@ -81,6 +109,13 @@ def transform_to_prod(doc):
     ultrawide = parse_numeric(uw_match.group(1)) if uw_match else 0
 
     # Safety wrapper for Telephoto
+    build_str = (raw.get("Body", {}) or {}).get("Build", "").lower()
+    materials = []
+    if "glass" in build_str: materials.append("Glass")
+    if "aluminum" in build_str: materials.append("Aluminum")
+    if "titanium" in build_str: materials.append("Titanium")
+    if "plastic" in build_str: materials.append("Polycarbonate")
+
     tp_match = re.search(r"(\d+)\s*MP.*telephoto", cam_spec_str, re.I)
     telephoto = parse_numeric(tp_match.group(1)) if tp_match else 0
 
@@ -90,6 +125,12 @@ def transform_to_prod(doc):
     feat_raw = raw.get("Features", {}) or {}
     sensors_str = feat_raw.get("Sensors", "").lower()
     charge_str = (raw.get("Battery", {}) or {}).get("Charging", "").lower()
+
+    raw_prot = (raw.get("Display", {}) or {}).get("Protection", "Glass")
+    prot_match = re.search(r"(Victus\s?\d?|Gorilla\sGlass\s?\d?|Ceramic\sShield|Saphire)", raw_prot, re.I)
+    protection_name = prot_match.group(0) if prot_match else "Standard Glass"
+
+    is_us_ready = check_us_compatibility(ext.get("networkBands", {}))
 
     # Launch Date: Using ext['announcedParsed'] from Screenshot 1
     try:
@@ -115,9 +156,8 @@ def transform_to_prod(doc):
                 "resolution": (raw.get("Display", {}) or {}).get("Resolution", "Unknown"),
                 "technology": (raw.get("Display", {}) or {}).get("Type", "").split(",")[0] or "OLED",
                 "refreshRateHz": ext.get("refreshRateHz", 60),
-                # Pulling measured brightness from "Our Tests" (Screenshot 2)
                 "peakBrightnessNits": parse_numeric(tests.get("Display", "800").split("nits")[0]),
-                "protection": (raw.get("Display", {}) or {}).get("Protection", "None"),
+                "protection": protection_name,
                 "pixelDensityPpi": parse_numeric((raw.get("Display", {}) or {}).get("Resolution", "").split("~")[-1]) or 400,
             },
             "performance": {
@@ -129,13 +169,16 @@ def transform_to_prod(doc):
                     "technology": "LPDDR5"
                 },
                 "storageOptions": parse_storage((raw.get("Memory", {}) or {}).get("Internal", "")),
-                "operatingSystem": ext.get("os", "Android"),
+                "operatingSystem": {
+                    "raw": ext.get("os", "Android"),
+                    "version": parse_os_version(ext.get("os"))
+                },
                 "expandableStorage": "no" not in (raw.get("Memory", {}) or {}).get("Card slot", "").lower(),
             },
             "benchmarks": {
-                "antutuScore": get_benchmark(tests.get("Performance", ""), "AnTuTu"),
-                "geekbenchMultiCore": get_benchmark(tests.get("Performance", ""), "GeekBench"),
-                "geekbenchSingleCore": 0 
+                "antutuScore": get_benchmark(perf_str, "AnTuTu"),
+                "geekbenchMultiCore": get_benchmark(perf_str, "GeekBench"),
+                "geekbenchSingleCore": 0
             },
             "camera": {
                 "mainMegapixels": main_mp,
@@ -153,7 +196,7 @@ def transform_to_prod(doc):
             "design": {
                 "dimensionsMm": (raw.get("Body", {}) or {}).get("Dimensions", "N/A"),
                 "weightGrams": parse_numeric((raw.get("Body", {}) or {}).get("Weight", "0")),
-                "buildMaterials": (raw.get("Body", {}) or {}).get("Build", "Not specified"),
+                "buildMaterials": ", ".join(materials) if materials else "Premium Composite",
                 "colorsAvailable": (raw.get("Misc", {}) or {}).get("Colors", "Standard").split(", ")
             },
             "connectivity": {
@@ -171,9 +214,9 @@ def transform_to_prod(doc):
             }
         },
         "carrierCompatibility": [
-            {"name": "Verizon", "compatible": True},
-            {"name": "AT&T", "compatible": True},
-            {"name": "T-Mobile", "compatible": True}
+            {"name": "Verizon", "compatible": is_us_ready},
+            {"name": "AT&T", "compatible": is_us_ready},
+            {"name": "T-Mobile", "compatible": is_us_ready}
         ]
     }
 
@@ -181,7 +224,7 @@ def run_migration():
     client = MongoClient(MONGO_URI) 
     db = client[DB_NAME]
     source_col = db["scrape_output"] 
-    destination_col = db["phones_test2"] 
+    destination_col = db["phones"] 
 
     print(f"--- Starting Migration ---")
     ops = []
