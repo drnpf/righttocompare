@@ -2,6 +2,7 @@ import { Response } from "express";
 import { AuthRequest } from "../middleware/authentication";
 import * as reviewService from "../services/reviewService";
 import Phone from "../models/Phone";
+import { filterMultipleFields } from "../utils/contentFilter";
 
 /**
  * Creates a new review for a phone.
@@ -44,6 +45,17 @@ export const createReview = async (req: AuthRequest, res: Response) => {
           message: `Invalid rating for ${category}. Must be between 1 and 5`,
         });
       }
+    }
+
+    // Content moderation — reject profanity and spam
+    const contentCheck = filterMultipleFields([
+      { name: "title", text: title },
+      { name: "review", text: review },
+    ]);
+    if (!contentCheck.isClean) {
+      return res.status(400).json({
+        message: `${contentCheck.reason} in ${contentCheck.field}. Please revise and resubmit.`,
+      });
     }
 
     // Get user info from auth middleware
