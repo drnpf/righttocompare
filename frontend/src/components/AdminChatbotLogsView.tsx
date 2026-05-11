@@ -141,8 +141,8 @@ export default function AdminChatbotLogsView() {
                                         </div>
 
                                         <div>
-                                            <h3 className="text-[#2c3968] mb-2">Developer Trace</h3>
-                                            <pre className="bg-[#0f172a] text-[#1e1e1e] dark:text-white text-xs rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
+                                            <h3 className="text-white mb-2">Developer Trace</h3>
+                                            <pre className="bg-[#0f172a] text-white text-xs rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
                                                 {JSON.stringify(log.developerTrace || {}, null, 2)}
                                             </pre>
                                         </div>

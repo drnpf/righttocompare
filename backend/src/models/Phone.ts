@@ -84,6 +84,12 @@ export interface IPhone extends IPhoneCard, Document {
       hasNfc: boolean;
       headphoneJack: boolean;
     };
+    networkBands?: {
+      bands2G?: string[];
+      bands3G?: string[];
+      bands4G?: string[];
+      bands5G?: string[];
+    };
     audio: {
       speakers: string; // i.e.e "Stereo speakers tuned by AKG"
       hasHeadphoneJack: boolean;
@@ -205,6 +211,12 @@ const PhoneSchema: Schema = new Schema<IPhone>(
         bluetoothVersion: { type: String, required: true },
         hasNfc: { type: Boolean, required: true },
         headphoneJack: { type: Boolean, required: true },
+      },
+      networkBands: {
+        bands2G: [{ type: String }],
+        bands3G: [{ type: String }],
+        bands4G: [{ type: String }],
+        bands5G: [{ type: String }],
       },
       audio: {
         speakers: { type: String },

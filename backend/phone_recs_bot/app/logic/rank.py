@@ -1,30 +1,36 @@
 from app.models.prefs import PreferenceProfile
 
-def _usd_min(doc: dict) -> float | None:
-    prices = (((doc.get("extracted") or {}).get("price") or {}).get("prices") or [])
-    usd = [p for p in prices if p.get("currency") == "USD" and isinstance(p.get("amount"), (int, float))]
-    if not usd:
-        return None
-    return float(min(p["amount"] for p in usd))
 
 def _text_lower(x):
     return (x or "").lower()
 
+
+def _price(doc: dict) -> float | None:
+    price = doc.get("price")
+    if isinstance(price, (int, float)):
+        return float(price)
+    return None
+
+
 def score(profile: PreferenceProfile, doc: dict) -> tuple[float, dict, list[str]]:
-    e = doc.get("extracted") or {}
-    raw = doc.get("raw") or {}
+    specs = doc.get("specs") or {}
+    display = specs.get("display") or {}
+    performance = specs.get("performance") or {}
+    benchmarks = specs.get("benchmarks") or {}
+    camera = specs.get("camera") or {}
+    battery = specs.get("battery") or {}
+    connectivity = specs.get("connectivity") or {}
+    category_averages = doc.get("categoryAverages") or {}
 
     why: list[str] = []
 
-    # -------------------------
-    # weights (simple version)
-    # -------------------------
     weights = {
         "price": 1.0,
         "battery": 1.2 if "battery" in profile.priorities else 0.3,
         "display": 1.0 if "display" in profile.priorities else 0.3,
         "performance": 1.2 if "performance" in profile.priorities else 0.3,
         "camera": 1.0 if "camera" in profile.priorities else 0.3,
+        "rating": 0.7,
         "features": 0.5,
     }
 
@@ -34,100 +40,116 @@ def score(profile: PreferenceProfile, doc: dict) -> tuple[float, dict, list[str]
         "display": 0,
         "performance": 0,
         "camera": 0,
-        "features": 0
+        "rating": 0,
+        "features": 0,
     }
 
-    # -------------------------
-    # PRICE SCORE
-    # -------------------------
-    usd = _usd_min(doc)
+    # PRICE
+    usd = _price(doc)
     if profile.budget.max_amount and usd:
         if usd <= profile.budget.max_amount:
-            # normalize: closer to budget = better (0–10)
-            diff = profile.budget.max_amount - usd
-            price_score = max(0, 10 - (diff / profile.budget.max_amount) * 10)
-            breakdown["price"] = price_score
+            # Higher score when comfortably within budget
+            ratio = usd / profile.budget.max_amount
+            breakdown["price"] = max(0, 10 - ratio * 4)
             why.append(f"within budget (${usd:,.0f})")
         else:
             breakdown["price"] = -10
     else:
         breakdown["price"] = -1
 
-    # -------------------------
     # BATTERY
-    # -------------------------
-    mah = e.get("batteryMah") or 0
+    mah = battery.get("capacitymAh") or 0
     if mah:
-        battery_score = min(10, mah / 500)  # 5000 mAh ≈ 10
-        breakdown["battery"] = battery_score
+        battery_score = min(10, mah / 500)
+        avg_battery = category_averages.get("battery")
+        if isinstance(avg_battery, (int, float)):
+            battery_score += avg_battery
+        breakdown["battery"] = min(10, battery_score)
         if "battery" in profile.priorities:
             why.append(f"{mah} mAh battery")
 
-    # -------------------------
     # DISPLAY
-    # -------------------------
-    hz = e.get("refreshRateHz") or 60
-    display_score = min(10, hz / 12)  # 120Hz ≈ 10
-    dtype = (((raw.get("Display") or {}).get("Type") or ""))
-    if "oled" in _text_lower(dtype):
-        display_score += 2
-        why.append("OLED display")
+    hz = display.get("refreshRateHz") or 60
+    display_score = min(10, hz / 12)
 
-    breakdown["display"] = display_score
+    tech = display.get("technology") or ""
+    if "oled" in _text_lower(tech) or "amoled" in _text_lower(tech):
+        display_score += 2
+        why.append(f"{tech} display")
+
+    breakdown["display"] = min(10, display_score)
     if hz >= 120:
         why.append(f"{hz}Hz display")
 
-    # -------------------------
     # PERFORMANCE
-    # -------------------------
-    chipset = e.get("chipset") or ""
+    processor = performance.get("processor") or ""
+    antutu = benchmarks.get("antutuScore") or 0
+    geekbench_multi = benchmarks.get("geekbenchMultiCore") or 0
+
     perf_score = 2
 
-    if "3 nm" in chipset:
+    if "3 nm" in processor:
         perf_score = 10
         why.append("high-end chipset (3 nm)")
-    elif "4 nm" in chipset:
+    elif "4 nm" in processor:
         perf_score = 8
         why.append("strong chipset (4 nm)")
-    elif "5 nm" in chipset:
+    elif "5 nm" in processor:
         perf_score = 6
+    elif "snapdragon" in _text_lower(processor):
+        perf_score = 5
 
-    tests = (((raw.get("Our Tests") or {}).get("Performance") or ""))
-    if "AnTuTu" in tests:
-        perf_score += 1
-        why.append("strong benchmark results")
+    if isinstance(antutu, (int, float)) and antutu > 0:
+        perf_score += min(3, antutu / 300000)
+        why.append(f"AnTuTu score around {int(antutu):,}")
 
-    breakdown["performance"] = perf_score
+    if isinstance(geekbench_multi, (int, float)) and geekbench_multi > 0:
+        perf_score += min(2, geekbench_multi / 1500)
 
-    # -------------------------
+    avg_perf = category_averages.get("performance")
+    if isinstance(avg_perf, (int, float)):
+        perf_score += avg_perf / 2
+
+    breakdown["performance"] = min(10, perf_score)
+
     # CAMERA
-    # -------------------------
-    main = (((raw.get("Main Camera") or {}).get("Triple") or
-            (raw.get("Main Camera") or {}).get("Dual") or ""))
-
     cam_score = 0
-    if "OIS" in main or "ois" in main:
-        cam_score += 5
-        why.append("OIS on main camera")
+    main_mp = camera.get("mainMegapixels") or 0
+    ultra_mp = camera.get("ultrawideMegapixels") or 0
+    tele_mp = camera.get("telephotoMegapixels") or 0
 
-    if "periscope" in _text_lower(main) or "telephoto" in _text_lower(main):
-        cam_score += 3
-        why.append("telephoto/periscope zoom")
+    if main_mp:
+        cam_score += min(5, main_mp / 10)
+    if ultra_mp:
+        cam_score += min(2, ultra_mp / 25)
+    if tele_mp:
+        cam_score += 2
+        why.append("telephoto camera included")
 
-    breakdown["camera"] = cam_score
+    avg_camera = category_averages.get("camera")
+    if isinstance(avg_camera, (int, float)):
+        cam_score += avg_camera / 2
 
-    # -------------------------
-    # FEATURES (5G, NFC)
-    # -------------------------
+    breakdown["camera"] = min(10, cam_score)
+
+    if "camera" in profile.priorities and main_mp:
+        why.append(f"{main_mp}MP main camera")
+
+    # RATINGS / REVIEWS
+    rating = doc.get("aggregateRating")
+    if isinstance(rating, (int, float)):
+        breakdown["rating"] = min(10, rating * 2)
+        why.append(f"user rating {rating}/5")
+
+    # FEATURES
     feature_score = 0
 
-    if profile.must_5g and e.get("has5g"):
+    if profile.must_5g and connectivity.get("has5G"):
         feature_score += 3
         why.append("has 5G")
 
     if profile.must_nfc:
-        nfc = (((raw.get("Comms") or {}).get("NFC") or ""))
-        if "yes" in _text_lower(nfc):
+        if connectivity.get("hasNfc"):
             feature_score += 2
             why.append("has NFC")
         else:
@@ -135,14 +157,16 @@ def score(profile: PreferenceProfile, doc: dict) -> tuple[float, dict, list[str]
 
     breakdown["features"] = feature_score
 
-    # -------------------------
-    # FINAL SCORE
-    # -------------------------
     total = 0
     for k in breakdown:
         total += breakdown[k] * weights[k]
 
+    # Fallback explanation
+    if not why:
+        why.append("matches your requested preferences")
+
     return total, breakdown, why
+
 
 def rank_candidates(profile: PreferenceProfile, docs: list[dict], top_k: int = 5) -> list[dict]:
     scored: list[dict] = []

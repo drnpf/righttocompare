@@ -263,3 +263,80 @@ export const getManufacturers = async (): Promise<string[]> => {
   if (!response.ok) throw new Error(`Manufacturer failed to fetch: ${response.status}`);
   return await response.json();
 };
+
+// =======================
+// Simon's admin CRUD 
+// =======================
+
+/**
+ * Create a new phone (admin only)
+ * @param phone The phone data to create
+ * @param token Firebase auth token
+ */
+export async function createPhone(phone: any, token: string): Promise<any> {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(phone),
+  });
+
+  if (!res.ok) {
+    const msg = await safeError(res);
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+/**
+ * Update an existing phone by ID (admin only)
+ * @param id The phone ID to update
+ * @param phone The updated phone data
+ * @param token Firebase auth token
+ */
+export async function updatePhone(id: string, phone: any, token: string): Promise<any> {
+  const res = await fetch(`${API_URL}/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(phone),
+  });
+
+  if (!res.ok) {
+    const msg = await safeError(res);
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+/**
+ * Delete a phone by ID (admin only)
+ * @param id The phone ID to delete
+ * @param token Firebase auth token
+ */
+export async function deletePhone(id: string, token: string): Promise<void> {
+  const res = await fetch(`${API_URL}/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    const msg = await safeError(res);
+    throw new Error(msg);
+  }
+}
+
+async function safeError(res: Response): Promise<string> {
+  try {
+    const body = await res.json();
+    return body?.message || `Request failed (${res.status})`;
+  } catch {
+    return `Request failed (${res.status})`;
+  }
+}

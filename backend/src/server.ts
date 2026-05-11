@@ -19,6 +19,7 @@ import analyticsRoutes from "./routes/analyticsRoutes";
 import { initializeEmailService } from "./services/emailService";
 import { startDailyDigestScheduler } from "./services/notificationService";
 import trendsRoutes from "./routes/trendsRoutes";
+import inAppNotificationRoutes from "./routes/inAppNotificationRoutes";
 
 dotenv.config();
 
@@ -84,6 +85,7 @@ app.use("/api/scraper", scraperRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/trends", trendsRoutes);
+app.use("/api/notifications", inAppNotificationRoutes);
 
 // ------------------------------------------------------------
 // | HEALTH CHECK AND ERROR HANDLING

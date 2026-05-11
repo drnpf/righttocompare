@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api/chatbot";
+const API_URL = "http://localhost:5001/api/chatbot";
 
 export interface ChatbotRecommendation {
     rank: number;
