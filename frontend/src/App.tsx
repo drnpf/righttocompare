@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense, useRef } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner@2.0.3";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -120,6 +120,7 @@ function AppContent() {
   const [currentDiscussionId, setCurrentDiscussionId] = useState<string>("");
   const [sessionSpecPageFilters, setSessionSpecPageFilters] = useState<SelectedSpecsState | null>(null);
   const [sessionComparisonPageFilters, setSessionComparisonPageFilters] = useState<SelectedSpecsState | null>(null);
+  const hadResolvedGuestSessionRef = useRef(false);
 
   // ------------------------------------------------------------
   // | DATA SYNCHRONIZATION (REFRESHES)
@@ -184,6 +185,22 @@ function AppContent() {
     const isAuthPage = location.pathname === "/sign-in" || location.pathname === "/sign-up";
     if (currentUser && isAuthPage) navigate("/profile", { replace: true });
   }, [currentUser, location.pathname, navigate]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!currentUser) {
+      hadResolvedGuestSessionRef.current = true;
+      return;
+    }
+
+    if (hadResolvedGuestSessionRef.current) {
+      clearSelectedSpecsSessionState();
+      setSessionSpecPageFilters(null);
+      setSessionComparisonPageFilters(null);
+      hadResolvedGuestSessionRef.current = false;
+    }
+  }, [authLoading, currentUser]);
 
   /**
    * COMPARISON PERSISTENCE:
