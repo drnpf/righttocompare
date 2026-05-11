@@ -18,7 +18,7 @@ def fix_dates(days_back, recent_window):
         client = MongoClient(MONGO_URI)
         db = client[DB_NAME]
         reviews_col = db["reviews"]
-        phones_col = db["phones"]
+        phones_col = db["phones_test2"]
 
         # 1. Map phone release dates for quick lookup
         phone_releases = {p["id"]: p["releaseDate"] for p in phones_col.find({}, {"id": 1, "releaseDate": 1})}
