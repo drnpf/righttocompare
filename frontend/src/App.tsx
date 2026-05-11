@@ -27,6 +27,11 @@ const TrendsPage = lazy(() => import("./components/TrendsPage"));
 // UI Component (Lazy Loaded)
 const AIChatWidget = lazy(() => import("./components/AIChatWidget"));
 
+type SelectedSpecsState = Record<string, string[]>;
+
+const SPEC_PAGE_FILTERS_SESSION_KEY = "specPageSelectedSpecs";
+const COMPARISON_PAGE_FILTERS_SESSION_KEY = "comparisonPageSelectedSpecs";
+
 // Helper function for getting Recently Viewed phones from localStorage
 const getRecentlyViewedFromStorage = (): string[] => {
   try {
@@ -65,6 +70,40 @@ const saveComparisonToStorage = (phoneIds: string[]) => {
   }
 };
 
+const getSelectedSpecsFromSession = (key: string): SelectedSpecsState | null => {
+  try {
+    const stored = sessionStorage.getItem(key);
+    if (!stored) return null;
+
+    const parsed = JSON.parse(stored);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveSelectedSpecsToSession = (key: string, selectedSpecs: SelectedSpecsState | null) => {
+  try {
+    if (!selectedSpecs) {
+      sessionStorage.removeItem(key);
+      return;
+    }
+
+    sessionStorage.setItem(key, JSON.stringify(selectedSpecs));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
+const clearSelectedSpecsSessionState = () => {
+  try {
+    sessionStorage.removeItem(SPEC_PAGE_FILTERS_SESSION_KEY);
+    sessionStorage.removeItem(COMPARISON_PAGE_FILTERS_SESSION_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+};
+
 function AppContent() {
   // ------------------------------------------------------------
   // | HOOKS
@@ -79,6 +118,8 @@ function AppContent() {
   const [comparisonPhoneIds, setComparisonPhoneIds] = useState<string[]>([]);
   const [recentlyViewedPhones, setRecentlyViewedPhones] = useState<string[]>([]);
   const [currentDiscussionId, setCurrentDiscussionId] = useState<string>("");
+  const [sessionSpecPageFilters, setSessionSpecPageFilters] = useState<SelectedSpecsState | null>(null);
+  const [sessionComparisonPageFilters, setSessionComparisonPageFilters] = useState<SelectedSpecsState | null>(null);
 
   // ------------------------------------------------------------
   // | DATA SYNCHRONIZATION (REFRESHES)
@@ -110,6 +151,9 @@ function AppContent() {
     if (storedCompare.length > 0) {
       setComparisonPhoneIds(storedCompare);
     }
+
+    setSessionSpecPageFilters(getSelectedSpecsFromSession(SPEC_PAGE_FILTERS_SESSION_KEY));
+    setSessionComparisonPageFilters(getSelectedSpecsFromSession(COMPARISON_PAGE_FILTERS_SESSION_KEY));
   }, []);
 
   /**
@@ -150,6 +194,14 @@ function AppContent() {
   useEffect(() => {
     saveComparisonToStorage(comparisonPhoneIds);
   }, [comparisonPhoneIds]);
+
+  useEffect(() => {
+    saveSelectedSpecsToSession(SPEC_PAGE_FILTERS_SESSION_KEY, sessionSpecPageFilters);
+  }, [sessionSpecPageFilters]);
+
+  useEffect(() => {
+    saveSelectedSpecsToSession(COMPARISON_PAGE_FILTERS_SESSION_KEY, sessionComparisonPageFilters);
+  }, [sessionComparisonPageFilters]);
 
   // Update compare page URL whenever user adds/removes phones to compare cart
   useEffect(() => {
@@ -229,6 +281,9 @@ function AppContent() {
 
   const handleSignOut = async () => {
     await signOut();
+    clearSelectedSpecsSessionState();
+    setSessionSpecPageFilters(null);
+    setSessionComparisonPageFilters(null);
     navigate("/");
   };
 
@@ -306,6 +361,8 @@ function AppContent() {
                     recentlyViewedPhones={recentlyViewedPhones}
                     onAddToRecentlyViewed={addPhoneToRecentlyViewed}
                     onNavigateToComparison={handleNavigateToComparison}
+                    sessionSelectedSpecs={sessionSpecPageFilters}
+                    onSessionSelectedSpecsChange={setSessionSpecPageFilters}
                   />
                 }
               />
@@ -320,6 +377,8 @@ function AppContent() {
                     onAddPhone={handleAddToComparison}
                     recentlyViewedPhones={recentlyViewedPhones}
                     onNavigate={handleNavigateToPhone}
+                    sessionSelectedSpecs={sessionComparisonPageFilters}
+                    onSessionSelectedSpecsChange={setSessionComparisonPageFilters}
                   />
                 }
               />

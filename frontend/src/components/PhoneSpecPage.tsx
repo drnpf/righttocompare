@@ -161,6 +161,8 @@ interface PhoneSpecPageProps {
   recentlyViewedPhones: string[];
   onAddToRecentlyViewed: (phoneId: string) => void;
   onNavigateToComparison: () => void;
+  sessionSelectedSpecs: Record<string, string[]> | null;
+  onSessionSelectedSpecsChange: React.Dispatch<React.SetStateAction<Record<string, string[]> | null>>;
 }
 
 interface PriceHistoryPoint {
@@ -189,6 +191,8 @@ export default function PhoneSpecPage({
   recentlyViewedPhones,
   onAddToRecentlyViewed,
   onNavigateToComparison,
+  sessionSelectedSpecs,
+  onSessionSelectedSpecsChange,
 }: PhoneSpecPageProps) {
   // ------------------------------------------------------------
   // | HOOKS
@@ -249,6 +253,34 @@ export default function PhoneSpecPage({
   const categories = useMemo(() => {
     return phoneData ? Object.keys(phoneData.categories) : [];
   }, [phoneData]);
+
+  const buildAllSpecsForPhone = useCallback((data: PhoneData) => {
+    const allSpecs: Record<string, string[]> = {};
+    Object.keys(data.categories).forEach((categoryName) => {
+      const categoryData = data.categories[categoryName as keyof typeof data.categories];
+      allSpecs[categoryName] = Object.keys(categoryData);
+    });
+    return allSpecs;
+  }, []);
+
+  const buildInitialSpecsForPhone = useCallback(
+    (data: PhoneData, persistedSpecs: Record<string, string[]> | null) => {
+      const allSpecs = buildAllSpecsForPhone(data);
+
+      return Object.fromEntries(
+        Object.entries(allSpecs).map(([category, availableSpecs]) => {
+          if (persistedSpecs && Object.prototype.hasOwnProperty.call(persistedSpecs, category)) {
+            const persistedCategorySpecs = persistedSpecs[category] || [];
+            return [category, availableSpecs.filter((spec) => persistedCategorySpecs.includes(spec))];
+          }
+
+          const priorityScore = currentUser?.preferences.priorityFeatures[category as keyof typeof currentUser.preferences.priorityFeatures];
+          return [category, priorityScore != null && priorityScore < 3 ? [] : availableSpecs];
+        }),
+      );
+    },
+    [buildAllSpecsForPhone, currentUser],
+  );
 
   // Comparison cart items to be fetched
   const comparisonPhones = useMemo<PhoneSummary[]>(() => {
@@ -354,12 +386,7 @@ export default function PhoneSpecPage({
         setPhoneData(data);
 
         // Initializing labels for each category of phone spec
-        const specLabels: Record<string, string[]> = {};
-        Object.keys(data.categories).forEach((categoryName) => {
-          const categoryData = data.categories[categoryName as keyof typeof data.categories];
-          specLabels[categoryName] = Object.keys(categoryData);
-        });
-        setSelectedSpecs(specLabels);
+        setSelectedSpecs(buildInitialSpecsForPhone(data, sessionSelectedSpecs));
 
         // Adding fetched phone to recently viewed if it has not already been added
         if (onAddToRecentlyViewed && hasAddedToHistory.current !== phoneId) {
@@ -380,7 +407,12 @@ export default function PhoneSpecPage({
         hasAddedToHistory.current = null;
       }
     };
-  }, [phoneId, fetchReviews, onAddToRecentlyViewed]);
+  }, [buildInitialSpecsForPhone, phoneId, fetchReviews, onAddToRecentlyViewed, sessionSelectedSpecs]);
+
+  useEffect(() => {
+    if (!phoneData) return;
+    setSelectedSpecs(buildInitialSpecsForPhone(phoneData, sessionSelectedSpecs));
+  }, [buildInitialSpecsForPhone, phoneData, sessionSelectedSpecs]);
 
   useEffect(() => {
     const fetchPriceTrackingData = async () => {
@@ -677,7 +709,9 @@ export default function PhoneSpecPage({
       const newCategorySpecs = categorySpecs.includes(specName)
         ? categorySpecs.filter((s) => s !== specName)
         : [...categorySpecs, specName];
-      return { ...prev, [category]: newCategorySpecs };
+      const nextSpecs = { ...prev, [category]: newCategorySpecs };
+      onSessionSelectedSpecsChange(nextSpecs);
+      return nextSpecs;
     });
   };
 
@@ -686,10 +720,8 @@ export default function PhoneSpecPage({
   };
 
   const selectAllSpecs = () => {
-    const allSpecs: Record<string, string[]> = {};
-    categories.forEach((category) => {
-      allSpecs[category] = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
-    });
+    const allSpecs = buildAllSpecsForPhone(phoneData);
+    onSessionSelectedSpecsChange(allSpecs);
     setSelectedSpecs(allSpecs);
   };
 
@@ -698,6 +730,7 @@ export default function PhoneSpecPage({
     categories.forEach((category) => {
       emptySpecs[category] = [];
     });
+    onSessionSelectedSpecsChange(emptySpecs);
     setSelectedSpecs(emptySpecs);
   };
 
@@ -715,10 +748,14 @@ export default function PhoneSpecPage({
   const toggleAllCategorySpecs = (category: string) => {
     const allSpecs = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
     const isFullySelected = isCategoryFullySelected(category);
-    setSelectedSpecs((prev) => ({
-      ...prev,
-      [category]: isFullySelected ? [] : allSpecs,
-    }));
+    setSelectedSpecs((prev) => {
+      const nextSpecs = {
+        ...prev,
+        [category]: isFullySelected ? [] : allSpecs,
+      };
+      onSessionSelectedSpecsChange(nextSpecs);
+      return nextSpecs;
+    });
   };
 
   // -- WISHLIST --
