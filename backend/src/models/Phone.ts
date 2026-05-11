@@ -231,7 +231,7 @@ const PhoneSchema: Schema = new Schema<IPhone>(
   },
   {
     timestamps: true,
-    collection: "phones_test",
+    collection: "phones_test2",
   },
 );
 
