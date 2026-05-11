@@ -163,6 +163,9 @@ interface PhoneSpecPageProps {
   recentlyViewedPhones: string[];
   onAddToRecentlyViewed: (phoneId: string) => void;
   onNavigateToComparison: () => void;
+  sessionSelectedSpecs: Record<string, string[]> | null;
+  onSessionSelectedSpecsChange: React.Dispatch<React.SetStateAction<Record<string, string[]> | null>>;
+  sessionStateHydrated: boolean;
 }
 
 interface PriceHistoryPoint {
@@ -191,6 +194,9 @@ export default function PhoneSpecPage({
   recentlyViewedPhones,
   onAddToRecentlyViewed,
   onNavigateToComparison,
+  sessionSelectedSpecs,
+  onSessionSelectedSpecsChange,
+  sessionStateHydrated,
 }: PhoneSpecPageProps) {
   // ------------------------------------------------------------
   // | HOOKS
@@ -201,6 +207,7 @@ export default function PhoneSpecPage({
   const { currentUser, updateCurrentUser } = useAuth();
   const reviewsSectionRef = useRef<HTMLDivElement>(null);
   const hasAddedToHistory = useRef<string | null>(null); // Tracking if a phone has already been added to recently viewed
+  const isSyncingSessionFromLocalChange = useRef(false);
 
   // -- Phone Specification States --
   const [phoneData, setPhoneData] = useState<PhoneData | null>(null);
@@ -251,6 +258,34 @@ export default function PhoneSpecPage({
   const categories = useMemo(() => {
     return phoneData ? Object.keys(phoneData.categories) : [];
   }, [phoneData]);
+
+  const buildAllSpecsForPhone = useCallback((data: PhoneData) => {
+    const allSpecs: Record<string, string[]> = {};
+    Object.keys(data.categories).forEach((categoryName) => {
+      const categoryData = data.categories[categoryName as keyof typeof data.categories];
+      allSpecs[categoryName] = Object.keys(categoryData);
+    });
+    return allSpecs;
+  }, []);
+
+  const buildInitialSpecsForPhone = useCallback(
+    (data: PhoneData, persistedSpecs: Record<string, string[]> | null) => {
+      const allSpecs = buildAllSpecsForPhone(data);
+
+      return Object.fromEntries(
+        Object.entries(allSpecs).map(([category, availableSpecs]) => {
+          if (persistedSpecs && Object.prototype.hasOwnProperty.call(persistedSpecs, category)) {
+            const persistedCategorySpecs = persistedSpecs[category] || [];
+            return [category, availableSpecs.filter((spec) => persistedCategorySpecs.includes(spec))];
+          }
+
+          const priorityScore = currentUser?.preferences.priorityFeatures[category as keyof typeof currentUser.preferences.priorityFeatures];
+          return [category, priorityScore != null && priorityScore < 3 ? [] : availableSpecs];
+        }),
+      );
+    },
+    [buildAllSpecsForPhone, currentUser],
+  );
 
   // Comparison cart items to be fetched
   const comparisonPhones = useMemo<PhoneSummary[]>(() => {
@@ -345,6 +380,7 @@ export default function PhoneSpecPage({
    * Action: Fetches full phone specification data from the backend.
    */
   useEffect(() => {
+    if (!sessionStateHydrated) return;
     const initPage = async () => {
       if (!phoneId) return; // Short circuit to no phone found
 
@@ -356,12 +392,7 @@ export default function PhoneSpecPage({
         setPhoneData(data);
 
         // Initializing labels for each category of phone spec
-        const specLabels: Record<string, string[]> = {};
-        Object.keys(data.categories).forEach((categoryName) => {
-          const categoryData = data.categories[categoryName as keyof typeof data.categories];
-          specLabels[categoryName] = Object.keys(categoryData);
-        });
-        setSelectedSpecs(specLabels);
+        setSelectedSpecs(buildInitialSpecsForPhone(data, sessionSelectedSpecs));
 
         // Adding fetched phone to recently viewed if it has not already been added
         if (onAddToRecentlyViewed && hasAddedToHistory.current !== phoneId) {
@@ -382,7 +413,17 @@ export default function PhoneSpecPage({
         hasAddedToHistory.current = null;
       }
     };
-  }, [phoneId, fetchReviews, onAddToRecentlyViewed]);
+  }, [buildInitialSpecsForPhone, onAddToRecentlyViewed, phoneId, sessionStateHydrated]);
+
+  useEffect(() => {
+    if (!sessionStateHydrated) return;
+    if (!phoneData) return;
+    if (isSyncingSessionFromLocalChange.current) {
+      isSyncingSessionFromLocalChange.current = false;
+      return;
+    }
+    setSelectedSpecs(buildInitialSpecsForPhone(phoneData, sessionSelectedSpecs));
+  }, [buildInitialSpecsForPhone, phoneData, sessionSelectedSpecs, sessionStateHydrated]);
 
   useEffect(() => {
     if (!phoneData || !currentUser) {
@@ -688,7 +729,10 @@ export default function PhoneSpecPage({
       const newCategorySpecs = categorySpecs.includes(specName)
         ? categorySpecs.filter((s) => s !== specName)
         : [...categorySpecs, specName];
-      return { ...prev, [category]: newCategorySpecs };
+      const nextSpecs = { ...prev, [category]: newCategorySpecs };
+      isSyncingSessionFromLocalChange.current = true;
+      onSessionSelectedSpecsChange(nextSpecs);
+      return nextSpecs;
     });
   };
 
@@ -697,10 +741,9 @@ export default function PhoneSpecPage({
   };
 
   const selectAllSpecs = () => {
-    const allSpecs: Record<string, string[]> = {};
-    categories.forEach((category) => {
-      allSpecs[category] = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
-    });
+    const allSpecs = buildAllSpecsForPhone(phoneData);
+    isSyncingSessionFromLocalChange.current = true;
+    onSessionSelectedSpecsChange(allSpecs);
     setSelectedSpecs(allSpecs);
   };
 
@@ -709,6 +752,8 @@ export default function PhoneSpecPage({
     categories.forEach((category) => {
       emptySpecs[category] = [];
     });
+    isSyncingSessionFromLocalChange.current = true;
+    onSessionSelectedSpecsChange(emptySpecs);
     setSelectedSpecs(emptySpecs);
   };
 
@@ -726,10 +771,15 @@ export default function PhoneSpecPage({
   const toggleAllCategorySpecs = (category: string) => {
     const allSpecs = Object.keys(phoneData.categories[category as keyof typeof phoneData.categories]);
     const isFullySelected = isCategoryFullySelected(category);
-    setSelectedSpecs((prev) => ({
-      ...prev,
-      [category]: isFullySelected ? [] : allSpecs,
-    }));
+    setSelectedSpecs((prev) => {
+      const nextSpecs = {
+        ...prev,
+        [category]: isFullySelected ? [] : allSpecs,
+      };
+      isSyncingSessionFromLocalChange.current = true;
+      onSessionSelectedSpecsChange(nextSpecs);
+      return nextSpecs;
+    });
   };
 
   // -- WISHLIST --

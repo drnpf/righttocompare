@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense, useRef } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner@2.0.3";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -26,6 +26,19 @@ const TrendsPage = lazy(() => import("./components/TrendsPage"));
 
 // UI Component (Lazy Loaded)
 const AIChatWidget = lazy(() => import("./components/AIChatWidget"));
+
+type SelectedSpecsState = Record<string, string[]>;
+type CatalogFiltersSessionState = {
+  selectedManufacturers: string[];
+  minPrice: number;
+  maxPrice: number;
+  selectedRAM: number[];
+  selectedStorage: number[];
+};
+
+const SPEC_PAGE_FILTERS_SESSION_KEY = "specPageSelectedSpecs";
+const COMPARISON_PAGE_FILTERS_SESSION_KEY = "comparisonPageSelectedSpecs";
+const CATALOG_FILTERS_SESSION_KEY = "catalogFilters";
 
 // Helper function for getting Recently Viewed phones from localStorage
 const getRecentlyViewedFromStorage = (): string[] => {
@@ -65,6 +78,73 @@ const saveComparisonToStorage = (phoneIds: string[]) => {
   }
 };
 
+const getSelectedSpecsFromSession = (key: string): SelectedSpecsState | null => {
+  try {
+    const stored = sessionStorage.getItem(key);
+    if (!stored) return null;
+
+    const parsed = JSON.parse(stored);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveSelectedSpecsToSession = (key: string, selectedSpecs: SelectedSpecsState | null) => {
+  try {
+    if (!selectedSpecs) {
+      sessionStorage.removeItem(key);
+      return;
+    }
+
+    sessionStorage.setItem(key, JSON.stringify(selectedSpecs));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
+const clearSelectedSpecsSessionState = () => {
+  try {
+    sessionStorage.removeItem(SPEC_PAGE_FILTERS_SESSION_KEY);
+    sessionStorage.removeItem(COMPARISON_PAGE_FILTERS_SESSION_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+};
+
+const getCatalogFiltersFromSession = (): CatalogFiltersSessionState | null => {
+  try {
+    const stored = sessionStorage.getItem(CATALOG_FILTERS_SESSION_KEY);
+    if (!stored) return null;
+
+    const parsed = JSON.parse(stored);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveCatalogFiltersToSession = (filters: CatalogFiltersSessionState | null) => {
+  try {
+    if (!filters) {
+      sessionStorage.removeItem(CATALOG_FILTERS_SESSION_KEY);
+      return;
+    }
+
+    sessionStorage.setItem(CATALOG_FILTERS_SESSION_KEY, JSON.stringify(filters));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
+const clearCatalogFiltersSessionState = () => {
+  try {
+    sessionStorage.removeItem(CATALOG_FILTERS_SESSION_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+};
+
 function AppContent() {
   // ------------------------------------------------------------
   // | HOOKS
@@ -79,6 +159,11 @@ function AppContent() {
   const [comparisonPhoneIds, setComparisonPhoneIds] = useState<string[]>([]);
   const [recentlyViewedPhones, setRecentlyViewedPhones] = useState<string[]>([]);
   const [currentDiscussionId, setCurrentDiscussionId] = useState<string>("");
+  const [sessionSpecPageFilters, setSessionSpecPageFilters] = useState<SelectedSpecsState | null>(null);
+  const [sessionComparisonPageFilters, setSessionComparisonPageFilters] = useState<SelectedSpecsState | null>(null);
+  const [sessionCatalogFilters, setSessionCatalogFilters] = useState<CatalogFiltersSessionState | null>(null);
+  const [sessionStateHydrated, setSessionStateHydrated] = useState(false);
+  const hadResolvedGuestSessionRef = useRef(false);
 
   // ------------------------------------------------------------
   // | DATA SYNCHRONIZATION (REFRESHES)
@@ -110,6 +195,11 @@ function AppContent() {
     if (storedCompare.length > 0) {
       setComparisonPhoneIds(storedCompare);
     }
+
+    setSessionSpecPageFilters(getSelectedSpecsFromSession(SPEC_PAGE_FILTERS_SESSION_KEY));
+    setSessionComparisonPageFilters(getSelectedSpecsFromSession(COMPARISON_PAGE_FILTERS_SESSION_KEY));
+    setSessionCatalogFilters(getCatalogFiltersFromSession());
+    setSessionStateHydrated(true);
   }, []);
 
   /**
@@ -141,6 +231,24 @@ function AppContent() {
     if (currentUser && isAuthPage) navigate("/profile", { replace: true });
   }, [currentUser, location.pathname, navigate]);
 
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!currentUser) {
+      hadResolvedGuestSessionRef.current = true;
+      return;
+    }
+
+    if (hadResolvedGuestSessionRef.current) {
+      clearSelectedSpecsSessionState();
+      clearCatalogFiltersSessionState();
+      setSessionSpecPageFilters(null);
+      setSessionComparisonPageFilters(null);
+      setSessionCatalogFilters(null);
+      hadResolvedGuestSessionRef.current = false;
+    }
+  }, [authLoading, currentUser]);
+
 /**
    * COMPARISON PERSISTENCE:
    * Signal: Any changes to the comparisonPhoneIds array (i.e. adding new phone)
@@ -171,6 +279,21 @@ function AppContent() {
     }
   }, [comparisonPhoneIds]);
   
+  useEffect(() => {
+    if (!sessionStateHydrated) return;
+    saveSelectedSpecsToSession(SPEC_PAGE_FILTERS_SESSION_KEY, sessionSpecPageFilters);
+  }, [sessionSpecPageFilters, sessionStateHydrated]);
+
+  useEffect(() => {
+    if (!sessionStateHydrated) return;
+    saveSelectedSpecsToSession(COMPARISON_PAGE_FILTERS_SESSION_KEY, sessionComparisonPageFilters);
+  }, [sessionComparisonPageFilters, sessionStateHydrated]);
+
+  useEffect(() => {
+    if (!sessionStateHydrated) return;
+    saveCatalogFiltersToSession(sessionCatalogFilters);
+  }, [sessionCatalogFilters, sessionStateHydrated]);
+
   // Update compare page URL whenever user adds/removes phones to compare cart
   useEffect(() => {
     if (location.pathname !== "/compare") return;
@@ -249,6 +372,11 @@ function AppContent() {
 
   const handleSignOut = async () => {
     await signOut();
+    clearSelectedSpecsSessionState();
+    clearCatalogFiltersSessionState();
+    setSessionSpecPageFilters(null);
+    setSessionComparisonPageFilters(null);
+    setSessionCatalogFilters(null);
     navigate("/");
   };
 
@@ -312,6 +440,9 @@ function AppContent() {
                     onComparisonChange={setComparisonPhoneIds}
                     onNavigateToComparison={handleNavigateToComparison}
                     recentlyViewedPhones={recentlyViewedPhones}
+                    sessionCatalogFilters={sessionCatalogFilters}
+                    onSessionCatalogFiltersChange={setSessionCatalogFilters}
+                    sessionStateHydrated={sessionStateHydrated}
                   />
                 }
               />
@@ -326,6 +457,9 @@ function AppContent() {
                     recentlyViewedPhones={recentlyViewedPhones}
                     onAddToRecentlyViewed={addPhoneToRecentlyViewed}
                     onNavigateToComparison={handleNavigateToComparison}
+                    sessionSelectedSpecs={sessionSpecPageFilters}
+                    onSessionSelectedSpecsChange={setSessionSpecPageFilters}
+                    sessionStateHydrated={sessionStateHydrated}
                   />
                 }
               />
@@ -340,6 +474,9 @@ function AppContent() {
                     onAddPhone={handleAddToComparison}
                     recentlyViewedPhones={recentlyViewedPhones}
                     onNavigate={handleNavigateToPhone}
+                    sessionSelectedSpecs={sessionComparisonPageFilters}
+                    onSessionSelectedSpecsChange={setSessionComparisonPageFilters}
+                    sessionStateHydrated={sessionStateHydrated}
                   />
                 }
               />
@@ -375,7 +512,15 @@ function AppContent() {
               {/* Admin */}
               <Route
                 path="/admin"
-                element={<AdminDashboardPage />}
+                element={
+                  <ProtectedRoute
+                    adminOnly
+                    onNavigateToCatalog={handleCatalogClick}
+                    onNavigateToSignIn={handleSignInClick}
+                  >
+                    <AdminDashboardPage />
+                  </ProtectedRoute>
+                }
               />
 
               {/* Password reset */}
