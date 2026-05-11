@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner@2.0.3";
+import { useAuth } from "../context/AuthContext";
 
 // UI Components
 import { Badge } from "./ui/badge";
@@ -22,6 +23,23 @@ interface PhoneCatalogPageProps {
   onComparisonChange?: (phoneIds: string[]) => void;
   onNavigateToComparison?: () => void;
   recentlyViewedPhones?: string[];
+  sessionCatalogFilters: {
+    selectedManufacturers: string[];
+    minPrice: number;
+    maxPrice: number;
+    selectedRAM: number[];
+    selectedStorage: number[];
+  } | null;
+  onSessionCatalogFiltersChange: React.Dispatch<
+    React.SetStateAction<{
+      selectedManufacturers: string[];
+      minPrice: number;
+      maxPrice: number;
+      selectedRAM: number[];
+      selectedStorage: number[];
+    } | null>
+  >;
+  sessionStateHydrated: boolean;
 }
 
 // ------------------------------------------------------------
@@ -29,6 +47,10 @@ interface PhoneCatalogPageProps {
 // ------------------------------------------------------------
 const SEARCH_DELAY_LOADING_MS = 150; // The time until loading UI displays on search
 const SEARCH_DEBOUNCE_MS = 300; // Time to wait after typing stops before sending search query to server
+const CATALOG_DEFAULT_MIN_PRICE = 0;
+const CATALOG_DEFAULT_MAX_PRICE = 2000;
+const CATALOG_ALLOWED_RAM = [8, 12, 16, 24];
+const CATALOG_ALLOWED_STORAGE = [128, 256, 512, 1024];
 
 // ------------------------------------------------------------
 // | PHONE CATALOG PAGE DEFINITION
@@ -39,10 +61,14 @@ export default function PhoneCatalogPage({
   onComparisonChange,
   onNavigateToComparison,
   recentlyViewedPhones = [],
+  sessionCatalogFilters,
+  onSessionCatalogFiltersChange,
+  sessionStateHydrated,
 }: PhoneCatalogPageProps) {
   // ------------------------------------------------------------
   // | HOOKS
   // ------------------------------------------------------------
+  const { currentUser } = useAuth();
   // --- Phone Data States ---
   const [allPhones, setAllPhones] = useState<PhoneCard[]>([]);
   const [popularComparisons, setPopularComparisons] = useState<PopularComparison[]>([]);
@@ -78,6 +104,58 @@ export default function PhoneCatalogPage({
   // --- UI States ---
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [activeTab, setActiveTab] = useState<"catalog" | "hot" | "popular">("catalog");
+  const isSyncingSessionFromLocalChange = useRef(false);
+  const hasInitializedCatalogFilters = useRef(false);
+
+  const normalizedCatalogSessionFilters = useMemo(() => {
+    const normalizedManufacturers = (sessionCatalogFilters?.selectedManufacturers || []).filter((brand) =>
+      availableManufacturers.includes(brand),
+    );
+    const normalizedMinPrice = Math.max(CATALOG_DEFAULT_MIN_PRICE, sessionCatalogFilters?.minPrice ?? CATALOG_DEFAULT_MIN_PRICE);
+    const normalizedMaxPrice = Math.min(
+      CATALOG_DEFAULT_MAX_PRICE,
+      Math.max(normalizedMinPrice, sessionCatalogFilters?.maxPrice ?? CATALOG_DEFAULT_MAX_PRICE),
+    );
+
+    return {
+      selectedManufacturers: normalizedManufacturers,
+      minPrice: normalizedMinPrice,
+      maxPrice: normalizedMaxPrice,
+      selectedRAM: (sessionCatalogFilters?.selectedRAM || []).filter((value) => CATALOG_ALLOWED_RAM.includes(value)),
+      selectedStorage: (sessionCatalogFilters?.selectedStorage || []).filter((value) =>
+        CATALOG_ALLOWED_STORAGE.includes(value),
+      ),
+    };
+  }, [availableManufacturers, sessionCatalogFilters]);
+
+  const buildInitialCatalogFilters = useMemo(
+    () => () => {
+      if (sessionCatalogFilters) {
+        return normalizedCatalogSessionFilters;
+      }
+
+      const preferredBrands = (currentUser?.preferences.preferredBrands || []).filter((brand) =>
+        availableManufacturers.includes(brand),
+      );
+      const preferredBudgetMin = Math.max(
+        CATALOG_DEFAULT_MIN_PRICE,
+        currentUser?.preferences.budget.min ?? CATALOG_DEFAULT_MIN_PRICE,
+      );
+      const preferredBudgetMax = Math.min(
+        CATALOG_DEFAULT_MAX_PRICE,
+        Math.max(preferredBudgetMin, currentUser?.preferences.budget.max ?? CATALOG_DEFAULT_MAX_PRICE),
+      );
+
+      return {
+        selectedManufacturers: preferredBrands,
+        minPrice: preferredBudgetMin,
+        maxPrice: preferredBudgetMax,
+        selectedRAM: [],
+        selectedStorage: [],
+      };
+    },
+    [availableManufacturers, currentUser, normalizedCatalogSessionFilters, sessionCatalogFilters],
+  );
 
   // ------------------------------------------------------------
   // | DATA SYNCHRONIZATION
@@ -98,6 +176,23 @@ export default function PhoneCatalogPage({
     };
     loadManufacturers();
   }, []);
+
+  useEffect(() => {
+    if (!sessionStateHydrated) return;
+    if (availableManufacturers.length === 0) return;
+    if (isSyncingSessionFromLocalChange.current) {
+      isSyncingSessionFromLocalChange.current = false;
+      return;
+    }
+
+    const initialFilters = buildInitialCatalogFilters();
+    setSelectedManufacturers(initialFilters.selectedManufacturers);
+    setMinPrice(initialFilters.minPrice);
+    setMaxPrice(initialFilters.maxPrice);
+    setSelectedRAM(initialFilters.selectedRAM);
+    setSelectedStorage(initialFilters.selectedStorage);
+    hasInitializedCatalogFilters.current = true;
+  }, [availableManufacturers.length, buildInitialCatalogFilters, sessionStateHydrated]);
 
   /**
    * ON FILTER CHANGE CATALOG PAGE SYNC:
@@ -246,12 +341,33 @@ export default function PhoneCatalogPage({
   const handleClearAll = () => {
     setSearchQuery("");
     setSelectedManufacturers([]);
-    setMinPrice(0);
-    setMaxPrice(2000);
+    setMinPrice(CATALOG_DEFAULT_MIN_PRICE);
+    setMaxPrice(CATALOG_DEFAULT_MAX_PRICE);
     setSelectedRAM([]);
     setSelectedStorage([]);
     setSortBy("name");
   };
+
+  useEffect(() => {
+    if (!sessionStateHydrated) return;
+    if (!hasInitializedCatalogFilters.current) return;
+    isSyncingSessionFromLocalChange.current = true;
+    onSessionCatalogFiltersChange({
+      selectedManufacturers,
+      minPrice,
+      maxPrice,
+      selectedRAM,
+      selectedStorage,
+    });
+  }, [
+    maxPrice,
+    minPrice,
+    onSessionCatalogFiltersChange,
+    selectedManufacturers,
+    selectedRAM,
+    selectedStorage,
+    sessionStateHydrated,
+  ]);
 
   const handleAddToComparison = (phoneId: string, e: React.MouseEvent) => {
     e.stopPropagation();

@@ -1,6 +1,7 @@
 ﻿import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner@2.0.3";
+import { useAuth } from "../context/AuthContext";
 
 // UI Components
 import { Button } from "./ui/button";
@@ -100,6 +101,9 @@ interface PhoneComparisonPageProps {
   onAddPhone: (phoneId: string) => void;
   onNavigate: (phoneId: string) => void;
   recentlyViewedPhones?: string[];
+  sessionSelectedSpecs: Record<string, string[]> | null;
+  onSessionSelectedSpecsChange: React.Dispatch<React.SetStateAction<Record<string, string[]> | null>>;
+  sessionStateHydrated: boolean;
 }
 
 // ------------------------------------------------------------
@@ -120,11 +124,16 @@ export default function PhoneComparisonPage({
   onAddPhone,
   onNavigate,
   recentlyViewedPhones,
+  sessionSelectedSpecs,
+  onSessionSelectedSpecsChange,
+  sessionStateHydrated,
 }: PhoneComparisonPageProps) {
   // ------------------------------------------------------------
   // | HOOKS
   // ------------------------------------------------------------
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const isSyncingSessionFromLocalChange = React.useRef(false);
 
   // --- Phone Data States ---
   const [phoneDataList, setPhoneDataList] = useState<PhoneData[]>([]);
@@ -283,6 +292,31 @@ export default function PhoneComparisonPage({
     return Array.from(categoriesSet);
   }, [phones]);
 
+  const buildAllSpecsForComparison = useMemo(
+    () => () => {
+      const allSpecs: Record<string, string[]> = {};
+      allCategories.forEach((category) => {
+        const specs = new Set<string>();
+        if (category === "carrier-compatibility") {
+          phones.forEach((phone) => {
+            phone.carrierCompatibility?.forEach((carrier) => {
+              specs.add(carrier.name);
+            });
+          });
+        } else {
+          phones.forEach((phone) => {
+            if (phone.categories[category]) {
+              Object.keys(phone.categories[category]).forEach((key) => specs.add(key));
+            }
+          });
+        }
+        allSpecs[category] = Array.from(specs);
+      });
+      return allSpecs;
+    },
+    [allCategories, phones],
+  );
+
   useEffect(() => {
     const handleScroll = () => {
       // 1. Only run logic if loading is done
@@ -305,29 +339,37 @@ export default function PhoneComparisonPage({
 
   // Initialize and reset filters when phones change
   useEffect(() => {
-    if (phones.length > 0) {
-      const newSelectedSpecs: Record<string, string[]> = {};
-      allCategories.forEach((category) => {
-        const specs = new Set<string>();
-        if (category === "carrier-compatibility") {
-          // Handle carrier compatibility separately
-          phones.forEach((phone) => {
-            phone.carrierCompatibility?.forEach((carrier) => {
-              specs.add(carrier.name);
-            });
-          });
-        } else {
-          phones.forEach((phone) => {
-            if (phone.categories[category]) {
-              Object.keys(phone.categories[category]).forEach((key) => specs.add(key));
-            }
-          });
-        }
-        newSelectedSpecs[category] = Array.from(specs);
-      });
-      setSelectedSpecs(newSelectedSpecs);
+    if (!sessionStateHydrated) return;
+    if (phones.length === 0) {
+      setSelectedSpecs({});
+      return;
     }
-  }, [phones.length, allCategories.length]);
+
+    if (isSyncingSessionFromLocalChange.current) {
+      isSyncingSessionFromLocalChange.current = false;
+      return;
+    }
+
+    const allSpecs = buildAllSpecsForComparison();
+    const nextSelectedSpecs = Object.fromEntries(
+      Object.entries(allSpecs).map(([category, availableSpecs]) => {
+        if (sessionSelectedSpecs && Object.prototype.hasOwnProperty.call(sessionSelectedSpecs, category)) {
+          const persistedCategorySpecs = sessionSelectedSpecs[category] || [];
+          return [category, availableSpecs.filter((spec) => persistedCategorySpecs.includes(spec))];
+        }
+
+        const priorityFeatures = currentUser?.preferences.priorityFeatures;
+        const priorityScore =
+          priorityFeatures && category in priorityFeatures
+            ? priorityFeatures[category as keyof typeof priorityFeatures]
+            : undefined;
+
+        return [category, priorityScore != null && priorityScore < 3 ? [] : availableSpecs];
+      }),
+    );
+
+    setSelectedSpecs(nextSelectedSpecs);
+  }, [buildAllSpecsForComparison, currentUser, phones.length, sessionSelectedSpecs, sessionStateHydrated]);
 
   // ------------------------------------------------------------
   // | COMPONENT LOGIC
@@ -363,7 +405,10 @@ export default function PhoneComparisonPage({
       const newCategorySpecs = categorySpecs.includes(specName)
         ? categorySpecs.filter((s) => s !== specName)
         : [...categorySpecs, specName];
-      return { ...prev, [category]: newCategorySpecs };
+      const nextSpecs = { ...prev, [category]: newCategorySpecs };
+      isSyncingSessionFromLocalChange.current = true;
+      onSessionSelectedSpecsChange(nextSpecs);
+      return nextSpecs;
     });
   };
 
@@ -372,25 +417,9 @@ export default function PhoneComparisonPage({
   };
 
   const selectAllSpecs = () => {
-    const allSpecs: Record<string, string[]> = {};
-    allCategories.forEach((category) => {
-      const specs = new Set<string>();
-      if (category === "carrier-compatibility") {
-        // Handle carrier compatibility separately
-        phones.forEach((phone) => {
-          phone.carrierCompatibility?.forEach((carrier) => {
-            specs.add(carrier.name);
-          });
-        });
-      } else {
-        phones.forEach((phone) => {
-          if (phone.categories[category]) {
-            Object.keys(phone.categories[category]).forEach((key) => specs.add(key));
-          }
-        });
-      }
-      allSpecs[category] = Array.from(specs);
-    });
+    const allSpecs = buildAllSpecsForComparison();
+    isSyncingSessionFromLocalChange.current = true;
+    onSessionSelectedSpecsChange(allSpecs);
     setSelectedSpecs(allSpecs);
   };
 
@@ -399,6 +428,8 @@ export default function PhoneComparisonPage({
     allCategories.forEach((category) => {
       emptySpecs[category] = [];
     });
+    isSyncingSessionFromLocalChange.current = true;
+    onSessionSelectedSpecsChange(emptySpecs);
     setSelectedSpecs(emptySpecs);
   };
 
@@ -444,10 +475,15 @@ export default function PhoneComparisonPage({
     }
     const allSpecs = Array.from(allSpecsSet);
     const isFullySelected = isCategoryFullySelected(category);
-    setSelectedSpecs((prev) => ({
-      ...prev,
-      [category]: isFullySelected ? [] : allSpecs,
-    }));
+    setSelectedSpecs((prev) => {
+      const nextSpecs = {
+        ...prev,
+        [category]: isFullySelected ? [] : allSpecs,
+      };
+      isSyncingSessionFromLocalChange.current = true;
+      onSessionSelectedSpecsChange(nextSpecs);
+      return nextSpecs;
+    });
   };
 
   const handleExportToPdf = () => {
