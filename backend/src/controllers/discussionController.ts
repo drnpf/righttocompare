@@ -2,6 +2,7 @@ import { Response } from "express";
 import { AuthRequest } from "../middleware/authentication";
 import * as discussionService from "../services/discussionService";
 import { analyzeSentiment } from "../utils/sentimentAnalyzer";
+import { filterMultipleFields } from "../utils/contentFilter";
 
 /**
  * Creates a new discussion.
@@ -17,6 +18,17 @@ export const createDiscussion = async (req: AuthRequest, res: Response) => {
 
     if (!content || !content.trim()) {
       return res.status(400).json({ message: "Content is required" });
+    }
+
+    // Content moderation — reject profanity and spam
+    const contentCheck = filterMultipleFields([
+      { name: "title", text: title },
+      { name: "content", text: content },
+    ]);
+    if (!contentCheck.isClean) {
+      return res.status(400).json({
+        message: `${contentCheck.reason} in ${contentCheck.field}. Please revise and resubmit.`,
+      });
     }
 
     const userId = req.user?.uid;
@@ -231,6 +243,16 @@ export const createReply = async (req: AuthRequest, res: Response) => {
 
     if (!content || !content.trim()) {
       return res.status(400).json({ message: "Reply content is required" });
+    }
+
+    // Content moderation — reject profanity and spam
+    const replyCheck = filterMultipleFields([
+      { name: "reply", text: content },
+    ]);
+    if (!replyCheck.isClean) {
+      return res.status(400).json({
+        message: `${replyCheck.reason} in ${replyCheck.field}. Please revise and resubmit.`,
+      });
     }
 
     const userId = req.user?.uid;

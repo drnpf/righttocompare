@@ -1,12 +1,14 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { getPhoneSummaries } from "../api/phoneApi";
+import { PhoneSummary } from "../types/phoneTypes";
 import imgPixel10 from "figma:asset/97e15958dda8a68c72375b01cfb9d69534512ed8.png";
 import imgIphone16 from "figma:asset/7243092b9d248569f9ed82517f0a760b59ebcb8a.png";
 import imgGalaxyS25 from "figma:asset/c677ba4036733b50cf4df2b9c6932db195bf7661.png";
 import imgGalaxyS24Ultra from "figma:asset/4561f1a435dc79c2ca0bd4aa332a210a40948a78.png";
 
-interface Phone {
-  id: number;
+interface RecentPhoneCard {
+  id: string;
   name: string;
   image: string;
   phoneId: string;
@@ -35,22 +37,69 @@ const phoneNames: Record<string, string> = {
 export default function RecentlyViewedPhones({ currentPhone, onNavigate, recentlyViewedPhones }: RecentlyViewedPhonesProps) {
   const [scrollPosition, setScrollPosition] = useState(0);
   const [canScroll, setCanScroll] = useState(false);
+  const [recentPhones, setRecentPhones] = useState<RecentPhoneCard[]>([]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
-  // Use recently viewed phones from props, or fallback to all phones
-  const recentPhoneIds = recentlyViewedPhones && recentlyViewedPhones.length > 0 
-    ? recentlyViewedPhones.slice(0, 8) // Show up to 8 phones
-    : ["galaxy-s24-ultra", "galaxy-s25", "iphone-16", "pixel-10"]; // Default fallback
-  
-  // Convert phone IDs to Phone objects
-  const recentPhones: Phone[] = recentPhoneIds
-    .map((phoneId, index) => ({
-      id: index + 1,
-      name: phoneNames[phoneId] || phoneId,
-      image: phoneImages[phoneId] || imgGalaxyS24Ultra,
-      phoneId: phoneId,
-    }))
-    .filter(p => phoneImages[p.phoneId]); // Only show phones with images
+  const recentPhoneIds = useMemo(() => {
+    if (!recentlyViewedPhones || recentlyViewedPhones.length === 0) {
+      return [];
+    }
+
+    return recentlyViewedPhones
+      .filter((phoneId): phoneId is string => typeof phoneId === "string" && phoneId.trim().length > 0)
+      .slice(0, 8);
+  }, [recentlyViewedPhones]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const fallbackPhones: RecentPhoneCard[] = recentPhoneIds
+      .map((phoneId) => ({
+        id: phoneId,
+        name: phoneNames[phoneId] || phoneId,
+        image: phoneImages[phoneId] || imgGalaxyS24Ultra,
+        phoneId,
+      }))
+      .filter((phone) => Boolean(phoneImages[phone.phoneId]));
+
+    const loadRecentPhones = async () => {
+      if (recentPhoneIds.length === 0) {
+        if (isActive) setRecentPhones(fallbackPhones);
+        return;
+      }
+
+      try {
+        const summaries = await getPhoneSummaries(recentPhoneIds);
+        if (!isActive) return;
+
+        const phoneMap = new Map<string, PhoneSummary>(summaries.map((phone) => [phone.id, phone]));
+        const backendPhones: RecentPhoneCard[] = recentPhoneIds
+          .map((phoneId) => {
+            const phone = phoneMap.get(phoneId);
+            if (!phone?.images?.main) return null;
+
+            return {
+              id: phone.id,
+              name: phone.name,
+              image: phone.images.main,
+              phoneId: phone.id,
+            };
+          })
+          .filter((phone): phone is RecentPhoneCard => phone !== null);
+
+        setRecentPhones(backendPhones.length > 0 ? backendPhones : fallbackPhones);
+      } catch (error) {
+        console.error("Failed to load recently viewed phones:", error);
+        if (isActive) setRecentPhones(fallbackPhones);
+      }
+    };
+
+    loadRecentPhones();
+
+    return () => {
+      isActive = false;
+    };
+  }, [recentPhoneIds]);
   
   // Check if content is scrollable
   useEffect(() => {
@@ -65,6 +114,13 @@ export default function RecentlyViewedPhones({ currentPhone, onNavigate, recentl
     window.addEventListener('resize', checkScrollable);
     
     return () => window.removeEventListener('resize', checkScrollable);
+  }, [recentPhones]);
+
+  useEffect(() => {
+    setScrollPosition(0);
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ left: 0, behavior: "auto" });
+    }
   }, [recentPhones]);
   
   const handleScroll = (direction: 'left' | 'right') => {
