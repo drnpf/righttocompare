@@ -227,21 +227,21 @@ if (!currentUser?.firebaseUser) {
       const phoneData = {
         id: editingPhoneId || slug,
         name: formData.name,
-        brand: formData.brand,
-        releaseDate: formData.releaseDate ? new Date(formData.releaseDate) : undefined,
+        manufacturer: formData.brand,
+        releaseDate: formData.releaseDate ? new Date(formData.releaseDate) : new Date(),
         price: parseFloat(formData.price.replace(/[^0-9.]/g, "")) || 0,
         images: { main: formData.image || "placeholder.com" },
         specs: {
           display: {
             screenSizeInches: parseFloat(formData.screenSize) || 0,
-            resolution: formData.resolution,
+            resolution: formData.resolution || "N/A",
             technology: formData.displayType,
             refreshRateHz: parseInt(formData.refreshRate) || 60,
             peakBrightnessNits: parseInt(formData.peakBrightness) || undefined,
             protection: formData.protection || undefined,
           },
           performance: {
-            processor: formData.processor,
+            processor: formData.processor || "N/A",
             cpu: formData.cpu || undefined,
             gpu: formData.gpu || undefined,
             ram: { options: formData.ram.split(/[,\/]/).map((s: string) => parseInt(s)).filter((n: number) => !isNaN(n)), technology: "" },
@@ -249,9 +249,9 @@ if (!currentUser?.firebaseUser) {
             operatingSystem: formData.operatingSystem || undefined,
           },
           benchmarks: {
-            geekbenchSingleCore: parseInt(formData.geekbenchSingle) || undefined,
-            geekbenchMultiCore: parseInt(formData.geekbenchMulti) || undefined,
-            antutuScore: parseInt(formData.antutuScore) || undefined,
+            geekbenchSingleCore: parseInt(formData.geekbenchSingle) || 0,
+            geekbenchMultiCore: parseInt(formData.geekbenchMulti) || 0,
+            antutuScore: parseInt(formData.antutuScore) || 0,
           },
           camera: {
             mainMegapixels: parseInt(formData.mainCamera) || 0,
@@ -329,54 +329,66 @@ if (!currentUser?.firebaseUser) {
     }
   };
 
-  const handleEditPhone = (phone: any) => {
-    setEditingPhoneId(phone.id);
-    setFormData({
-      name: phone.name || "", brand: phone.brand || "", image: phone.images?.main || "", releaseDate: phone.releaseDate || "",
-      price: phone.price ? String(phone.price) : "",
-      screenSize: phone.specs?.display?.screenSizeInches ? String(phone.specs.display.screenSizeInches) : "",
-      resolution: phone.specs?.display?.resolution || "",
-      refreshRate: phone.specs?.display?.refreshRateHz ? String(phone.specs.display.refreshRateHz) : "",
-      displayType: phone.specs?.display?.technology || "",
-      peakBrightness: phone.specs?.display?.peakBrightnessNits ? String(phone.specs.display.peakBrightnessNits) : "",
-      protection: phone.specs?.display?.protection || "",
-      processor: phone.specs?.performance?.processor || "",
-      cpu: phone.specs?.performance?.cpu || "",
-      gpu: phone.specs?.performance?.gpu || "",
-      ram: phone.specs?.performance?.ram?.options?.join(", ") || "",
-      storage: phone.specs?.performance?.storageOptions?.join(", ") || "",
-      operatingSystem: phone.specs?.performance?.operatingSystem || "",
-      geekbenchSingle: phone.specs?.benchmarks?.geekbenchSingleCore ? String(phone.specs.benchmarks.geekbenchSingleCore) : "",
-      geekbenchMulti: phone.specs?.benchmarks?.geekbenchMultiCore ? String(phone.specs.benchmarks.geekbenchMultiCore) : "",
-      antutuScore: phone.specs?.benchmarks?.antutuScore ? String(phone.specs.benchmarks.antutuScore) : "",
-      mainCamera: phone.specs?.camera?.mainMegapixels ? String(phone.specs.camera.mainMegapixels) : "",
-      ultrawideMegapixels: phone.specs?.camera?.ultrawideMegapixels ? String(phone.specs.camera.ultrawideMegapixels) : "",
-      telephotoMegapixels: phone.specs?.camera?.telephotoMegapixels ? String(phone.specs.camera.telephotoMegapixels) : "",
-      frontCamera: phone.specs?.camera?.frontMegapixels ? String(phone.specs.camera.frontMegapixels) : "",
-      videoRecording: phone.specs?.camera?.features?.join(", ") || "",
-      batteryCapacity: phone.specs?.battery?.capacitymAh ? String(phone.specs.battery.capacitymAh) : "",
-      chargingSpeed: phone.specs?.battery?.chargingSpeedW ? String(phone.specs.battery.chargingSpeedW) : "",
-      batteryType: phone.specs?.battery?.batteryType || "",
-      wirelessCharging: phone.specs?.battery?.wirelessCharging ? "Yes" : "No",
-      dimensions: phone.specs?.design?.dimensionsMm || "",
-      weight: phone.specs?.design?.weightGrams ? String(phone.specs.design.weightGrams) : "",
-      colors: phone.specs?.design?.colorsAvailable?.join(", ") || "",
-      materials: phone.specs?.design?.buildMaterials || "",
-      has5G: phone.specs?.connectivity?.has5G ? "Yes" : "No",
-      bluetoothVersion: phone.specs?.connectivity?.bluetoothVersion || "5.3",
-      hasNfc: phone.specs?.connectivity?.hasNfc ? "Yes" : "No",
-      headphoneJack: phone.specs?.connectivity?.headphoneJack ? "Yes" : "No",
-      speakers: phone.specs?.audio?.speakers || "",
-      audioFeatures: phone.specs?.audio?.audioFeatures?.join(", ") || "",
-      fingerprint: phone.specs?.sensors?.fingerprint || "",
-      faceRecognition: phone.specs?.sensors?.faceRecognition ? "Yes" : "No",
-      accelerometer: phone.specs?.sensors?.accelerometer ? "Yes" : "No",
-      gyroscope: phone.specs?.sensors?.gyroscope ? "Yes" : "No",
-      proximity: phone.specs?.sensors?.proximity ? "Yes" : "No",
-      compass: phone.specs?.sensors?.compass ? "Yes" : "No",
-      barometer: phone.specs?.sensors?.barometer ? "Yes" : "No",
-    });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const handleEditPhone = async (phone: any) => {
+    try {
+      // Fetch full phone data before editing
+      const res = await fetch(`${API_BASE}/api/phones/${phone.id}`);
+      if (!res.ok) throw new Error("Failed to fetch phone details");
+      const fullPhone = await res.json();
+      
+      setEditingPhoneId(fullPhone.id);
+      setFormData({
+        name: fullPhone.name || "", 
+        brand: fullPhone.manufacturer || fullPhone.brand || "", 
+        image: fullPhone.images?.main || "", 
+        releaseDate: fullPhone.releaseDate || "",
+        price: fullPhone.price ? String(fullPhone.price) : "",
+        screenSize: fullPhone.specs?.display?.screenSizeInches ? String(fullPhone.specs.display.screenSizeInches) : "",
+        resolution: fullPhone.specs?.display?.resolution || "",
+        refreshRate: fullPhone.specs?.display?.refreshRateHz ? String(fullPhone.specs.display.refreshRateHz) : "",
+        displayType: fullPhone.specs?.display?.technology || "",
+        peakBrightness: fullPhone.specs?.display?.peakBrightnessNits ? String(fullPhone.specs.display.peakBrightnessNits) : "",
+        protection: fullPhone.specs?.display?.protection || "",
+        processor: fullPhone.specs?.performance?.processor || "",
+        cpu: fullPhone.specs?.performance?.cpu || "",
+        gpu: fullPhone.specs?.performance?.gpu || "",
+        ram: fullPhone.specs?.performance?.ram?.options?.join(", ") || "",
+        storage: fullPhone.specs?.performance?.storageOptions?.join(", ") || "",
+        operatingSystem: fullPhone.specs?.performance?.operatingSystem || "",
+        geekbenchSingle: fullPhone.specs?.benchmarks?.geekbenchSingleCore ? String(fullPhone.specs.benchmarks.geekbenchSingleCore) : "",
+        geekbenchMulti: fullPhone.specs?.benchmarks?.geekbenchMultiCore ? String(fullPhone.specs.benchmarks.geekbenchMultiCore) : "",
+        antutuScore: fullPhone.specs?.benchmarks?.antutuScore ? String(fullPhone.specs.benchmarks.antutuScore) : "",
+        mainCamera: fullPhone.specs?.camera?.mainMegapixels ? String(fullPhone.specs.camera.mainMegapixels) : "",
+        ultrawideMegapixels: fullPhone.specs?.camera?.ultrawideMegapixels ? String(fullPhone.specs.camera.ultrawideMegapixels) : "",
+        telephotoMegapixels: fullPhone.specs?.camera?.telephotoMegapixels ? String(fullPhone.specs.camera.telephotoMegapixels) : "",
+        frontCamera: fullPhone.specs?.camera?.frontMegapixels ? String(fullPhone.specs.camera.frontMegapixels) : "",
+        videoRecording: fullPhone.specs?.camera?.features?.join(", ") || "",
+        batteryCapacity: fullPhone.specs?.battery?.capacitymAh ? String(fullPhone.specs.battery.capacitymAh) : "",
+        chargingSpeed: fullPhone.specs?.battery?.chargingSpeedW ? String(fullPhone.specs.battery.chargingSpeedW) : "",
+        batteryType: fullPhone.specs?.battery?.batteryType || "",
+        wirelessCharging: fullPhone.specs?.battery?.wirelessCharging ? "Yes" : "No",
+        dimensions: fullPhone.specs?.design?.dimensionsMm || "",
+        weight: fullPhone.specs?.design?.weightGrams ? String(fullPhone.specs.design.weightGrams) : "",
+        colors: fullPhone.specs?.design?.colorsAvailable?.join(", ") || "",
+        materials: fullPhone.specs?.design?.buildMaterials || "",
+        has5G: fullPhone.specs?.connectivity?.has5G ? "Yes" : "No",
+        bluetoothVersion: fullPhone.specs?.connectivity?.bluetoothVersion || "5.3",
+        hasNfc: fullPhone.specs?.connectivity?.hasNfc ? "Yes" : "No",
+        headphoneJack: fullPhone.specs?.connectivity?.headphoneJack ? "Yes" : "No",
+        speakers: fullPhone.specs?.audio?.speakers || "",
+        audioFeatures: fullPhone.specs?.audio?.audioFeatures?.join(", ") || "",
+        fingerprint: fullPhone.specs?.sensors?.fingerprint || "",
+        faceRecognition: fullPhone.specs?.sensors?.faceRecognition ? "Yes" : "No",
+        accelerometer: fullPhone.specs?.sensors?.accelerometer ? "Yes" : "No",
+        gyroscope: fullPhone.specs?.sensors?.gyroscope ? "Yes" : "No",
+        proximity: fullPhone.specs?.sensors?.proximity ? "Yes" : "No",
+        compass: fullPhone.specs?.sensors?.compass ? "Yes" : "No",
+        barometer: fullPhone.specs?.sensors?.barometer ? "Yes" : "No",
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load phone details for editing");
+    }
   };
 
   const handleDeletePhone = async (phoneId: string, phoneName: string) => {
