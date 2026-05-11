@@ -44,11 +44,58 @@ def parse_os_version(os_str):
     match = re.search(r"(?:Android|iOS)\s*(\d+)", str(os_str), re.I)
     return int(match.group(1)) if match else 0
 
+def parse_build_materials(body_raw_dict):
+    """Detects and returns a comma-separated list of premium materials."""
+    build_str = (body_raw_dict or {}).get("Build", "").lower()
+    materials = []
+    
+    if "glass" in build_str: materials.append("Glass")
+    if "aluminum" in build_str: materials.append("Aluminum")
+    if "titanium" in build_str: materials.append("Titanium")
+    if "plastic" in build_str: materials.append("Polycarbonate")
+    return ", ".join(materials) if materials else "Premium Composite"
+
 def check_us_compatibility(network_doc):
     bands = str(network_doc.get("bands4G", "")) + str(network_doc.get("bands5G", ""))
     # Common US Band markers often found in GSMArena strings
     us_markers = ["12", "13", "17", "66", "71", "n260", "n261"]
     return any(m in bands for m in us_markers) or "usa" in bands.lower()
+
+def calculate_msrp(prices_list):
+    """
+    Parses price from scraped output to determine MSRP. Prioritizes USD but
+    if USD is 15% off from global maximum price of phone (that are plausible)
+    then USD pricing is most likely not MSRP price.
+    """
+    if not prices_list:
+        return 0
+
+    rates = {"USD": 1.0, "GBP": 1.28, "EUR": 1.09, "CAD": 0.74, "INR": 0.012}
+    plausible_entries = []
+
+    for p in prices_list:
+        curr = p.get("currency", "USD").upper()
+        amt = p.get("amount", 0)
+        usd_val = amt * rates.get(curr, 1.0)
+        
+        # Checks if price is within a plausible range for phones
+        if 50 < usd_val < 2500:
+            plausible_entries.append({"val": usd_val, "is_native": (curr == "USD")})
+
+    if not plausible_entries:
+        return 0
+
+    # Gets the max global price within plausible range
+    max_global = max(e["val"] for e in plausible_entries)
+    native_usd = [e for e in plausible_entries if e["is_native"]]
+
+    # Checks USD price against global max to check if it is MSRP (within 15% of each other)
+    if native_usd:
+        best_native = max(e["val"] for e in native_usd)
+        if best_native >= (max_global * 0.85):
+            return round(best_native, 2)
+    
+    return round(max_global, 2)
 
 def transform_to_prod(doc):
     raw = doc.get("raw", {}) or {}
@@ -57,43 +104,8 @@ def transform_to_prod(doc):
     tests = raw.get("Our Tests", {}) or raw.get("Tests", {}) or {}
     perf_str = tests.get("Performance", "")
 
-    # Prices
-    price_container = ext.get("price", {}) or {}
-    prices_list = price_container.get("prices", []) or []
-    
-    # Approx 2026 Conversion Rates
-    rates = {
-        "USD": 1.0,
-        "GBP": 1.28,
-        "EUR": 1.09,
-        "CAD": 0.74,
-        "INR": 0.012
-    }
-    
-    price_val = 0
-    plausible_usd_prices = []
-
-    for p in prices_list:
-        curr = p.get("currency", "USD").upper()
-        amt = p.get("amount", 0)
-        
-        # Convert to a common baseline (USD)
-        usd_converted = amt * rates.get(curr, 1.0)
-        
-        # Checks if price is within a plausible range
-        if 50 < usd_converted < 2500:
-            plausible_usd_prices.append({
-                "val": usd_converted,
-                "is_native_usd": (curr == "USD")
-            })
-
-    if plausible_usd_prices:
-        # Favor the native USD price if in plausible list
-        native_usd = next((x for x in plausible_usd_prices if x["is_native_usd"]), None)
-        if native_usd:
-            price_val = round(native_usd["val"], 2)
-        else:
-            price_val = round(max(p["val"] for p in plausible_usd_prices), 2)
+    raw_id = doc.get("sourceId", "unknown")
+    clean_id = re.sub(r"-\d+$", "", raw_id)
 
     cam_section = raw.get("Main Camera", {}) or {}
     cam_spec_str = ""
@@ -109,13 +121,6 @@ def transform_to_prod(doc):
     ultrawide = parse_numeric(uw_match.group(1)) if uw_match else 0
 
     # Safety wrapper for Telephoto
-    build_str = (raw.get("Body", {}) or {}).get("Build", "").lower()
-    materials = []
-    if "glass" in build_str: materials.append("Glass")
-    if "aluminum" in build_str: materials.append("Aluminum")
-    if "titanium" in build_str: materials.append("Titanium")
-    if "plastic" in build_str: materials.append("Polycarbonate")
-
     tp_match = re.search(r"(\d+)\s*MP.*telephoto", cam_spec_str, re.I)
     telephoto = parse_numeric(tp_match.group(1)) if tp_match else 0
 
@@ -140,11 +145,11 @@ def transform_to_prod(doc):
         rel_date = datetime.now()
 
     return {
-        "id": doc.get("sourceId", "unknown"),
+        "id": clean_id,
         "name": ext.get("modelName") or "Unknown Model",
         "manufacturer": ext.get("brand") or "Unknown Brand",
         "releaseDate": rel_date,
-        "price": price_val,
+        "price": calculate_msrp(ext.get("price", {}).get("prices", [])),
         "images": { "main": ext.get("imageUrl") or "" },
         "totalReviews": 0,
         "aggregateRating": 0,
@@ -196,7 +201,7 @@ def transform_to_prod(doc):
             "design": {
                 "dimensionsMm": (raw.get("Body", {}) or {}).get("Dimensions", "N/A"),
                 "weightGrams": parse_numeric((raw.get("Body", {}) or {}).get("Weight", "0")),
-                "buildMaterials": ", ".join(materials) if materials else "Premium Composite",
+                "buildMaterials": parse_build_materials(raw.get("Body")),
                 "colorsAvailable": (raw.get("Misc", {}) or {}).get("Colors", "Standard").split(", ")
             },
             "connectivity": {
@@ -213,10 +218,13 @@ def transform_to_prod(doc):
                 "proximity": True, "compass": True, "barometer": True
             }
         },
-        "carrierCompatibility": [
-            {"name": "Verizon", "compatible": is_us_ready},
-            {"name": "AT&T", "compatible": is_us_ready},
-            {"name": "T-Mobile", "compatible": is_us_ready}
+            "carrierCompatibility": [
+            {"name": "Verizon", "compatible": is_us_ready, "type": "MNO"},
+            {"name": "AT&T", "compatible": is_us_ready, "type": "MNO"},
+            {"name": "T-Mobile", "compatible": is_us_ready, "type": "MNO"},
+            {"name": "Mint Mobile", "compatible": is_us_ready, "type": "MVNO"},
+            {"name": "Google Fi", "compatible": is_us_ready, "type": "MVNO"},
+            {"name": "Visible", "compatible": is_us_ready, "type": "MVNO"}
         ]
     }
 
@@ -226,18 +234,35 @@ def run_migration():
     source_col = db["scrape_output"] 
     destination_col = db["phones"] 
 
-    print(f"--- Starting Migration ---")
+    print(f"Starting scraper output conversion...")
+    
+    existing_ids = set(destination_col.distinct("id"))
+    print(f"\tDetected {len(existing_ids)} phones already in production.")
+
     ops = []
+    skipped = 0
+    
     for raw_doc in source_col.find():
         try:
+            # Pre-check ID before transforming
+            raw_id = raw_doc.get("sourceId", "unknown")
+            clean_id = re.sub(r"-\d+$", "", raw_id)
+
+            if clean_id in existing_ids:
+                skipped += 1
+                continue
+
             prod_data = transform_to_prod(raw_doc)
             ops.append(UpdateOne({"id": prod_data["id"]}, {"$set": prod_data}, upsert=True))
+            
         except Exception as e:
-            print(f"Failed to transform {raw_doc.get('sourceId')}: {e}")
+            print(f"\tFailed to transform {raw_doc.get('sourceId')}: {e}")
 
     if ops:
         res = destination_col.bulk_write(ops)
-        print(f"Upserted: {res.upserted_count}, Modified: {res.modified_count}")
+        print(f"Done! Upserted: {res.upserted_count}, Modified: {res.modified_count}, Skipped: {skipped}")
+    else:
+        print(f"No new phones found to migrate. Skipped: {skipped}")
 
 if __name__ == "__main__":
     run_migration()
