@@ -385,6 +385,15 @@ export default function PhoneSpecPage({
   }, [phoneId, fetchReviews, onAddToRecentlyViewed]);
 
   useEffect(() => {
+    if (!phoneData || !currentUser) {
+      setIsWishlisted(false);
+      return;
+    }
+
+    setIsWishlisted(currentUser.wishlist.includes(phoneData.id));
+  }, [phoneData, currentUser]);
+
+  useEffect(() => {
     const fetchPriceTrackingData = async () => {
       if (!phoneId) return;
 

@@ -414,9 +414,14 @@ export const createPhonePriceHistory = async (req: Request, res: Response) => {
       recordedAt: recordedAt ? new Date(recordedAt) : undefined,
     });
 
+    const notificationResult = await import("../services/inAppNotificationService").then((service) =>
+      service.createPriceDropNotificationsForPhone(id),
+    );
+
     res.status(201).json({
       message: "Price history entry created successfully",
       data: createdEntry,
+      notificationResult,
     });
   } catch (error) {
     console.error(`Error creating price history for phone ${req.params.id}:`, error);

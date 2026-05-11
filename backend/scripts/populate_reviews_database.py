@@ -29,7 +29,7 @@ def clear_all_reviews(db):
     rev_result = db.reviews.delete_many({})
     
     # Reset all phone metadata fields to default/empty state
-    phone_result = db.phones.update_many({}, {
+    phone_result = db.phones_test2.update_many({}, {
         "$set": {
             "totalReviews": 0,
             "aggregateRating": 0,
@@ -80,7 +80,7 @@ def run_api_seeder(chance, clear):
         return
 
     # Review injection loop
-    phones = list(db.phones.find({}, {"id": 1, "name": 1}))
+    phones = list(db.phones_test2.find({}, {"id": 1, "name": 1}))
     print(f"\nStarting injection for {len(phones)} phones...")
 
     success_count = 0

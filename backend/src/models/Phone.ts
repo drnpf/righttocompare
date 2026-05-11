@@ -85,10 +85,10 @@ export interface IPhone extends IPhoneCard, Document {
       headphoneJack: boolean;
     };
     networkBands?: {
-        bands2G?: string[];
-        bands3G?: string[];
-        bands4G?: string[];
-        bands5G?: string[];
+      bands2G?: string[];
+      bands3G?: string[];
+      bands4G?: string[];
+      bands5G?: string[];
     };
     audio: {
       speakers: string; // i.e.e "Stereo speakers tuned by AKG"
@@ -243,7 +243,7 @@ const PhoneSchema: Schema = new Schema<IPhone>(
   },
   {
     timestamps: true,
-    collection: "phones_test",
+    collection: "phones_test2",
   },
 );
 
