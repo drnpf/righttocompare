@@ -10,17 +10,19 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 load_dotenv(SCRIPT_DIR.parent / ".env")
 
+# --- CONFIG ---
 MONGO_URI = os.getenv("MONGO_URI")
-DB_NAME = os.getenv("DB_NAME")
+DB_NAME = os.getenv("DB_NAME") or "test"
+PHONE_COLLECTION = os.getenv("PHONE_COLLECTION") or "phones"
 
 def fix_dates(days_back, recent_window):
     try:
         client = MongoClient(MONGO_URI)
         db = client[DB_NAME]
         reviews_col = db["reviews"]
-        phones_col = db["phones_test2"]
+        phones_col = db[PHONE_COLLECTION]
 
-        # 1. Map phone release dates for quick lookup
+        # Map phone release dates for quick lookup
         phone_releases = {p["id"]: p["releaseDate"] for p in phones_col.find({}, {"id": 1, "releaseDate": 1})}
 
         reviews = list(reviews_col.find({}))

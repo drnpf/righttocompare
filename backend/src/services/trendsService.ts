@@ -3,6 +3,8 @@ import Phone from "../models/Phone";
 import { GlobalTrendsResponse, TickerData, VibeShiftResponse } from "../types/trendTypes";
 import { calculateDynamicSummary } from "../utils/sentimentUtils";
 
+const collectionName = process.env.PHONE_COLLECTION || "phones";
+
 /**
  * Aggregates platform-wide data to show market momentum and brand performance. Processes
  * a certain number of months of data to generate dual-faceted report. The number of months
@@ -38,7 +40,7 @@ export const getGlobalTrends = async (months: number = 6): Promise<GlobalTrendsR
         brandRadar: [
           {
             $lookup: {
-              from: "phones_test2",
+              from: collectionName,
               localField: "phoneId",
               foreignField: "id",
               as: "phone",

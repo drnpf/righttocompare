@@ -2,6 +2,8 @@ import mongoose, { Schema, Document } from "mongoose";
 import { ICategoryRatings } from "./Review";
 import { ISentimentSummary } from "./Sentiment";
 
+const collectionName = process.env.PHONE_COLLECTION || "phones";
+
 export interface IPhoneReference {
   id: string;
   name: string;
@@ -243,7 +245,7 @@ const PhoneSchema: Schema = new Schema<IPhone>(
   },
   {
     timestamps: true,
-    collection: "phones_test2",
+    collection: collectionName,
   },
 );
 

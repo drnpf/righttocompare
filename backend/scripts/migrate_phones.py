@@ -6,8 +6,10 @@ import os
 
 load_dotenv()
 
-MONGO_URI = os.getenv("MONGO_URI") or "mongodb://localhost:27017"
+# --- CONFIG ---
+MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = os.getenv("DB_NAME") or "test"
+PHONE_COLLECTION = os.getenv("PHONE_COLLECTION") or "phones"
 
 def parse_numeric(text):
     if not text or text is None: return 0
@@ -232,7 +234,7 @@ def run_migration():
     client = MongoClient(MONGO_URI) 
     db = client[DB_NAME]
     source_col = db["scrape_output"] 
-    destination_col = db["phones"] 
+    destination_col =  db[PHONE_COLLECTION]
 
     print(f"Starting scraper output conversion...")
     

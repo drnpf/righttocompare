@@ -78,7 +78,7 @@ export const mapJsonToPhoneSpecification = (dbPhone: any): PhoneSpecification =>
         Processor: specs.performance.processor,
         RAM: `${specs.performance.ram.options.join(" / ")}GB ${specs.performance.ram.technology}`,
         Storage: `${specs.performance.storageOptions.join(" / ")}GB`,
-        "Operating System": specs.performance.operatingSystem,
+        "Operating System": specs.performance.operatingSystem.raw || "N/A",
         "Expandable Storage": specs.performance.expandableStorage ? "Yes" : "No",
       },
       benchmarks: {
