@@ -32,7 +32,7 @@ export const recordComparisonView = async (phoneIds: string[], clientId: string)
         $setOnInsert: { phoneIds: sortedIds }, // Used for new comparison inserted
         $set: { lastCompared: new Date() }, // Updates last view/compared date
       },
-      { upsert: true, new: true },
+      { upsert: true },
     );
   } catch (error: any) {
     // If error 11000 in recording requestor IP then user has already viewed

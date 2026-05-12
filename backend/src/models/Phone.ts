@@ -1,7 +1,10 @@
 import mongoose, { Schema, Document } from "mongoose";
 import { ICategoryRatings } from "./Review";
 import { ISentimentSummary } from "./Sentiment";
+import dotenv from "dotenv";
+import path from "path";
 
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 const collectionName = process.env.PHONE_COLLECTION || "phones";
 
 export interface IPhoneReference {

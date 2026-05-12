@@ -59,7 +59,7 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: true,
 });
-app.use("/api", limiter);
+//app.use("/api", limiter);
 
 // ------------------------------------------------------------
 // | DATA PARSING AND SANITIZATION

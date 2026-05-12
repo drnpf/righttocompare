@@ -5,7 +5,6 @@ import PriceHistory from "../models/PriceHistory";
 import path from "path";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-
 const MONGO_URI = process.env.MONGO_URI as string;
 
 const roundPrice = (num: number) => Math.round(num);
@@ -49,9 +48,6 @@ const seed = async () => {
     console.log("Connecting to MongoDB...");
     await mongoose.connect(MONGO_URI);
     console.log("Connected!");
-
-    await PriceHistory.deleteMany({ source: "mock-seed" });
-    console.log("Cleared existing price history");
 
     const phones = await Phone.find({});
     console.log(`Found ${phones.length} phones`);

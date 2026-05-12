@@ -2,7 +2,10 @@ import Review from "../models/Review";
 import Phone from "../models/Phone";
 import { GlobalTrendsResponse, TickerData, VibeShiftResponse } from "../types/trendTypes";
 import { calculateDynamicSummary } from "../utils/sentimentUtils";
+import dotenv from "dotenv";
+import path from "path";
 
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 const collectionName = process.env.PHONE_COLLECTION || "phones";
 
 /**
