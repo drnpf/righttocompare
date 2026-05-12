@@ -2,6 +2,11 @@ import Review from "../models/Review";
 import Phone from "../models/Phone";
 import { GlobalTrendsResponse, TickerData, VibeShiftResponse } from "../types/trendTypes";
 import { calculateDynamicSummary } from "../utils/sentimentUtils";
+import dotenv from "dotenv";
+import path from "path";
+
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+const collectionName = process.env.PHONE_COLLECTION || "phones";
 
 /**
  * Aggregates platform-wide data to show market momentum and brand performance. Processes
@@ -38,7 +43,7 @@ export const getGlobalTrends = async (months: number = 6): Promise<GlobalTrendsR
         brandRadar: [
           {
             $lookup: {
-              from: "phones_test2",
+              from: collectionName,
               localField: "phoneId",
               foreignField: "id",
               as: "phone",

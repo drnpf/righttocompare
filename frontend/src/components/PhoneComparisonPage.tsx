@@ -33,11 +33,13 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  Check,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 // Custom Components & APIs
+import { formatPrice } from "../utils/formatter";
 import { PhoneCard, PhoneData } from "../types/phoneTypes";
 
 import { PartialStar } from "./PartialStar";
@@ -651,32 +653,6 @@ export default function PhoneComparisonPage({
     toast.success("PDF downloaded", {
       description: "The comparison PDF has been saved to your browser's default downloads location.",
     });
-  };
-
-  const formatPrice = (price: number | string | undefined | null) => {
-    if (price === undefined || price === null || price === "---" || price === 0) {
-      return "---";
-    }
-
-    // Strips out characters other than numbers and .
-    let numericValue: number;
-    if (typeof price === "string") {
-      // Regex: keep only digits and the first decimal point
-      const cleaned = price.replace(/[^0-9.]/g, "");
-      numericValue = parseFloat(cleaned);
-    } else {
-      numericValue = price;
-    }
-
-    // Fallback = ---
-    if (isNaN(numericValue)) return "---";
-
-    // Format as USD with no decimals
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).format(numericValue);
   };
 
   // ------------------------------------------------------------
@@ -1377,11 +1353,26 @@ export default function PhoneComparisonPage({
                                   >
                                     {carrierInfo ? (
                                       <div className="flex flex-col gap-1">
-                                        <span
-                                          className={`text-sm font-medium ${carrierInfo.compatible ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-                                        >
-                                          {carrierInfo.compatible ? "? Compatible" : "? Not Compatible"}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                          {carrierInfo.compatible ? (
+                                            <>
+                                              <Check
+                                                size={18}
+                                                className="text-green-600 dark:text-green-400 shrink-0"
+                                              />
+                                              <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                                                Compatible
+                                              </span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <X size={18} className="text-red-600 dark:text-red-400 shrink-0" />
+                                              <span className="text-sm font-bold text-red-600 dark:text-red-400">
+                                                Incompatible
+                                              </span>
+                                            </>
+                                          )}
+                                        </div>
                                         {carrierInfo.notes && (
                                           <span className="text-xs text-[#999] dark:text-[#6b7280]">
                                             {carrierInfo.notes}

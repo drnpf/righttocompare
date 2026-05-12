@@ -39,8 +39,13 @@ export function BrandRadar({ brands }: BrandRadarProps) {
   // ------------------------------------------------------------
   // | COMPONENT LOGIC
   // ------------------------------------------------------------
-  // Calculate total insights to determine statistical confidence
-  const totalInsights = brands.reduce((sum, item) => sum + item.reviewCount, 0);
+  // We sort by rating (highest first) and take the top 3
+  const topBrands = useMemo(() => {
+    return [...brands].sort((a, b) => b.avgRating - a.avgRating).slice(0, 3);
+  }, [brands]);
+
+  // We keep totalInsights based on ALL brands to keep the Confidence Score high
+  const totalInsights = useMemo(() => brands.reduce((sum, item) => sum + item.reviewCount, 0), [brands]);
 
   /**
    * Confidence Calculation:
@@ -79,7 +84,7 @@ export function BrandRadar({ brands }: BrandRadarProps) {
       </div>
 
       <div className="space-y-4 flex-1">
-        {brands.map((item, idx) => (
+        {topBrands.map((item, idx) => (
           <div
             key={item.brand}
             className="group cursor-default p-4 -mx-4 rounded-2xl transition-all duration-300"

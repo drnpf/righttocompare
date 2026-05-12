@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 // Custom Components & API
+import { formatPrice } from "../utils/formatter";
 import { useAuth } from "../context/AuthContext";
 import { AppUser } from "../types/userTypes";
 import { updateUserProfile } from "../api/userApi";
@@ -670,7 +671,7 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
                           <div className="flex-1">
                             <h4 className="text-gray-800 dark:text-[#d1d5db] mb-1">{phone.name}</h4>
                             <p className="text-gray-600 dark:text-[#a0a8b8] text-sm mb-2">{phone.manufacturer}</p>
-                            <p className="text-[#2c3968] dark:text-[#4a7cf6]">{phone.price}</p>
+                            <p className="text-[#2c3968] dark:text-[#4a7cf6]">{formatPrice(phone.price)}</p>
                           </div>
                         </div>
                       </div>
