@@ -111,7 +111,10 @@ export default function PhoneCatalogPage({
     const normalizedManufacturers = (sessionCatalogFilters?.selectedManufacturers || []).filter((brand) =>
       availableManufacturers.includes(brand),
     );
-    const normalizedMinPrice = Math.max(CATALOG_DEFAULT_MIN_PRICE, sessionCatalogFilters?.minPrice ?? CATALOG_DEFAULT_MIN_PRICE);
+    const normalizedMinPrice = Math.max(
+      CATALOG_DEFAULT_MIN_PRICE,
+      sessionCatalogFilters?.minPrice ?? CATALOG_DEFAULT_MIN_PRICE,
+    );
     const normalizedMaxPrice = Math.min(
       CATALOG_DEFAULT_MAX_PRICE,
       Math.max(normalizedMinPrice, sessionCatalogFilters?.maxPrice ?? CATALOG_DEFAULT_MAX_PRICE),
@@ -220,9 +223,7 @@ export default function PhoneCatalogPage({
 
         if (activeTab === "popular") {
           const comparisons = await getPopularComparisons(30, 100);
-          const validComparisons = comparisons.filter(
-            (comparison) => comparison.phones.length >= 2
-          );
+          const validComparisons = comparisons.filter((comparison) => comparison.phones.length >= 2);
           setPopularComparisons(validComparisons);
           setAllPhones([]);
           setTotalItems(comparisons.length);
@@ -426,11 +427,7 @@ export default function PhoneCatalogPage({
 
     if (phone.hotSignals.isNewRelease) {
       badges.push(
-        <Badge
-          key="new"
-          variant="secondary"
-          className="bg-[#ef4444] text-white hover:bg-[#ef4444]/90"
-        >
+        <Badge key="new" variant="secondary" className="bg-[#ef4444] text-white hover:bg-[#ef4444]/90">
           New This Year
         </Badge>,
       );
@@ -438,11 +435,7 @@ export default function PhoneCatalogPage({
 
     if (phone.hotSignals.hasPriceDrop && phone.hotSignals.percentDrop != null) {
       badges.push(
-        <Badge
-          key="drop"
-          variant="secondary"
-          className="bg-[#10b981] text-white hover:bg-[#10b981]/90"
-        >
+        <Badge key="drop" variant="secondary" className="bg-[#10b981] text-white hover:bg-[#10b981]/90">
           {Math.round(phone.hotSignals.percentDrop)}% Off Launch
         </Badge>,
       );
@@ -477,6 +470,32 @@ export default function PhoneCatalogPage({
       }
     }
     return pages;
+  };
+
+  const formatPrice = (price: number | string | undefined | null) => {
+    if (price === undefined || price === null || price === "---" || price === 0) {
+      return "---";
+    }
+
+    // Strips out characters other than numbers and .
+    let numericValue: number;
+    if (typeof price === "string") {
+      // Regex: keep only digits and the first decimal point
+      const cleaned = price.replace(/[^0-9.]/g, "");
+      numericValue = parseFloat(cleaned);
+    } else {
+      numericValue = price;
+    }
+
+    // Fallback = ---
+    if (isNaN(numericValue)) return "---";
+
+    // Format as USD with no decimals
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(numericValue);
   };
 
   // ------------------------------------------------------------
@@ -540,140 +559,143 @@ export default function PhoneCatalogPage({
 
         {/* Controls */}
         {activeTab !== "popular" && (
-        <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6 mb-8">
-          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-            {/* Search Bar */}
-            <div className="relative flex-1 w-full lg:max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#999] dark:text-[#707070]" size={20} />
-              <input
-                type="text"
-                placeholder="Search phones..."
-                maxLength={100}
-                autoComplete="off"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-3 items-center">
-              {/* Toggle Filters Button */}
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`px-4 py-3 rounded-lg border text-sm font-bold transition-all cursor-pointer ${
-                  showFilters
-                    ? "bg-[#2c3968] dark:bg-[#4a7cf6] text-white border-transparent shadow-md"
-                    : "border-[#d9d9d9] dark:border-[#2d3548] text-[#2c3968] dark:text-[#4a7cf6] hover:bg-gray-50 dark:hover:bg-[#252b3d]"
-                }`}
-              >
-                {showFilters ? "Hide Filters" : "Filters"}
-              </button>
-
-              {/* Sort By */}
-              <div className="relative">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                  className="appearance-none pl-4 pr-10 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all cursor-pointer"
-                >
-                  <option value="name">Name: A → Z</option>
-                  <option value="name_desc">Name: Z → A</option>
-                  <option value="price_asc">Price: Low → High</option>
-                  <option value="price">Price: High → Low</option>
-                  <option value="release">Release: Newest</option>
-                  <option value="oldest">Release: Oldest</option>
-                  <option value="rating">Top Rated</option>
-                </select>
-                <ChevronDown
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] pointer-events-none"
+          <div className="bg-white dark:bg-[#161b26] rounded-2xl shadow-sm border border-[#e5e5e5] dark:border-[#2d3548] p-6 mb-8">
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+              {/* Search Bar */}
+              <div className="relative flex-1 w-full lg:max-w-md">
+                <Search
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-[#999] dark:text-[#707070]"
                   size={20}
+                />
+                <input
+                  type="text"
+                  placeholder="Search phones..."
+                  maxLength={100}
+                  autoComplete="off"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white placeholder:text-[#b3b3b3] dark:placeholder:text-[#707070] focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all"
                 />
               </div>
 
-              {/* View Mode Toggle */}
-              <div className="flex gap-2 bg-[#f7f7f7] dark:bg-[#1a1f2e] rounded-lg p-1">
+              <div className="flex flex-wrap gap-3 items-center">
+                {/* Toggle Filters Button */}
                 <button
-                  onClick={() => setViewMode("grid")}
-                  className={`p-2 rounded-md transition-all cursor-pointer ${
-                    viewMode === "grid"
-                      ? "bg-white dark:bg-[#252b3d] text-[#2c3968] dark:text-[#4a7cf6] shadow-sm"
-                      : "text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`px-4 py-3 rounded-lg border text-sm font-bold transition-all cursor-pointer ${
+                    showFilters
+                      ? "bg-[#2c3968] dark:bg-[#4a7cf6] text-white border-transparent shadow-md"
+                      : "border-[#d9d9d9] dark:border-[#2d3548] text-[#2c3968] dark:text-[#4a7cf6] hover:bg-gray-50 dark:hover:bg-[#252b3d]"
                   }`}
                 >
-                  <Grid3x3 size={20} />
+                  {showFilters ? "Hide Filters" : "Filters"}
                 </button>
-                <button
-                  onClick={() => setViewMode("list")}
-                  className={`p-2 rounded-md transition-all cursor-pointer ${
-                    viewMode === "list"
-                      ? "bg-white dark:bg-[#252b3d] text-[#2c3968] dark:text-[#4a7cf6] shadow-sm"
-                      : "text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
-                  }`}
-                >
-                  <List size={20} />
-                </button>
+
+                {/* Sort By */}
+                <div className="relative">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                    className="appearance-none pl-4 pr-10 py-3 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#1a1f2e] text-[#1e1e1e] dark:text-white focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 dark:focus:ring-[#4a7cf6]/20 transition-all cursor-pointer"
+                  >
+                    <option value="name">Name: A → Z</option>
+                    <option value="name_desc">Name: Z → A</option>
+                    <option value="price_asc">Price: Low → High</option>
+                    <option value="price">Price: High → Low</option>
+                    <option value="release">Release: Newest</option>
+                    <option value="oldest">Release: Oldest</option>
+                    <option value="rating">Top Rated</option>
+                  </select>
+                  <ChevronDown
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] dark:text-[#a0a8b8] pointer-events-none"
+                    size={20}
+                  />
+                </div>
+
+                {/* View Mode Toggle */}
+                <div className="flex gap-2 bg-[#f7f7f7] dark:bg-[#1a1f2e] rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode("grid")}
+                    className={`p-2 rounded-md transition-all cursor-pointer ${
+                      viewMode === "grid"
+                        ? "bg-white dark:bg-[#252b3d] text-[#2c3968] dark:text-[#4a7cf6] shadow-sm"
+                        : "text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
+                    }`}
+                  >
+                    <Grid3x3 size={20} />
+                  </button>
+                  <button
+                    onClick={() => setViewMode("list")}
+                    className={`p-2 rounded-md transition-all cursor-pointer ${
+                      viewMode === "list"
+                        ? "bg-white dark:bg-[#252b3d] text-[#2c3968] dark:text-[#4a7cf6] shadow-sm"
+                        : "text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6]"
+                    }`}
+                  >
+                    <List size={20} />
+                  </button>
+                </div>
               </div>
             </div>
+
+            {/* Active Filters */}
+            {(searchQuery ||
+              selectedManufacturers.length > 0 ||
+              selectedRAM.length > 0 ||
+              selectedStorage.length > 0 ||
+              maxPrice < 2000) && (
+              <div className="mt-4 pt-4 border-t border-[#e5e5e5] dark:border-[#2d3548]">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-[12px] font-bold text-[#999] dark:text-[#707070] uppercase tracking-wider mr-2">
+                    Active filters:
+                  </span>
+
+                  {/* Search Query Badge */}
+                  {searchQuery && (
+                    <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
+                      "{searchQuery}"
+                    </span>
+                  )}
+
+                  {/* Manufacturer Badges */}
+                  {selectedManufacturers.length > 0 && (
+                    <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
+                      Brands: {selectedManufacturers.join(", ")}
+                    </span>
+                  )}
+
+                  {/* RAM Badges */}
+                  {selectedRAM.length > 0 && (
+                    <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
+                      RAM: {selectedRAM.map((r) => `${r}GB`).join(", ")}
+                    </span>
+                  )}
+
+                  {/* Storage Badges */}
+                  {selectedStorage.length > 0 && (
+                    <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
+                      Storage: {selectedStorage.map((s) => (s >= 1024 ? "1TB" : `${s}GB`)).join(", ")}
+                    </span>
+                  )}
+
+                  {/* Price Badge */}
+                  {(minPrice > 0 || maxPrice < 2000) && (
+                    <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium tabular-nums">
+                      Price: ${minPrice} - ${maxPrice}
+                    </span>
+                  )}
+
+                  {/* The Global Reset */}
+                  <button
+                    onClick={handleClearAll}
+                    className="ml-2 text-xs font-bold text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-colors underline underline-offset-4 cursor-pointer"
+                  >
+                    Reset All
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* Active Filters */}
-          {(searchQuery ||
-            selectedManufacturers.length > 0 ||
-            selectedRAM.length > 0 ||
-            selectedStorage.length > 0 ||
-            maxPrice < 2000) && (
-            <div className="mt-4 pt-4 border-t border-[#e5e5e5] dark:border-[#2d3548]">
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-[12px] font-bold text-[#999] dark:text-[#707070] uppercase tracking-wider mr-2">
-                  Active filters:
-                </span>
-
-                {/* Search Query Badge */}
-                {searchQuery && (
-                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
-                    "{searchQuery}"
-                  </span>
-                )}
-
-                {/* Manufacturer Badges */}
-                {selectedManufacturers.length > 0 && (
-                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
-                    Brands: {selectedManufacturers.join(", ")}
-                  </span>
-                )}
-
-                {/* RAM Badges */}
-                {selectedRAM.length > 0 && (
-                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
-                    RAM: {selectedRAM.map((r) => `${r}GB`).join(", ")}
-                  </span>
-                )}
-
-                {/* Storage Badges */}
-                {selectedStorage.length > 0 && (
-                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium">
-                    Storage: {selectedStorage.map((s) => (s >= 1024 ? "1TB" : `${s}GB`)).join(", ")}
-                  </span>
-                )}
-
-                {/* Price Badge */}
-                {(minPrice > 0 || maxPrice < 2000) && (
-                  <span className="px-3 py-1 bg-[#2c3968]/10 dark:bg-[#4a7cf6]/10 text-[#2c3968] dark:text-[#4a7cf6] rounded-full text-xs font-medium tabular-nums">
-                    Price: ${minPrice} - ${maxPrice}
-                  </span>
-                )}
-
-                {/* The Global Reset */}
-                <button
-                  onClick={handleClearAll}
-                  className="ml-2 text-xs font-bold text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-colors underline underline-offset-4 cursor-pointer"
-                >
-                  Reset All
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
         )}
 
         {/* ADVANCED FILTER DRAWER */}
@@ -738,7 +760,9 @@ export default function PhoneCatalogPage({
                           </div>
                           <div className="min-w-0">
                             <p className="text-[#999] dark:text-[#707070] text-xs truncate">{phone.manufacturer}</p>
-                            <p className="text-[#1e1e1e] dark:text-white text-sm leading-snug line-clamp-2">{phone.name}</p>
+                            <p className="text-[#1e1e1e] dark:text-white text-sm leading-snug line-clamp-2">
+                              {phone.name}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -795,7 +819,7 @@ export default function PhoneCatalogPage({
                         </Badge>
                         {getHotSignalBadges(phone)}
                       </div>
-                      <p className="text-[#2c3968] dark:text-[#4a7cf6]">{phone.price}</p>
+                      <p className="text-[#2c3968] dark:text-[#4a7cf6]">{formatPrice(phone.price)}</p>
                       {activeTab === "hot" && phone.hotSignals?.hasPriceDrop && (
                         <p className="text-[13px] text-[#10b981] dark:text-[#34d399]">
                           Launch price ${phone.hotSignals.originalPrice?.toLocaleString()} to current $
@@ -865,7 +889,7 @@ export default function PhoneCatalogPage({
                           </Badge>
                           {getHotSignalBadges(phone)}
                         </div>
-                        <p className="text-[#2c3968] dark:text-[#4a7cf6]">{phone.price}</p>
+                        <p className="text-[#2c3968] dark:text-[#4a7cf6]">{formatPrice(phone.price)}</p>
                         {activeTab === "hot" && phone.hotSignals?.hasPriceDrop && (
                           <p className="text-[13px] text-[#10b981] dark:text-[#34d399]">
                             Launch price ${phone.hotSignals.originalPrice?.toLocaleString()} to current $
