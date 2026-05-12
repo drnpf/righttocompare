@@ -135,7 +135,7 @@ def apply_hardware_constraints(phone, template_ratings):
         dynamic_ratings["design"] = min(3, dynamic_ratings["design"])
         dynamic_ratings["value"] = min(2, dynamic_ratings["value"])
 
-    # --- 5. RAM CONSTRAINTS ---
+    # --- RAM CONSTRAINTS ---
     perf_data = specs.get("performance", {})
     ram_data = perf_data.get("ram", {})
     ram_options = ram_data.get("options", [])
@@ -161,7 +161,7 @@ def apply_hardware_constraints(phone, template_ratings):
         # High-end multitasking bonus
         dynamic_ratings["performance"] = min(5, dynamic_ratings["performance"] + 1)
 
-    # --- 6. BUILD MATERIAL PENALTY ---
+    # --- BUILD MATERIAL PENALTY ---
     build_material = specs.get("design", {}).get("buildMaterials", "glass").lower()
     if price > 800 and "plastic" in build_material:
         dynamic_ratings["design"] = min(2, dynamic_ratings["design"])
@@ -244,7 +244,6 @@ def run_api_seeder(chance, clear):
                     print(f"      {email.split('@')[0]} already reviewed.")
             except Exception as e:
                 print(f"      Request failed: {e}")
-            
             time.sleep(0.05) 
 
     print(f"\nInjected {success_count} reviews.")
