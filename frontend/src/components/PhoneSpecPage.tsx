@@ -279,7 +279,10 @@ export default function PhoneSpecPage({
             return [category, availableSpecs.filter((spec) => persistedCategorySpecs.includes(spec))];
           }
 
-          const priorityScore = currentUser?.preferences.priorityFeatures[category as keyof typeof currentUser.preferences.priorityFeatures];
+          const priorityScore =
+            currentUser?.preferences.priorityFeatures[
+              category as keyof typeof currentUser.preferences.priorityFeatures
+            ];
           return [category, priorityScore != null && priorityScore < 3 ? [] : availableSpecs];
         }),
       );
@@ -904,7 +907,7 @@ export default function PhoneSpecPage({
   const handleCarrierChange = async (carrier: string) => {
     // Save to localStorage so it works immediately
     localStorage.setItem("preferredCarrier", carrier);
-    
+
     // Save to database for logged-in users
     if (!currentUser?.firebaseUser) return;
     try {
@@ -922,6 +925,31 @@ export default function PhoneSpecPage({
     }
   };
 
+  const formatPrice = (price: number | string | undefined | null) => {
+    if (price === undefined || price === null || price === "---" || price === 0) {
+      return "---";
+    }
+
+    // Strips out characters other than numbers and .
+    let numericValue: number;
+    if (typeof price === "string") {
+      // Regex: keep only digits and the first decimal point
+      const cleaned = price.replace(/[^0-9.]/g, "");
+      numericValue = parseFloat(cleaned);
+    } else {
+      numericValue = price;
+    }
+
+    // Fallback = ---
+    if (isNaN(numericValue)) return "---";
+
+    // Format as USD with no decimals
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(numericValue);
+  };
 
   // ------------------------------------------------------------
   // | UI SECTION
@@ -942,7 +970,7 @@ export default function PhoneSpecPage({
               >
                 {phoneData.releaseDate}
               </Badge>
-              <span className="text-[#2c3968] dark:text-[#4a7cf6]">{phoneData.price}</span>
+              <span className="text-[#2c3968] dark:text-[#4a7cf6]">{formatPrice(phoneData.price)}</span>
             </div>
           </div>
 
@@ -1177,7 +1205,10 @@ export default function PhoneSpecPage({
                         </div>
                         <div className="flex flex-col gap-3">
                           {(["Amazon", "Best Buy", "Walmart", "Target"] as const).map((retailer) => (
-                            <div key={retailer} className="rounded-xl border border-[#2c3968]/10 bg-white p-4 shadow-sm">
+                            <div
+                              key={retailer}
+                              className="rounded-xl border border-[#2c3968]/10 bg-white p-4 shadow-sm"
+                            >
                               <div className="flex flex-col items-center gap-3">
                                 <div className="flex min-h-14 items-center justify-center rounded-lg border border-[#e6ebf5] bg-white px-3 py-2">
                                   <img
@@ -1872,10 +1903,20 @@ export default function PhoneSpecPage({
                 phoneName={phoneData.name}
                 userCarrier={currentUser?.preferredCarrier || localStorage.getItem("preferredCarrier") || ""}
                 onCarrierChange={handleCarrierChange}
-                networkBands={phoneData.categories?.connectivity ? {
-                  bands4G: String(phoneData.categories.connectivity["4G Bands"] || "").split(",").map((b: string) => b.trim()).filter(Boolean),
-                  bands5G: String(phoneData.categories.connectivity["5G Bands"] || "").split(",").map((b: string) => b.trim()).filter(Boolean),
-                } : undefined}
+                networkBands={
+                  phoneData.categories?.connectivity
+                    ? {
+                        bands4G: String(phoneData.categories.connectivity["4G Bands"] || "")
+                          .split(",")
+                          .map((b: string) => b.trim())
+                          .filter(Boolean),
+                        bands5G: String(phoneData.categories.connectivity["5G Bands"] || "")
+                          .split(",")
+                          .map((b: string) => b.trim())
+                          .filter(Boolean),
+                      }
+                    : undefined
+                }
               />
             </CollapsibleContent>
           </div>
@@ -1892,13 +1933,9 @@ export default function PhoneSpecPage({
                 </div>
               </div>
             </div>
-            <BenchmarkDisplay
-              benchmarks={phoneData.categories?.benchmarks || {}}
-              phoneName={phoneData.name}
-            />
+            <BenchmarkDisplay benchmarks={phoneData.categories?.benchmarks || {}} phoneName={phoneData.name} />
           </div>
         </Collapsible>
-
 
         {/* 7. Reviews Section */}
         <Collapsible open={isReviewsOpen} onOpenChange={setIsReviewsOpen}>

@@ -502,8 +502,9 @@ export default function PhoneComparisonPage({
           return carriers.length > 0 ? { category, specs: carriers } : null;
         }
 
-        const specKeys = Array.from(new Set(phones.flatMap((phone) => Object.keys(phone.categories[category] || {}))))
-          .filter((specKey) => (selectedSpecs[category] || []).includes(specKey));
+        const specKeys = Array.from(
+          new Set(phones.flatMap((phone) => Object.keys(phone.categories[category] || {}))),
+        ).filter((specKey) => (selectedSpecs[category] || []).includes(specKey));
 
         return specKeys.length > 0 ? { category, specs: specKeys } : null;
       })
@@ -533,8 +534,7 @@ export default function PhoneComparisonPage({
       maxWidth: pageWidth - 80,
     });
 
-    const getLastTableY = () =>
-      (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? 76;
+    const getLastTableY = () => (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? 76;
 
     const ensureSectionSpace = (requiredHeight = 80) => {
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -587,7 +587,10 @@ export default function PhoneComparisonPage({
       const heading =
         category === "carrier-compatibility"
           ? "Carrier Compatibility"
-          : category.replace(/([A-Z])/g, " $1").trim().replace(/\b\w/g, (char) => char.toUpperCase());
+          : category
+              .replace(/([A-Z])/g, " $1")
+              .trim()
+              .replace(/\b\w/g, (char) => char.toUpperCase());
 
       ensureSectionSpace();
       const sectionTitleY = getLastTableY() + 22;
@@ -648,6 +651,32 @@ export default function PhoneComparisonPage({
     toast.success("PDF downloaded", {
       description: "The comparison PDF has been saved to your browser's default downloads location.",
     });
+  };
+
+  const formatPrice = (price: number | string | undefined | null) => {
+    if (price === undefined || price === null || price === "---" || price === 0) {
+      return "---";
+    }
+
+    // Strips out characters other than numbers and .
+    let numericValue: number;
+    if (typeof price === "string") {
+      // Regex: keep only digits and the first decimal point
+      const cleaned = price.replace(/[^0-9.]/g, "");
+      numericValue = parseFloat(cleaned);
+    } else {
+      numericValue = price;
+    }
+
+    // Fallback = ---
+    if (isNaN(numericValue)) return "---";
+
+    // Format as USD with no decimals
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(numericValue);
   };
 
   // ------------------------------------------------------------
@@ -979,7 +1008,7 @@ export default function PhoneComparisonPage({
                             >
                               {phone.releaseDate}
                             </Badge>
-                            <p className="text-[#2c3968] dark:text-[#4a7cf6] mb-3">{phone.price}</p>
+                            <p className="text-[#2c3968] dark:text-[#4a7cf6] mb-3">{formatPrice(phone.price)}</p>
 
                             {/* Rating */}
                             <div className="flex items-center gap-2 mb-1">
@@ -1074,7 +1103,7 @@ export default function PhoneComparisonPage({
                                                       {phone.manufacturer} {phone.name}
                                                     </p>
                                                     <p className="text-xs text-[#666] dark:text-[#a0a8b8]">
-                                                      {phone.price}
+                                                      {formatPrice(phone.price)}
                                                     </p>
                                                   </div>
                                                   <Plus className="w-4 h-4 text-[#2c3968] dark:text-[#4a7cf6] shrink-0" />
@@ -1411,4 +1440,3 @@ export default function PhoneComparisonPage({
     </div>
   );
 }
-
