@@ -195,6 +195,23 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
     setHasChanges(true);
   };
 
+  const handleChannelToggle = (key: keyof AppUser["preferences"]["notificationChannels"]) => {
+    setProfile((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        preferences: {
+          ...prev.preferences,
+          notificationChannels: {
+            ...prev.preferences.notificationChannels,
+            [key]: !prev.preferences.notificationChannels[key],
+          },
+        },
+      };
+    });
+    setHasChanges(true);
+  };
+
   const handleRemoveFromWishlist = (phoneId: string) => {
     setProfile((prev) => {
       if (!prev) return null;
@@ -468,6 +485,44 @@ export default function UserProfilePage({ onViewDiscussion }: UserProfilePagePro
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Delivery Channels */}
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-[#2d3548]">
+                <h3 className="text-[#2c3968] dark:text-[#4a7cf6] mb-4">Delivery Channels</h3>
+                <div className="space-y-4">
+                  {[
+                    { key: "email", label: "Email", description: "Receive notifications via email" },
+                    { key: "push", label: "Push", description: "Receive in-app push notifications" },
+                  ].map(({ key, label, description }) => {
+                    const channelKey = key as keyof AppUser["preferences"]["notificationChannels"];
+                    return (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-[#2d3548] hover:border-[#2c3968] dark:hover:border-[#4a7cf6] transition-colors"
+                      >
+                        <div>
+                          <h4 className="text-gray-800 dark:text-[#d1d5db] mb-1">{label}</h4>
+                          <p className="text-gray-600 dark:text-[#a0a8b8] text-sm">{description}</p>
+                        </div>
+                        <button
+                          onClick={() => handleChannelToggle(channelKey)}
+                          className={`relative w-14 h-8 rounded-full transition-all duration-300 cursor-pointer ${
+                            profile.preferences.notificationChannels[channelKey]
+                              ? "bg-[#2c3968] dark:bg-[#4a7cf6]"
+                              : "bg-gray-300 dark:bg-[#2d3548]"
+                          }`}
+                        >
+                          <div
+                            className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
+                              profile.preferences.notificationChannels[channelKey] ? "translate-x-7" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
