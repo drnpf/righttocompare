@@ -1032,7 +1032,12 @@ export default function PhoneComparisonPage({
                                     align="center"
                                   >
                                     <Command className="dark:bg-background" shouldFilter={false}>
-                                      <CommandInput className="dark:text-white" placeholder="Search phones..." />
+                                      <CommandInput
+                                        className="dark:text-white"
+                                        placeholder="Search phones..."
+                                        value={searchQuery}
+                                        onValueChange={setSearchQuery}
+                                      />
                                       <CommandList className="dark:bg-background border-t border-border">
                                         {/* Search loading indicator */}
                                         {isSearching && (
