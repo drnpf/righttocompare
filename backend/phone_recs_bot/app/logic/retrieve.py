@@ -17,12 +17,12 @@ async def retrieve_candidates(profile: PreferenceProfile) -> list[dict]:
 
     # Platform from new schema
     if profile.platform == "ios":
-        q["specs.performance.operatingSystem"] = {
+        q["specs.performance.operatingSystem.raw"] = {
             "$regex": r"\bios\b|iphone",
             "$options": "i",
         }
     elif profile.platform == "android":
-        q["specs.performance.operatingSystem"] = {
+        q["specs.performance.operatingSystem.raw"] = {
             "$regex": r"android",
             "$options": "i",
         }
@@ -47,6 +47,9 @@ async def retrieve_candidates(profile: PreferenceProfile) -> list[dict]:
     # Avoid brands from new schema
     if profile.avoid_brands:
         q["manufacturer"] = {"$nin": profile.avoid_brands}
+
+    # DEBUG: See exactly what the bot is asking MongoDB
+    print(f"DEBUG: Chatbot Query -> {q}")
 
     cursor = col.find(q).sort("updatedAt", -1).limit(settings.max_candidates)
     docs = await cursor.to_list(length=settings.max_candidates)
