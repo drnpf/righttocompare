@@ -10,6 +10,7 @@ interface Message {
   sender: "user" | "ai";
   timestamp: Date;
   phoneRecommendations?: {
+    id: string;
     name: string;
     brand: string;
     reason: string;
@@ -34,29 +35,29 @@ const getSessionId = () => {
 
 export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   // Load messages from localStorage or use default welcome message
   const getInitialMessages = (): Message[] => {
     try {
-      const stored = localStorage.getItem('aiChatMessages');
+      const stored = localStorage.getItem("aiChatMessages");
       if (stored) {
         const parsed = JSON.parse(stored);
         return parsed.map((msg: Message) => ({
           ...msg,
-          timestamp: new Date(msg.timestamp)
+          timestamp: new Date(msg.timestamp),
         }));
       }
     } catch (error) {
-      console.error('Error loading chat history:', error);
+      console.error("Error loading chat history:", error);
     }
-    
+
     return [
       {
         id: "welcome",
         text: "Hi! I'm your AI phone assistant. I can help you find the perfect phone based on your needs. Just tell me what you're looking for!",
         sender: "ai",
-        timestamp: new Date()
-      }
+        timestamp: new Date(),
+      },
     ];
   };
 
@@ -64,6 +65,7 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [selectedPhone, setSelectedPhone] = useState<{
+    id: string;
     name: string;
     brand: string;
     reason: string;
@@ -75,9 +77,9 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
   // Save messages to localStorage whenever they change
   useEffect(() => {
     try {
-      localStorage.setItem('aiChatMessages', JSON.stringify(messages));
+      localStorage.setItem("aiChatMessages", JSON.stringify(messages));
     } catch (error) {
-      console.error('Error saving chat history:', error);
+      console.error("Error saving chat history:", error);
     }
   }, [messages]);
 
@@ -130,6 +132,7 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
         sender: "ai",
         timestamp: new Date(),
         phoneRecommendations: (userView.recommendations || []).map((rec) => ({
+          id: rec.id,
           name: rec.model,
           brand: rec.brand,
           reason: (rec.why || []).join(", ") || "Recommended",
@@ -183,6 +186,7 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
         sender: "ai",
         timestamp: new Date(),
         phoneRecommendations: (userView.recommendations || []).map((rec) => ({
+          id: rec.id,
           name: rec.model,
           brand: rec.brand,
           reason: (rec.why || []).join(", ") || "Recommended based on your preferences",
@@ -215,30 +219,34 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
     }
   };
 
-  const handlePhoneClick = (link?: string) => {
-    if (!link) {
-      toast.error("No phone link available");
+  const handlePhoneClick = (phoneId?: string) => {
+    if (!phoneId) {
+      toast.error("Phone ID missing");
       return;
     }
 
-    window.open(link, "_blank");
+    if (onNavigate) {
+      onNavigate(phoneId);
+      setIsOpen(false); // Close chat so user sees the page
+      setSelectedPhone(null);
+    } else {
+      window.location.href = `/phones/${phoneId}`;
+    }
   };
 
-  const handleWhyThisPhone = (phone: {
-    name: string;
-    brand: string;
-    reason: string;
-    link?: string;
-  }) => {
+  const handleWhyThisPhone = (phone: { name: string; brand: string; reason: string; link?: string }) => {
     setSelectedPhone(phone);
   };
 
   const handleClearChat = () => {
+    // Resets the session key too
+    localStorage.removeItem(CHATBOT_SESSION_KEY);
+
     const welcomeMessage: Message = {
       id: "welcome",
       text: "Hi! I'm your AI phone assistant. I can help you find the perfect phone based on your needs. Just tell me what you're looking for!",
       sender: "ai",
-      timestamp: new Date()
+      timestamp: new Date(),
     };
     setMessages([welcomeMessage]);
     toast.success("Chat history cleared");
@@ -256,7 +264,7 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 left-6 z-50 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-full p-4 shadow-2xl hover:shadow-3xl transition-all group animate-pulse-glow"
+            className="fixed bottom-6 left-6 z-50 bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-full p-4 shadow-2xl hover:shadow-3xl transition-all group animate-pulse-glow cursor-pointer"
           >
             <MessageCircle size={28} className="group-hover:rotate-12 transition-transform" />
             <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
@@ -295,7 +303,7 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleClearChat}
-                  className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all"
+                  className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all cursor-pointer"
                   title="Clear chat history"
                 >
                   <Trash2 size={18} />
@@ -312,10 +320,7 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#f7f7f7] dark:bg-[#0d1117]">
               {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
-                >
+                <div key={message.id} className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
                   <div
                     className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                       message.sender === "user"
@@ -357,14 +362,14 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
                                 <div className="flex gap-2 flex-wrap">
                                   <button
                                     onClick={() => handleWhyThisPhone(phone)}
-                                    className="text-xs px-3 py-1.5 rounded-full bg-[#e9eefc] hover:bg-[#dbe5ff] text-[#2c3968] transition-all"
+                                    className="text-xs px-3 py-1.5 rounded-full bg-[#e9eefc] hover:bg-[#dbe5ff] text-[#2c3968] transition-all cursor-pointer"
                                   >
                                     Why this phone?
                                   </button>
 
                                   <button
-                                    onClick={() => handlePhoneClick(phone.link)}
-                                    className="text-xs px-3 py-1.5 rounded-full bg-[#2c3968] hover:bg-[#24315a] text-white transition-all"
+                                    onClick={() => handlePhoneClick(phone.id)} // Change from phone.link to phone.id
+                                    className="text-xs px-3 py-1.5 rounded-full bg-[#2c3968] hover:bg-[#24315a] text-white transition-all cursor-pointer"
                                   >
                                     View page
                                   </button>
@@ -377,7 +382,7 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
                     )}
 
                     <p className="text-xs mt-2 opacity-50">
-                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
                 </div>
@@ -386,14 +391,23 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
               {/* Typing Indicator */}
               {isTyping && (
                 <div className="flex justify-start">
-                  <div className="bg-white border border-[#e5e5e5] rounded-2xl px-4 py-3">
+                  <div className="bg-white dark:bg-[#1a1f2e] border border-[#e5e5e5] dark:border-[#2d3548] rounded-2xl px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-[#2c3968] rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-                        <div className="w-2 h-2 bg-[#2c3968] rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                        <div className="w-2 h-2 bg-[#2c3968] rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                        <div
+                          className="w-2 h-2 bg-[#2c3968] dark:bg-[#4a7cf6] rounded-full animate-bounce"
+                          style={{ animationDelay: "0ms" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-[#2c3968] dark:bg-[#4a7cf6] rounded-full animate-bounce"
+                          style={{ animationDelay: "150ms" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-[#2c3968] dark:bg-[#4a7cf6] rounded-full animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        ></div>
                       </div>
-                      <span className="text-xs text-[#666]">AI is thinking...</span>
+                      <span className="text-xs text-[#666] dark:text-[#a0a8b8]">AI is thinking...</span>
                     </div>
                   </div>
                 </div>
@@ -403,7 +417,7 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
             </div>
 
             {/* Input Area */}
-            <div className="bg-white border-t border-[#e5e5e5] p-4">
+            <div className="bg-white dark:bg-[#161b26] border-t border-[#e5e5e5] dark:border-[#2d3548] p-4">
               <div className="flex gap-2">
                 <input
                   ref={inputRef}
@@ -412,13 +426,13 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Ask for phone recommendations..."
-                  className="flex-1 px-4 py-3 rounded-xl border border-[#d9d9d9] focus:border-[#2c3968] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all text-sm"
+                  className="flex-1 px-4 py-3 rounded-xl border border-[#d9d9d9] dark:border-[#2d3548] bg-white dark:bg-[#0d1117] text-[#1e1e1e] dark:text-white focus:border-[#2c3968] dark:focus:border-[#4a7cf6] focus:outline-none focus:ring-2 focus:ring-[#2c3968]/20 transition-all text-sm"
                   disabled={isTyping}
                 />
                 <button
                   onClick={handleSendMessage}
                   disabled={!inputValue.trim() || isTyping}
-                  className="bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-xl px-4 py-3 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white rounded-xl px-4 py-3 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <Send size={20} />
                 </button>
@@ -426,7 +440,7 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
                   onClick={() => sendPresetPrompt("Best camera phones")}
-                  className="text-xs px-3 py-1.5 bg-[#f7f7f7] hover:bg-[#ececec] rounded-full text-[#666] hover:text-[#2c3968] transition-all"
+                  className="text-xs px-3 py-1.5 bg-[#f7f7f7] dark:bg-[#1a1f2e] hover:bg-[#ececec] dark:hover:bg-[#2d3548] rounded-full text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-all cursor-pointer"
                   disabled={isTyping}
                 >
                   📸 Camera
@@ -434,7 +448,7 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
 
                 <button
                   onClick={() => sendPresetPrompt("Gaming phones")}
-                  className="text-xs px-3 py-1.5 bg-[#f7f7f7] hover:bg-[#ececec] rounded-full text-[#666] hover:text-[#2c3968] transition-all"
+                  className="text-xs px-3 py-1.5 bg-[#f7f7f7] dark:bg-[#1a1f2e] hover:bg-[#ececec] dark:hover:bg-[#2d3548] rounded-full text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-all cursor-pointer"
                   disabled={isTyping}
                 >
                   🎮 Gaming
@@ -442,7 +456,7 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
 
                 <button
                   onClick={() => sendPresetPrompt("Long battery life")}
-                  className="text-xs px-3 py-1.5 bg-[#f7f7f7] hover:bg-[#ececec] rounded-full text-[#666] hover:text-[#2c3968] transition-all"
+                  className="text-xs px-3 py-1.5 bg-[#f7f7f7] dark:bg-[#1a1f2e] hover:bg-[#ececec] dark:hover:bg-[#2d3548] rounded-full text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-all cursor-pointer"
                   disabled={isTyping}
                 >
                   🔋 Battery
@@ -450,7 +464,7 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
 
                 <button
                   onClick={() => sendPresetPrompt("Budget phones")}
-                  className="text-xs px-3 py-1.5 bg-[#f7f7f7] hover:bg-[#ececec] rounded-full text-[#666] hover:text-[#2c3968] transition-all"
+                  className="text-xs px-3 py-1.5 bg-[#f7f7f7] dark:bg-[#1a1f2e] hover:bg-[#ececec] dark:hover:bg-[#2d3548] rounded-full text-[#666] dark:text-[#a0a8b8] hover:text-[#2c3968] dark:hover:text-[#4a7cf6] transition-all cursor-pointer"
                   disabled={isTyping}
                 >
                   💰 Budget
@@ -479,12 +493,14 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
             >
               <div className="bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white px-5 py-4 flex items-center justify-between">
                 <div>
-                  <h3 className="text-white">{selectedPhone.brand} {selectedPhone.name}</h3>
+                  <h3 className="text-white">
+                    {selectedPhone.brand} {selectedPhone.name}
+                  </h3>
                   <p className="text-white/80 text-sm">Recommendation Details</p>
                 </div>
                 <button
                   onClick={() => setSelectedPhone(null)}
-                  className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all"
+                  className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all cursor-pointer"
                 >
                   <X size={18} />
                 </button>
@@ -501,15 +517,15 @@ export default function AIChatWidget({ onNavigate }: AIChatWidgetProps) {
                 <div className="flex gap-3 justify-end">
                   <button
                     onClick={() => setSelectedPhone(null)}
-                    className="px-4 py-2 rounded-lg border border-[#d9d9d9] text-[#666] hover:bg-[#f7f7f7] transition-all"
+                    className="px-4 py-2 rounded-lg border border-[#d9d9d9] dark:border-[#2d3548] text-[#666] dark:text-[#a0a8b8] hover:bg-[#f7f7f7] dark:hover:bg-[#1a1f2e] transition-all cursor-pointer"
                   >
                     Close
                   </button>
 
-                  {selectedPhone.link && (
+                  {selectedPhone.id && (
                     <button
-                      onClick={() => handlePhoneClick(selectedPhone.link)}
-                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white hover:shadow-lg transition-all"
+                      onClick={() => handlePhoneClick(selectedPhone.id)}
+                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#2c3968] to-[#3d4a7a] text-white hover:shadow-lg transition-all cursor-pointer"
                     >
                       Open phone page
                     </button>
